@@ -1,0 +1,50 @@
+[data-chart-slc="grid-lines"] {
+    stroke: var(--color-border);
+    stroke-width: 0.4px;
+}
+
+[data-chart-slc="axis-ticks"] {
+    text-anchor: middle;
+    dominant-baseline: central;
+    fill: var(--color-secondary);
+    font-size: 0.25rem;
+}
+
+[data-chart-slc="axis-labels"] {
+    text-anchor: middle;
+    dominant-baseline: central;
+    fill: var(--color-secondary);
+    font-size: 0.35rem;
+}
+
+[data-chart-slc="primary-line"] {
+    fill: none;
+    stroke: var(--color-accent-2);
+    stroke-width: 0.3px;
+}
+
+[data-chart-slc="primary-dots"] {
+    fill: var(--color-accent-2);
+    stroke: none;
+}
+
+[data-chart-slc="secondary-line"] {
+    fill: none;
+    stroke: var(--color-secondary);
+    stroke-width: 0.3px;
+}
+
+[data-chart-slc="secondary-dots"] {
+    fill: var(--color-secondary);
+    stroke: none;
+}
+
+[data-chart-slc="selection-line"] {
+    stroke: var(--color-accent-1);
+    stroke-width: 1;
+}
+
+[data-chart-slc="selection-dot"] {
+    fill: var(--color-accent-1);
+    stroke: none;
+}

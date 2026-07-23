@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Electric Air Shipping - Fleet Calculator</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" type="image/x-icon" href="/assets/favicon.ico">
+    <link rel="stylesheet" href="/assets/charts/slider-line-chart/slider-line-chart.css">
+</head>
+
+<body>
+    <header class="header">
+        <img class="header-logo" src="/assets/logo.svg" alt="Electric Air Shipping Logo">
+        <nav class="header-nav">
+            <a class="header-nav-link current-page" href="/shape" data-nav="shape">Shape</a>
+            <span class="header-nav-separator">></span>
+            <a class="header-nav-link" href="/ship" data-nav="ship">Ship</a>
+            <span class="header-nav-separator">></span>
+            <a class="header-nav-link" href="/fleet" data-nav="fleet">Fleet</a>
+        </nav>
+        <div></div>
+    </header>
+
+    <section class="section-shape" style="display: none;" data-section="shape">
+        <div class="shape-controls">
+
+            <h2 class="shape-control-button-heading">Airship</h2>
+            <h2 class="shape-control-button-heading">Other Shapes</h2>
+            <button class="shape-control-button shape-button-primary" data-shape-button="sunship">
+                <img class="shape-button-circles" src="/assets/logo_circles.svg"
+                    alt="Electric Air Shipping Logo circles">
+                <img class="shape-control-button-icon" src="/assets/shape-icons/sunship.png" alt="sunship image">
+                <span class="shape-control-button-label">SUNSHIP
+                    <span class="has-tooltip" data-tooltip="shape-control-button-sunship">&#x2139;</span>
+                </span>
+            </button>
+
+            <button class="shape-control-button shape-button-secondary" data-shape-button="bottle">
+                <img class="shape-control-button-icon" src="/assets/shape-icons/bottle.png" alt="bottle image">
+                <span class="shape-control-button-label">BOTTLE</span>
+            </button>
+
+            <button class="shape-control-button shape-button-secondary" data-shape-button="cigar">
+                <img class="shape-control-button-icon" src="/assets/shape-icons/cigar.png" alt="cigar image">
+                <span class="shape-control-button-label">CIGAR
+                    <span class="has-tooltip" data-tooltip="shape-control-button-cigar">&#x2139;</span>
+                </span>
+            </button>
+
+            <button class="shape-control-button shape-button-secondary" data-shape-button="washingmachine">
+                <img class="shape-control-button-icon" src="/assets/shape-icons/washingmachine.png"
+                    alt="washing machine">
+                <span class="shape-control-button-label">WASHING MACHINE
+                    <span class="has-tooltip" data-tooltip="shape-control-button-washingmachine">&#x2139;</span>
+                </span>
+                </span>
+            </button>
+
+            <button class="shape-control-button shape-button-secondary" data-shape-button="aerosmena">
+                <img class="shape-control-button-icon" src="/assets/shape-icons/aerosmena.png" alt="washing machine">
+                <span class="shape-control-button-label">LENTICULAR (UFO)
+                    <span class="has-tooltip" data-tooltip="shape-control-button-lenticular">&#x2139;</span>
+                </span>
+                </span>
+            </button>
+
+            <button class="shape-control-button shape-button-secondary" data-shape-button="car">
+                <img class="shape-control-button-icon" src="/assets/shape-icons/car.png" alt="car image">
+                <span class="shape-control-button-label">CAR</span>
+            </button>
+
+        </div>
+
+        <div class="shape-viewer-container panel-border">
+            <button class="shape-viewer-button" data-shape="animation-button">⏸</button>
+            <canvas class="shape-viewer-canvas" data-shape="canvas"></canvas>
+        </div>
+
+        <div class="shape-results panel-border">
+            <div class="shape-results-header">Shape
+                <span class="has-tooltip" data-tooltip="shape-results-shape">&#x2139;</span>
+                :
+            </div>
+            <div class="shape-results-data" data-shape="shape"></div>
+            <div class="shape-results-header">Simple VS
+                <span class="has-tooltip" data-tooltip="shape-results-volumescalar">&#x2139;</span>
+                :
+            </div>
+            <div class="shape-results-data" data-shape="volume-scalar"></div>
+            <div class="shape-results-header">Volume Efficiency % (VE)
+                <span class="has-tooltip" data-tooltip="shape-results-volumeefficiency">&#x2139;</span>
+                :
+            </div>
+            <input class="shape-results-data shape-ve-input" type="text" data-shape="input-volume-efficiency">
+        </div>
+    </section>
+
+    <section class="section-ship" style="display: none;" data-section="ship">
+
+        <div class="ship-selected-shape panel-border">
+            <h2 class="ship-selected-heading">Previous Properties</h2>
+            <img class="ship-selected-icon" src="/assets/shape-icons/sunship.png" alt="selected shape icon"
+                data-ship="selected-icon">
+            <div class="ship-selected-data">Shape: </div>
+            <div class="ship-selected-data">
+                <span data-ship="selected-shape"></span>
+            </div>
+            <div class="ship-selected-data">Volume Efficiency (VE%):</div>
+            <div class="ship-selected-data" data-ship="selected-volumeefficiency"></div>
+            <div class="ship-selected-data">Shape-Volume scalar (VS):</div>
+            <div class="ship-selected-data" data-ship="selected-volumescalar"></div>
+        </div>
+
+        <div class="ship-controls panel-border">
+            <div class="ship-controls-heading-container">
+                <h2 class="ship-controls-heading">Current Properties</h2>
+                <button class="ship-control-preset" data-ship="ideal-button">
+                    <img class="ship-control-preset-icon" src="/assets/logo_circles.svg"
+                        alt="Electric Air Shipping Logo">
+                </button>
+            </div>
+            <div class="ship-control">
+                <label class="ship-control-label" for="length">Length <span class="has-tooltip"
+                        data-tooltip="ship-control-length">&#x2139;</span>
+                </label>
+                <input id="length" class="ship-control-slider" type="range" name="length" data-ship="length">
+                <output class="ship-control-output" for="length">
+                    <span data-ship="length-output" class="ship-control-output-value">0</span>
+                    <span data-ship="length-unit">metres</span>
+                </output>
+                <div class="ship-length-button-container">
+                    <button class="ship-length-button" data-ship="length-preset-a">LTA Pathfinder 1</button>
+                    <button class="ship-length-button" data-ship="length-preset-b">LZ-129 Hindenburg</button>
+                    <button class="ship-length-button" data-ship="length-preset-c">Conventional 500t</button>
+                </div>
+            </div>
+
+            <div class="ship-control">
+                <label class="ship-control-label" for="temperature">Internal Temperature <span class="has-tooltip"
+                        data-tooltip="ship-control-temperature">&#x2139;</span>
+                </label>
+                <input id="temperature" class="ship-control-slider" type="range" name="temperature"
+                    data-ship="temperature">
+                <output for="temperature" class="ship-control-output">
+                    <span data-ship="temperature-output" class="ship-control-output-value">0</span>
+                    <span data-ship="temperature-unit">&deg;C</span>
+                </output>
+            </div>
+        </div>
+
+        <div class="ship-results panel-border">
+            <div class="ship-results-header">
+                Net Lift
+                <span class="has-tooltip" data-tooltip="ship-results-netlift">&#x2139;</span>
+                :
+            </div>
+            <div class="ship-results-data">
+                <span data-ship="netlift-output"></span>
+                <span data-ship="netlift-unit">tonnes</span>
+            </div>
+
+        </div>
+
+        <figure class="ship-graph-container panel-border">
+            <figcaption>
+                <h2 class="ship-graph-caption">Scale Reference
+                    <span class="has-tooltip" data-tooltip="ship-chart-scale">&#x2139;</span>
+                </h2>
+            </figcaption>
+            <svg viewBox="0 0 100 100" data-ship="scale-ruler-chart" class="ship-graph ship-graph-scale">
+                <defs>
+                    <clipPath id="src">
+                        <rect width="100" height="100" />
+                    </clipPath>
+                </defs>
+                <g data-chart-sr="bg-group" clip-path="#url(src)" />
+                <g data-chart-sr='fg-group' />
+            </svg>
+        </figure>
+
+        <figure class="ship-graph-container panel-border">
+            <figcaption>
+                <h2 class="ship-graph-caption">
+                    Volume x Length <span class="has-tooltip" data-tooltip="ship-chart-volumexlength">&#x2139;</span>
+                </h2>
+            </figcaption>
+            <svg data-ship="length-volume-chart" class="ship-graph" viewBox="0 0 140 100" role="img"
+                aria-label="Data graph">
+                <defs>
+                    <clipPath data-chart-slc="graph-clip">
+                        <rect data-chart-slc="graph-clip-rect" />
+                    </clipPath>
+                </defs>
+                <g data-chart-slc="grid-lines"></g>
+                <g data-chart-slc="axis-ticks"></g>
+                <g data-chart-slc="secondary-line-group"></g>
+                <g data-chart-slc="primary-line-group"></g>
+                <line data-chart-slc="selection-line" />
+                <circle data-chart-slc="selection-dot" r="1.5" />
+                <g data-chart-slc="axis-labels">
+                    <text data-chart-slc="axis-label-x">Length (M)</text>
+                    <text data-chart-slc="axis-label-y">Volume (million M^3)</text>
+                </g>
+            </svg>
+        </figure>
+
+        <figure class="ship-graph-container panel-border">
+            <figcaption>
+                <h2 class="ship-graph-caption">
+                    Gross Lift x Length <span class="has-tooltip"
+                        data-tooltip="ship-chart-grossliftxlength">&#x2139;</span>
+                </h2>
+            </figcaption>
+            <svg data-ship="length-lift-chart" class="ship-graph" viewBox="0 0 140 100" role="img"
+                aria-label="Data graph">
+                <defs>
+                    <clipPath data-chart-slc="graph-clip">
+                        <rect data-chart-slc="graph-clip-rect" />
+                    </clipPath>
+                </defs>
+                <g data-chart-slc="grid-lines"></g>
+                <g data-chart-slc="axis-ticks"></g>
+                <g data-chart-slc="secondary-line-group"></g>
+                <g data-chart-slc="primary-line-group"></g>
+                <line data-chart-slc="selection-line" />
+                <circle data-chart-slc="selection-dot" r="1.5" />
+                <g data-chart-slc="axis-labels">
+                    <text data-chart-slc="axis-label-x">Length (M)</text>
+                    <text data-chart-slc="axis-label-y">Grosslift (Tonne)</text>
+                </g>
+            </svg>
+        </figure>
+
+    </section>
+
+    <section class="section-fleet" style="display: none;" data-section="fleet">
+
+        <div class="fleet-selected-ship panel-border">
+            <h2 class="fleet-selected-heading">Previous Properties</h2>
+            <img class="fleet-selected-icon" src="/assets/shape-icons/sunship.png" alt="selected fleet icon"
+                data-fleet="selected-icon">
+
+            <div class="fleet-selected-data ">Shape:</div>
+            <div class="fleet-selected-data " data-fleet="selected-shape"></div>
+
+
+            <div class="fleet-selected-data ">Volume Efficiency (VE%):</div>
+            <div class="fleet-selected-data " data-fleet="selected-volumeefficiency"></div>
+
+            <div class="fleet-selected-data ">Length:</div>
+            <div class="fleet-selected-data ">
+                <span data-fleet="selected-length"></span>
+                <span data-fleet="selected-length-unit">metres</span>
+            </div>
+
+            <div class="fleet-selected-data ">Temperature:</div>
+            <div class="fleet-selected-data ">
+                <span data-fleet="selected-temperature"></span>
+                <span data-fleet="selected-temperature-unit">&deg;C</span>
+            </div>
+
+        </div>
+
+        <div class="fleet-controls panel-border">
+            <div class="fleet-controls-heading-container">
+                <h2 class="fleet-controls-heading">Current Properties</h2>
+                <button class="fleet-control-preset" data-fleet="ideal-button">
+                    <img class="fleet-control-preset-icon" src="/assets/logo_circles.svg"
+                        alt="Electric Air Shipping Logo">
+                </button>
+            </div>
+
+            <div class="fleet-control">
+                <label class="fleet-control-label" for="airSpeed">Airspeed <span class="has-tooltip"
+                        data-tooltip="fleet-control-airspeed">&#x2139;</span>
+                </label>
+                <input class="fleet-control-slider" type="range" name="airSpeed" data-fleet="airSpeed">
+                <output class="fleet-control-output" for="airSpeed">
+                    <span data-fleet="airSpeed-output" class="output-value" class="fleet-control-output-value">0</span>
+                    <span data-fleet="airSpeed-unit">km/hr</span>
+                </output>
+            </div>
+            <div class=" fleet-control">
+                <label class="fleet-control-label" for="utilisation">Average Utilisation <span class="has-tooltip"
+                        data-tooltip="fleet-control-utilisation">&#x2139;</span>
+                </label>
+                <input class="fleet-control-slider" type="range" name="utilisation" data-fleet="utilisation">
+                <output class="fleet-control-output">
+                    <span data-fleet="utilisation-output" class="fleet-control-output-value">0</span>
+                    <span data-fleet="utilisation-unit">%</span>
+                </output>
+            </div>
+            <div class="fleet-control">
+                <label class="fleet-control-label" for="marketSize">Total Work Performed <span class="has-tooltip"
+                        data-tooltip="fleet-control-marketsize">&#x2139;</span>
+                </label>
+                <input class="fleet-control-slider" type="range" name="marketSize" data-fleet="marketsize">
+                <output class="fleet-control-output">
+                    <input type="text" class="marketsize-input" data-fleet="marketsize-output">
+                    <span data-fleet="marketsize-unit">Trillion Ton-km / year</span>
+                </output>
+            </div>
+            <div class="fleet-control">
+                <label class="fleet-control-label" for="averageTripDistance">Average Trip Distance <span
+                        class="has-tooltip" data-tooltip="fleet-control-averagedistance">&#x2139;</span>
+                </label>
+                <input class="fleet-control-slider" type="range" name="averageTripDistance"
+                    data-fleet="averagedistance">
+                <output class="fleet-control-output">
+                    <span data-fleet="averagetripdistance-output" class="fleet-control-output-value">0</span>
+                    <span data-fleet="averagetripdistance-unit">km</span>
+                </output>
+            </div>
+        </div>
+
+        <div class="fleet-results panel-border">
+            <h2 class="fleet-results-header">Results</h2>
+
+            <div class="fleet-results-required-header">Required Sunships:
+                <span class="has-tooltip" data-tooltip="fleet-results-requiredsunships">&#x2139;</span>
+            </div>
+            <div class="fleet-results-required-data"><span data-fleet="results-required"></span></div>
+            <div class="fleet-results-hr"></div>
+
+            <div class="fleet-results-data-header">Ton-km / year: <br>(per Sunship, Trillion)</div>
+            <div class="fleet-results-data"><span data-fleet="results-carrycapacity"></span>
+
+            </div>
+
+            <div class="fleet-results-data-header">Trips per year:
+                <br>(per Sunship)
+                <span class="has-tooltip" data-tooltip="fleet-results-tripsperyear">&#x2139;</span>
+            </div>
+            <div class="fleet-results-data"><span data-fleet="results-tripsperyear"></span></div>
+
+            <div class="fleet-results-data-header">Average Ton-km per trip:</div>
+            <div class="fleet-results-data"><span data-fleet="resuls-averagetonkmtrip"></span></div>
+
+            <div class="fleet-results-data-header">Average days per trip:</div>
+            <div class="fleet-results-data"><span data-fleet="resuls-averagedayspertrip"></span></div>
+
+            <div class="fleet-results-data-header">Yearly CO₂ avoided:
+                <br>(Million tonnes / year): <span class="has-tooltip"
+                    data-tooltip="fleet-results-c02avoided">&#x2139;</span>
+
+            </div>
+            <div class="fleet-results-data"><span data-fleet="resuls-c02reducedamount"></span> <span></span>
+            </div>
+
+            <div class="fleet-results-data-header">Total Emissions Eliminated:</div>
+            <div class="fleet-results-data"><span data-fleet="resuls-c02reducedpercent"></span> <span>%</span></div>
+        </div>
+
+        <figure class="fleet-graph-container panel-border">
+            <figcaption>
+                <h2 class="fleet-graph-caption">Total Work Performed <span class="has-tooltip"
+                        data-tooltip="fleet-chart-marketsize">&#x2139;</span>
+                </h2>
+            </figcaption>
+            <svg data-chart-ms="svg" class="fleet-graph"></svg>
+            <div class="fleet-chart-button-container">
+                <button class="fleet-chart-button" data-fleet="marketsize-preset-1">Breakeven</button>
+                <button class="fleet-chart-button" data-fleet="marketsize-preset-2">Container Shipping</button>
+                <button class="fleet-chart-button" data-fleet="marketsize-preset-3">Global Maritime</button>
+            </div>
+        </figure>
+
+        <figure class="fleet-graph-container panel-border">
+            <figcaption>
+                <h2 class="fleet-graph-caption">Average Trip Distance</h2>
+            </figcaption>
+            <canvas class="fleet-distance-canvas" data-chart-adc="canvas"></canvas>
+        </figure>
+
+    </section>
+
+    <script type="module" src="main.js"></script>
+<!-- Cloudflare Pages Analytics --><script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "6defccdbdb80490ba88e83bfd670a58d"}'></script><!-- Cloudflare Pages Analytics --></body>
+
+</html>
