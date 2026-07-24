@@ -55,11 +55,18 @@ resultsPanel.insertBefore(vsInfHeader, veHeader);
 resultsPanel.insertBefore(vsInfCell, veHeader);
 
 // Overlay canvas over the V1 viewer, used only while an uploaded shape is active.
+// Stacking (bottom→top): V1 canvas (z auto) < overlay (z 1) < pause button (z 2).
+// The overlay must sit above V1's canvas to show the upload, but BELOW the pause
+// button — the button lives inside this same container, so without the z-index the
+// overlay would cover it and swallow real mouse clicks (scripted .click() bypasses
+// hit-testing, which is why this hid during automated testing). The overlay still
+// receives OrbitControls drag everywhere the button isn't.
 const viewerBox = $('.shape-viewer-container');
 const v1Canvas = $('[data-shape="canvas"]');
 viewerBox.style.position = 'relative';
+$('[data-shape="animation-button"]').style.zIndex = '2';
 const overlayCanvas = document.createElement('canvas');
-overlayCanvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;display:none;';
+overlayCanvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;display:none;z-index:1;';
 viewerBox.appendChild(overlayCanvas);
 const replica = new ReplicaViewer(overlayCanvas);
 
