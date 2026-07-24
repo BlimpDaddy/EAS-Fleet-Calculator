@@ -36,7 +36,7 @@ createServer(async (req, res) => {
     const full = safe(CALCV2, path.slice('/calcv2/'.length));
     try {
       const body = await readFile(full);
-      res.writeHead(200, { 'content-type': TYPES[extname(full)] ?? 'application/octet-stream' });
+      res.writeHead(200, { 'content-type': TYPES[extname(full)] ?? 'application/octet-stream', 'cache-control': 'no-store' });
       return res.end(body);
     } catch { res.writeHead(404); return res.end('not found'); }
   }
@@ -58,7 +58,7 @@ createServer(async (req, res) => {
   const full = join(ROOT, normalize(path).replace(/^(\.\.[/\\])+/, ''));
   try {
     const body = await readFile(full);
-    res.writeHead(200, { 'content-type': TYPES[extname(full)] ?? 'application/octet-stream' });
+    res.writeHead(200, { 'content-type': TYPES[extname(full)] ?? 'application/octet-stream', 'cache-control': 'no-store' });
     res.end(body);
   } catch {
     // SPA fallback, as Cloudflare Pages does

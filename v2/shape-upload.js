@@ -130,22 +130,44 @@ const round3 = (x) => String(Math.round(x * 1000) / 1000);
 
 // ---------------------------------------------------------------- presets
 
+// Preset metrics are deterministic (fixed sample count and seed on a fixed .glb), so
+// they persist across visits: a returning user's first paint shows accurate figures
+// instantly instead of the hardcoded ones for a second. Keyed by pipeline parameters
+// so a change to either invalidates automatically.
+const LS_KEY = `v2-preset-metrics:s${SAMPLES}:seed1`;
+try {
+  const stored = JSON.parse(localStorage.getItem(LS_KEY) ?? '{}');
+  for (const [k, v] of Object.entries(stored)) presetCache.set(k, v);
+} catch { /* corrupt storage — recompute from scratch */ }
+
+function persistPresetCache() {
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify(Object.fromEntries(presetCache)));
+  } catch { /* storage full/blocked — cache stays in-memory only */ }
+}
+
+// Which preset's computed figures should currently be on screen (null = upload mode).
+let currentPreset = null;
+
 async function computePreset(shapeId) {
   showOverlay(false); // presets render in V1's own viewer
+  currentPreset = shapeId;
   const cached = presetCache.get(shapeId);
   if (cached) {
     const id = ++runId; // cancel any in-flight run so it can't overwrite these numbers
     worker?.terminate();
     // V1's own click handler runs AFTER this one (its listeners attach late, once its
     // async GLTF loading finishes) and re-renders the hardcoded config values. Applying
-    // synchronously would be overwritten — defer past it.
+    // synchronously would be overwritten — defer past it (the guard observer below
+    // also catches any later repaint).
     setTimeout(() => { if (id === runId) applyNumbers(cached); }, 50);
     return;
   }
   const buf = await (await fetch(`/assets/shape-models/${shapeId}.glb`)).arrayBuffer();
   compute({ glb: buf }, [buf], (m) => {
     presetCache.set(shapeId, m.metrics);
-    applyNumbers(m.metrics);
+    persistPresetCache();
+    if (currentPreset === shapeId) applyNumbers(m.metrics);
   });
 }
 
@@ -153,13 +175,32 @@ for (const id of PRESETS) {
   $(`[data-shape-button="${id}"]`)?.addEventListener('click', () => computePreset(id));
 }
 
-// The app starts on the sunship preset showing hardcoded figures — replace them with
-// computed ones immediately.
-computePreset('sunship');
+// Guard against V1 repainting hardcoded figures over computed ones. V1's init is
+// async (it loads six .glb files), so on a cold start its onInit can fire AFTER our
+// first compute lands and rewrite the VS cell / VE field with config values — the
+// user's first landing would show the old numbers. V1's re-renders always rewrite the
+// VS cell, so watch it: whenever it no longer shows the computed value for the active
+// preset, reassert. Re-applying writes the expected value, so the observer settles.
+const vsCellGuard = new MutationObserver(() => {
+  if (!currentPreset) return;
+  const m = presetCache.get(currentPreset);
+  if (!m) return;
+  if ($('[data-shape="volume-scalar"]').textContent !== round3(m.simpleVS)) {
+    const expect = currentPreset;
+    setTimeout(() => { if (currentPreset === expect) applyNumbers(m); }, 0);
+  }
+});
+vsCellGuard.observe($('[data-shape="volume-scalar"]'), { childList: true, characterData: true, subtree: true });
+
+// NOTE: the initial computePreset call lives at the END of this file. Calling it here
+// would run showOverlay() before the pause-ownership bindings below it are initialised
+// (TDZ ReferenceError) — and being async, that throw disappears into an unhandled
+// rejection, silently breaking load-time computation. Learned the hard way.
 
 // ---------------------------------------------------------------- uploads
 
 function loadObjText(name, text) {
+  currentPreset = null; // upload mode — release the preset repaint guard
   compute({ text }, null, (m) => {
     $('[data-shape="shape"]').textContent = name.replace(/\.obj$/i, '').toUpperCase();
     applyNumbers(m.metrics);
@@ -242,3 +283,10 @@ viewerBox.addEventListener('click', (e) => {
     queueMicrotask(() => { v1Spinning = animBtn.textContent.includes(ICON_PLAY); });
   }
 }, true);
+
+// ---------------------------------------------------------------- boot
+
+// The app starts on the sunship preset — the first landing must show computed
+// figures. This runs LAST, after every binding above is initialised (see the note
+// in the presets section for why calling it earlier silently breaks).
+computePreset('sunship');
