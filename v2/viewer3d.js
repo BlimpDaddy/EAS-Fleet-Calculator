@@ -22,6 +22,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
 import { LineSegmentsGeometry } from 'three/addons/lines/LineSegmentsGeometry.js';
 import { LineSegments2 } from 'three/addons/lines/LineSegments2.js';
+import { contourLoops } from './wireframe.js';
 
 export class ReplicaViewer {
   constructor(canvas) {
@@ -76,8 +77,16 @@ export class ReplicaViewer {
       (v[1] - centre[1]) / radius,
       (v[2] - centre[2]) / radius,
     ]);
+    // Sparse contour curves (meridians + parallels) instead of the raw hull edge set —
+    // ~6,000 triangulation segments read as a blob; a handful of smooth surface curves
+    // match the look of the preset models' baked wireframes.
     const flat = [];
-    for (const [a, b] of edges) flat.push(...p[a], ...p[b]);
+    for (const loop of contourLoops(p, edges)) {
+      for (let i = 0; i < loop.length; i++) {
+        const a = loop[i], b = loop[(i + 1) % loop.length];
+        flat.push(...a, ...b);
+      }
+    }
 
     if (this.line) {
       this.shapesParent.remove(this.line);
