@@ -1,14 +1,21 @@
 /**
- * Phase A adapter: the Economics strip on the Fleet page.
+ * Phase A: the ECONOMICS page — fourth stage of the pipeline (Shape > Ship > Fleet >
+ * Economics), matching V1's page pattern: recap upstream state, add this layer.
  *
- * All maths lives in economics.js (pure, Node-tested); this file only reads V1's
- * displayed primitives, renders, and re-renders on change. V1's bundle is untouched.
+ * Why a page and not a panel: V1's section grids are height-locked to the viewport
+ * (1fr rows), so injected extra rows overflow and paint over the page bottom. A page
+ * gives the module real estate and room for Phase C (costs) later.
  *
- * Inputs are read from V1's own labelled outputs rather than its closed model:
- * net lift from the Ship page's span (present in the DOM even while hidden),
- * airspeed/utilisation from their fleet labels, market size from its text input.
- * Derived-and-rounded values (tonKm/ship, CO2) are deliberately NOT read — they are
- * recomputed from primitives so rounding in V1's display never compounds.
+ * All maths lives in economics.js (pure, Node-tested). V1's bundle is untouched; its
+ * nav presenter only ever manages its own three links/sections, so a fourth link and
+ * section coexist safely: V1 clicks re-activate its pages idempotently (restoring
+ * them when leaving Economics), and a capture listener hides Economics on any V1 nav.
+ * V1 ignores URL paths entirely (navigation is click-only) — Economics matches.
+ *
+ * Inputs are read from V1's displayed primitives, never its rounded derivatives.
+ * Market size is special: V1 re-renders its text input ROUNDED (type 6.5 -> shows 7)
+ * while the model keeps 6.5; the CO2 span is model-derived, so model-truth market
+ * size is recovered from it and the input is only trusted when the two agree.
  */
 
 import {
@@ -21,42 +28,68 @@ const $ = (sel) => document.querySelector(sel);
 
 // ---------------------------------------------------------------- styles
 
-// One small style block, entirely in V1's tokens. The strip takes an implicit third
-// row of the fleet grid (full width); his 1200/768 breakpoints inherit it as-is.
+// Entirely in V1's tokens; grid + breakpoints mirror .section-fleet's structure.
 const style = document.createElement('style');
 style.textContent = `
-  .fleet-econ {
-    grid-column: 1 / -1;
+  .section-economics {
+    display: none;
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: 1fr auto;
+    min-height: 0;
+    padding: var(--space-base);
+    gap: var(--space-base);
+  }
+  .econ-panel {
     background-color: var(--color-bg-secondary);
     padding: 0 var(--space-base) var(--space-base) var(--space-base);
+    min-height: 0;
+    min-width: 0;
+  }
+  .econ-results-panel {
+    grid-column: 3;
+    grid-row: 1 / 3;
     display: grid;
-    gap: var(--space-base);
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: repeat(7, min-content);
+    align-items: center;
+    gap: 1rem;
   }
-  .fleet-econ-controls {
+  .econ-recap {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: var(--space-base);
-    align-items: start;
+    grid-template-columns: 1fr 1fr;
+    align-content: start;
+    gap: 0.5rem 1rem;
   }
-  .fleet-econ-results {
-    display: flex;
-    justify-content: space-around;
-    flex-wrap: wrap;
-    gap: var(--space-base);
-    text-align: center;
-  }
-  .fleet-econ-note {
+  .econ-note {
+    grid-column: 1 / 3;
     font-size: var(--font-base);
     color: var(--color-secondary);
-    text-align: right;
+  }
+  @media (max-width: 1200px) {
+    .section-economics { grid-template-columns: 1fr 1fr; grid-template-rows: repeat(3, auto); min-height: auto; }
+    .econ-results-panel { grid-column: 1 / 3; grid-row: auto; }
   }
   @media (max-width: 768px) {
-    .fleet-econ-controls { grid-template-columns: 1fr; }
+    .section-economics { grid-template-columns: auto; grid-template-rows: repeat(3, auto); }
+    .econ-results-panel { grid-column: auto; }
   }
 `;
 document.head.appendChild(style);
 
-// ---------------------------------------------------------------- build UI
+// ---------------------------------------------------------------- nav link
+
+const nav = $('.header-nav');
+const sep = document.createElement('span');
+sep.className = 'header-nav-separator';
+sep.textContent = '>';
+const econLink = document.createElement('a');
+econLink.className = 'header-nav-link';
+econLink.href = '/economics';
+econLink.dataset.navV2 = 'economics';
+econLink.textContent = 'Economics';
+nav.append(sep, econLink);
+
+// ---------------------------------------------------------------- build page
 
 const rateMap = logSlider(RATE.min, RATE.max);
 const capexMap = logSlider(CAPEX.min, CAPEX.max);
@@ -82,94 +115,137 @@ function control(labelText, unitText, { min, max, step, value }) {
   return { wrap, slider, valueSpan };
 }
 
-function stat(headerText) {
-  const box = document.createElement('div');
+function presetRow(ctl, presets, apply) {
+  const row = document.createElement('div');
+  row.className = 'fleet-chart-button-container';
+  for (const p of presets) {
+    const b = document.createElement('button');
+    b.className = 'fleet-chart-button';
+    b.textContent = p.label;
+    b.addEventListener('click', () => { apply(p.value); recompute(); });
+    row.appendChild(b);
+  }
+  ctl.wrap.appendChild(row);
+}
+
+const section = document.createElement('section');
+section.className = 'section-economics';
+section.dataset.sectionV2 = 'economics';
+
+// --- Panel 1: recap of upstream state (V1's "Previous Properties" pattern) ---
+const recapPanel = document.createElement('div');
+recapPanel.className = 'panel-border econ-panel';
+const recapHeading = document.createElement('h2');
+recapHeading.className = 'fleet-selected-heading';
+recapHeading.style.cssText = 'display:block;text-align:center;';
+recapHeading.textContent = 'Previous Properties';
+const recapGrid = document.createElement('div');
+recapGrid.className = 'econ-recap';
+const recapFields = {};
+for (const [key, label] of [
+  ['shape', 'Shape:'], ['ve', 'Volume Efficiency (VE%):'], ['netLift', 'Net Lift:'],
+  ['airSpeed', 'Airspeed:'], ['util', 'Utilisation:'], ['market', 'Market Size:'],
+]) {
   const h = document.createElement('div');
-  h.className = 'fleet-results-data-header';
-  h.textContent = headerText;
+  h.className = 'fleet-selected-data';
+  h.textContent = label;
   const d = document.createElement('div');
-  d.className = 'fleet-results-data';
+  d.className = 'fleet-selected-data';
+  d.style.color = 'var(--color-primary)';
   d.textContent = '—';
-  box.append(h, d);
-  return { box, d };
+  recapGrid.append(h, d);
+  recapFields[key] = d;
 }
+recapPanel.append(recapHeading, recapGrid);
 
-const panel = document.createElement('div');
-panel.className = 'panel-border fleet-econ';
-panel.dataset.v2 = 'economics';
+// --- Panel 2: the three price controls ---
+const controlsPanel = document.createElement('div');
+controlsPanel.className = 'panel-border econ-panel';
+const controlsHeading = document.createElement('h2');
+controlsHeading.className = 'fleet-controls-heading';
+controlsHeading.style.cssText = 'display:block;text-align:center;color:var(--color-secondary);font-size:var(--font-lg);';
+controlsHeading.textContent = 'Current Properties';
 
-const heading = document.createElement('h2');
-heading.className = 'fleet-results-header';
-heading.textContent = 'Economics';
-panel.appendChild(heading);
-
-const controls = document.createElement('div');
-controls.className = 'fleet-econ-controls';
-
-// Freight rate (log slider in view units 0-100) + its preset buttons.
 const rateCtl = control('Freight Rate', '/ Ton-km', { min: 0, max: 100, step: 'any', value: rateMap.toView(RATE.default) });
-const ratePresetRow = document.createElement('div');
-ratePresetRow.className = 'fleet-chart-button-container';
-for (const p of RATE_PRESETS) {
-  const b = document.createElement('button');
-  b.className = 'fleet-chart-button';
-  b.textContent = p.label;
-  b.addEventListener('click', () => {
-    rateCtl.slider.value = rateMap.toView(p.value);
-    recompute();
-  });
-  ratePresetRow.appendChild(b);
-}
-rateCtl.wrap.appendChild(ratePresetRow);
+presetRow(rateCtl, RATE_PRESETS, (v) => { rateCtl.slider.value = rateMap.toView(v); });
 
 const carbonCtl = control('Carbon Price', '/ Tonne CO₂', { min: CARBON.min, max: CARBON.max, step: 1, value: CARBON.default });
-// Same preset treatment as the rate slider: the carbon anchors ARE the policy story
-// (junk-vs-credible VCM, EU compliance, IMO's 2028 penalty tiers) — one click each.
-const carbonPresetRow = document.createElement('div');
-carbonPresetRow.className = 'fleet-chart-button-container';
-for (const p of CARBON_PRESETS) {
-  const b = document.createElement('button');
-  b.className = 'fleet-chart-button';
-  b.textContent = p.label;
-  b.addEventListener('click', () => {
-    carbonCtl.slider.value = p.value;
-    recompute();
-  });
-  carbonPresetRow.appendChild(b);
-}
-carbonCtl.wrap.appendChild(carbonPresetRow);
+presetRow(carbonCtl, CARBON_PRESETS, (v) => { carbonCtl.slider.value = v; });
+
 const capexCtl = control('Capex per Sunship', '', { min: 0, max: 100, step: 'any', value: capexMap.toView(CAPEX.default) });
 
-controls.append(rateCtl.wrap, carbonCtl.wrap, capexCtl.wrap);
-panel.appendChild(controls);
+controlsPanel.append(controlsHeading, rateCtl.wrap, carbonCtl.wrap, capexCtl.wrap);
 
-const results = document.createElement('div');
-results.className = 'fleet-econ-results';
-const outFreight = stat('Freight Revenue / year:');
-const outCarbon = stat('Carbon Credits / year:');
-const outTotal = stat('Total Revenue / year:');
-const outPerShip = stat('Revenue per Sunship / year:');
-const outPayback = stat('Simple Payback:');
-// Total gets V1's emphasis styling (accent, larger) — mirrors "Required Sunships".
-outTotal.d.className = 'fleet-results-required-data';
-results.append(outFreight.box, outCarbon.box, outTotal.box, outPerShip.box, outPayback.box);
-panel.appendChild(results);
+// --- Panel 3: results (V1's fleet-results pattern, spanning both rows) ---
+const resultsPanel = document.createElement('div');
+resultsPanel.className = 'panel-border econ-panel econ-results-panel';
+const resultsHeading = document.createElement('h2');
+resultsHeading.className = 'fleet-results-header';
+resultsHeading.textContent = 'Results';
+resultsPanel.appendChild(resultsHeading);
 
+function statRow(headerText, { emphasis = false } = {}) {
+  const h = document.createElement('div');
+  h.className = emphasis ? 'fleet-results-required-header' : 'fleet-results-data-header';
+  h.textContent = headerText;
+  const d = document.createElement('div');
+  d.className = emphasis ? 'fleet-results-required-data' : 'fleet-results-data';
+  d.textContent = '—';
+  resultsPanel.append(h, d);
+  return d;
+}
+const outTotal = statRow('Total Revenue / year:', { emphasis: true });
+const hr = document.createElement('div');
+hr.className = 'fleet-results-hr';
+resultsPanel.appendChild(hr);
+const outFreight = statRow('Freight Revenue / year:');
+const outCarbon = statRow('Carbon Credits / year:');
+const outPerShip = statRow('Revenue per Sunship / year:');
+const outPayback = statRow('Simple Payback:');
 const note = document.createElement('div');
-note.className = 'fleet-econ-note';
+note.className = 'econ-note';
 note.textContent = 'Payback is before operating costs — fuel & opex arrive with the aerodynamics module.';
-panel.appendChild(note);
+resultsPanel.appendChild(note);
 
-$('[data-section="fleet"]').appendChild(panel);
+section.append(recapPanel, controlsPanel, resultsPanel);
+$('[data-section="fleet"]').after(section);
+
+// ---------------------------------------------------------------- page switching
+
+const V1_SECTIONS = ['shape', 'ship', 'fleet'].map((id) => $(`[data-section="${id}"]`));
+const V1_LINKS = ['shape', 'ship', 'fleet'].map((id) => $(`[data-nav="${id}"]`));
+
+function showEconomics() {
+  // Hide whichever V1 section is showing and take its nav highlight. V1's own state
+  // is untouched — its next nav click re-activates idempotently.
+  for (const s of V1_SECTIONS) s.style.display = 'none';
+  for (const l of V1_LINKS) l.classList.remove('current-page');
+  section.style.display = 'grid';
+  econLink.classList.add('current-page');
+  recompute();
+}
+
+econLink.addEventListener('click', (e) => {
+  e.preventDefault();
+  showEconomics();
+});
+
+// Any V1 nav click leaves Economics. V1 DEDUPES same-page navigation (clicking Fleet
+// while its model already says "fleet" re-activates nothing), so the section the user
+// clicked is restored HERE, not left to V1 — idempotent with V1's own activation on
+// genuine page changes.
+V1_LINKS.forEach((link, i) => {
+  link.addEventListener('click', () => {
+    section.style.display = 'none';
+    econLink.classList.remove('current-page');
+    V1_SECTIONS[i].style.display = 'grid';
+    link.classList.add('current-page');
+  }, true);
+});
 
 // ---------------------------------------------------------------- recompute
 
-/**
- * Market size needs care: V1 can re-render its text input ROUNDED (type 6.5, it may
- * display "7") while the model keeps the exact value. Its CO2 span is model-derived
- * (co2 = market/122*1000), so market recovered from it is model-truth to 2dp. Use the
- * input's higher precision only when the two agree within display rounding.
- */
+/** See module doc: model-truth market size via the CO2 span, input only when they agree. */
 function readMarketSize() {
   const fromInput = parseDisplay($('[data-fleet="marketsize-output"]')?.value);
   const co2 = parseDisplay($('[data-fleet="resuls-c02reducedamount"]')?.textContent);
@@ -203,38 +279,40 @@ function recompute() {
     carbonCtl.valueSpan.textContent = `$${inputs.carbonPerT}`;
     capexCtl.valueSpan.textContent = fmtMoney(inputs.capex);
 
-    outFreight.d.textContent = fmtMoney(e.freightRevenue);
-    outCarbon.d.textContent = fmtMoney(e.carbonRevenue);
-    outTotal.d.textContent = fmtMoney(e.totalRevenue);
-    outPerShip.d.textContent = fmtMoney(e.revenuePerShip);
-    outPayback.d.textContent = fmtPayback(e.paybackYears);
+    recapFields.shape.textContent = $('[data-shape="shape"]')?.textContent || '—';
+    recapFields.ve.textContent = $('[data-shape="input-volume-efficiency"]')?.value || '—';
+    recapFields.netLift.textContent = `${$('[data-ship="netlift-output"]')?.textContent ?? '—'} tonnes`;
+    recapFields.airSpeed.textContent = `${inputs.airSpeedKmh} km/hr`;
+    recapFields.util.textContent = `${inputs.utilisationPct}%`;
+    recapFields.market.textContent = `${inputs.marketSizeTtkm.toFixed(2)} Trillion Ton-km / year`;
+
+    outFreight.textContent = fmtMoney(e.freightRevenue);
+    outCarbon.textContent = fmtMoney(e.carbonRevenue);
+    outTotal.textContent = fmtMoney(e.totalRevenue);
+    outPerShip.textContent = fmtMoney(e.revenuePerShip);
+    outPayback.textContent = fmtPayback(e.paybackYears);
   }, 0);
 }
-window.__v2Econ = { readInputs, recompute, computeEconomics }; // for automated tests
+window.__v2Econ = { readInputs, recompute, computeEconomics, showEconomics }; // for automated tests
 
 // ---------------------------------------------------------------- wiring
 
-// Our own sliders.
 for (const s of [rateCtl.slider, carbonCtl.slider, capexCtl.slider]) {
   s.addEventListener('input', recompute);
 }
 
-// V1-driven changes. The labelled outputs are spans, so one MutationObserver covers
-// slider drags, preset buttons, ideal buttons and upstream Shape/Ship changes alike
-// (V1 re-renders them all through pubsub). The market-size input is a text input —
-// .value changes are invisible to MutationObserver — so its events and every button
-// that sets it programmatically are wired explicitly.
+// V1-driven changes: labelled outputs are spans (one MutationObserver covers sliders,
+// presets, ideal buttons and upstream Shape/Ship changes alike). The market-size text
+// input's .value changes are invisible to observers, so its events and every button
+// that sets it programmatically are wired explicitly; V1 ingests typed values on
+// focusout and may re-render them rounded, so recompute then too.
 const observer = new MutationObserver(recompute);
 for (const sel of ['[data-ship="netlift-output"]', '[data-fleet="airSpeed-output"]', '[data-fleet="utilisation-output"]', '[data-fleet="resuls-c02reducedamount"]']) {
   const el = $(sel);
   if (el) observer.observe(el, { childList: true, characterData: true, subtree: true });
 }
 const marketInput = $('[data-fleet="marketsize-output"]');
-marketInput?.addEventListener('input', recompute);
-marketInput?.addEventListener('change', recompute);
-// V1 ingests typed values on focusout (its usual pattern) and may normalise them —
-// recompute then too, so we always reflect what V1 actually accepted.
-marketInput?.addEventListener('focusout', recompute);
+for (const evt of ['input', 'change', 'focusout']) marketInput?.addEventListener(evt, recompute);
 for (const sel of ['[data-fleet="marketsize"]', '[data-fleet="marketsize-preset-1"]', '[data-fleet="marketsize-preset-2"]', '[data-fleet="marketsize-preset-3"]', '[data-fleet="ideal-button"]']) {
   const el = $(sel);
   if (!el) continue;
