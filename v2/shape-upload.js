@@ -169,20 +169,34 @@ function facesToEdges(faces) {
   return edges;
 }
 
-// The V1 pause button's icon is the single source of truth for spin state: V1 sets
-// ⏸ while playing, ▶ while paused, and always keeps it correct. Reading it (rather
-// than keeping a second independent boolean) is what prevents the two viewers drifting.
+// Spin/pause control. The pause button is shared between two viewers that are never
+// visible at the same time, so it has two owners depending on mode:
+//   • preset mode  — V1 owns it: its own click handler toggles its viewer AND the icon.
+//   • upload mode  — this adapter owns it: we toggle the replica and set the icon
+//                    ourselves, and block V1's handler so the two can't fight.
+// This avoids relying on any ordering between V1's handler and ours (a real-click race
+// that produced an inverted, one-step-lagged button). We track V1's own spin state by
+// watching its clicks in preset mode, so the icon can be restored correctly when an
+// upload closes and V1's viewer takes over again.
+const ICON_PLAY = '⏸';   // shown while spinning (click to pause)
+const ICON_PAUSE = '▶';  // shown while paused (click to play)
 const animBtn = $('[data-shape="animation-button"]');
-const buttonWantsSpin = () => animBtn.textContent.includes('⏸');
+let overlayActive = false;
+let v1Spinning = animBtn.textContent.includes(ICON_PLAY); // V1 starts spinning
 
 function showOverlay(on) {
+  overlayActive = on;
   overlayCanvas.style.display = on ? 'block' : 'none';
   v1Canvas.style.visibility = on ? 'hidden' : 'visible';
   if (on) {
-    replica.isSpinning = buttonWantsSpin(); // adopt whatever the button currently shows
+    replica.isSpinning = true;              // uploads always start spinning
+    animBtn.textContent = ICON_PLAY;
     replica.start();
   } else {
     replica.stop();
+    // Returning to a preset: V1's viewer resumes at its own (untouched) spin state,
+    // so restore the icon to match it — we may have changed the icon during upload mode.
+    animBtn.textContent = v1Spinning ? ICON_PLAY : ICON_PAUSE;
   }
 }
 
@@ -195,9 +209,21 @@ fileInput.addEventListener('change', (e) => {
   fileInput.value = '';
 });
 
-// V1's pause button drives its own viewer; mirror its resulting state onto the replica.
-// The mirror is deferred to a microtask so V1's (synchronous) click handler has already
-// flipped the button icon — we read the truth rather than guessing a toggle direction.
-animBtn.addEventListener('click', () => {
-  queueMicrotask(() => { replica.isSpinning = buttonWantsSpin(); });
-});
+// Intercept clicks on the pause button in the CAPTURE phase, on an ancestor (the viewer
+// container), so this runs BEFORE the button's own listeners regardless of the order
+// V1 and this adapter attached them.
+//   • upload mode: we own it — toggle the replica, set the icon, and stopPropagation so
+//     V1's handler on the button never fires (V1's viewer + state stay frozen).
+//   • preset mode: let V1's handler run, and mirror the resulting icon into v1Spinning
+//     so we always know V1's state for the icon restore in showOverlay().
+viewerBox.addEventListener('click', (e) => {
+  if (!e.target.closest('[data-shape="animation-button"]')) return;
+  if (overlayActive) {
+    e.stopPropagation(); // capture-phase on ancestor: prevents V1's button listener
+    replica.isSpinning = !replica.isSpinning;
+    animBtn.textContent = replica.isSpinning ? ICON_PLAY : ICON_PAUSE;
+  } else {
+    // V1's (bubble-phase) handler will toggle its viewer and icon; record the result.
+    queueMicrotask(() => { v1Spinning = animBtn.textContent.includes(ICON_PLAY); });
+  }
+}, true);
