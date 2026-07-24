@@ -53,13 +53,24 @@ export class ReplicaViewer {
 
     // V1 quirk kept on purpose: LineMaterial resolution comes from the WINDOW size,
     // not the canvas — matching it keeps our line thickness identical to his.
-    this.material = new LineMaterial({
-      color: 0xff9900,
-      linewidth: 3,
-      resolution: new Vector2(window.innerWidth, window.innerHeight),
-    });
+    // Two render styles, both orange, switchable live:
+    //   curves — smoothed prime-axis contour lines at the preset linework's weight
+    //   mesh   — every hull edge, drawn thin so the full triangulation doesn't blob
+    this.materials = {
+      curves: new LineMaterial({
+        color: 0xff9900,
+        linewidth: 3,
+        resolution: new Vector2(window.innerWidth, window.innerHeight),
+      }),
+      mesh: new LineMaterial({
+        color: 0xff9900,
+        linewidth: 1.2,
+        resolution: new Vector2(window.innerWidth, window.innerHeight),
+      }),
+    };
 
-    this.line = null;
+    this.style = 'curves';
+    this.lines = { curves: null, mesh: null };
     this._resize = () => this.resize();
     this._running = false;
   }
@@ -77,34 +88,49 @@ export class ReplicaViewer {
       (v[1] - centre[1]) / radius,
       (v[2] - centre[2]) / radius,
     ]);
-    // Sparse contour curves (meridians + parallels) instead of the raw hull edge set —
-    // ~6,000 triangulation segments read as a blob; a handful of smooth surface curves
-    // match the look of the preset models' baked wireframes.
-    const flat = [];
+
+    // Curves style: sparse smoothed contour lines along the prime axis.
+    const curveFlat = [];
     for (const loop of contourLoops(p, edges)) {
       for (let i = 0; i < loop.length; i++) {
         const a = loop[i], b = loop[(i + 1) % loop.length];
-        flat.push(...a, ...b);
+        curveFlat.push(...a, ...b);
       }
     }
+    // Mesh style: the raw hull triangulation, thin.
+    const meshFlat = [];
+    for (const [a, b] of edges) meshFlat.push(...p[a], ...p[b]);
 
-    if (this.line) {
-      this.shapesParent.remove(this.line);
-      this.line.geometry.dispose();
+    for (const key of ['curves', 'mesh']) {
+      if (this.lines[key]) {
+        this.shapesParent.remove(this.lines[key]);
+        this.lines[key].geometry.dispose();
+      }
+      const geom = new LineSegmentsGeometry();
+      geom.setPositions(key === 'curves' ? curveFlat : meshFlat);
+      this.lines[key] = new LineSegments2(geom, this.materials[key]);
+      this.lines[key].visible = key === this.style;
+      this.shapesParent.add(this.lines[key]);
     }
-    const geom = new LineSegmentsGeometry();
-    geom.setPositions(flat);
-    this.line = new LineSegments2(geom, this.material);
     this.shapesParent.rotation.set(0, 0, 0);
-    this.shapesParent.add(this.line);
+  }
+
+  /** @param {'curves'|'mesh'} style */
+  setStyle(style) {
+    this.style = style;
+    for (const key of ['curves', 'mesh']) {
+      if (this.lines[key]) this.lines[key].visible = key === style;
+    }
   }
 
   resize() {
-    const { canvas, camera, renderer, material } = this;
+    const { canvas, camera, renderer } = this;
     camera.aspect = canvas.clientWidth / canvas.clientHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
-    material.resolution.set(window.innerWidth, window.innerHeight);
+    for (const m of Object.values(this.materials)) {
+      m.resolution.set(window.innerWidth, window.innerHeight);
+    }
   }
 
   start() {

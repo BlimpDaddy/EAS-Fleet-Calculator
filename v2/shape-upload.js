@@ -70,6 +70,20 @@ overlayCanvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;
 viewerBox.appendChild(overlayCanvas);
 const replica = new ReplicaViewer(overlayCanvas);
 
+// Style toggle for uploads only — flips between sparse smoothed curves and the full
+// thin-line hull mesh. Bottom-left, mirroring V1's pause button bottom-right, reusing
+// its class so it inherits Frazer's styling. Label shows the CURRENT style.
+const styleBtn = document.createElement('button');
+styleBtn.className = 'shape-viewer-button';
+styleBtn.style.cssText = 'left:1rem;right:auto;width:auto;z-index:2;display:none;';
+styleBtn.textContent = 'CURVES';
+viewerBox.appendChild(styleBtn);
+styleBtn.addEventListener('click', () => {
+  const next = replica.style === 'curves' ? 'mesh' : 'curves';
+  replica.setStyle(next);
+  styleBtn.textContent = next.toUpperCase();
+});
+
 // ---------------------------------------------------------------- compute
 
 let worker = null;
@@ -187,6 +201,7 @@ let v1Spinning = animBtn.textContent.includes(ICON_PLAY); // V1 starts spinning
 function showOverlay(on) {
   overlayActive = on;
   overlayCanvas.style.display = on ? 'block' : 'none';
+  styleBtn.style.display = on ? 'block' : 'none';
   v1Canvas.style.visibility = on ? 'hidden' : 'visible';
   if (on) {
     replica.isSpinning = true;              // uploads always start spinning
