@@ -2,10 +2,12 @@
  * Phase A economics — PURE logic, no DOM. See V2-ROADMAP.md.
  *
  * Principle: physics gives quantities, sliders give prices, this module only
- * multiplies. Deliberately absent: fuel and any operating cost (a fixed fuel figure
- * is only true for the standard Sunship and would be silently wrong for anything
- * else — it arrives with the aerodynamics module). Hence payback here is SIMPLE
- * payback, labelled "before operating costs".
+ * multiplies. Fuel is deliberately NOT modelled separately (a fixed fuel figure is
+ * only true for the standard Sunship and would be silently wrong for anything else —
+ * it arrives with the aerodynamics module); until then it lives inside the user's
+ * all-in opex assumption. Payback is real (capex against margin, after opex);
+ * fleet/programme figures are steady-state — they assume the full fleet built and
+ * operating, with no ramp model.
  *
  * Kept DOM-free so the logic can be verified in Node against hand calculations.
  */
@@ -142,6 +144,7 @@ export function fmtRate(v) {
 export function fmtPayback(years) {
   if (years === null || !Number.isFinite(years)) return '—';
   if (years > 999) return '>999 yrs';
+  if (years > 0 && years < 0.05) return '<0.1 yrs'; // beachhead pricing can pay back in weeks — "0.0 yrs" reads broken
   return `${years.toFixed(1)} yrs`;
 }
 

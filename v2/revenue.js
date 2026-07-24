@@ -158,7 +158,10 @@ for (const [key, label] of [
 }
 recapPanel.append(recapHeading, recapGrid);
 
-// --- Panel 2: the three price controls ---
+// --- Panel 2: the five price controls ---
+// (Capex benchmark markers from the roadmap — Handmer $10M / container ship ~$150M /
+// 747-8F ~$400M — are deliberately NOT buttons: a third preset row would push the
+// page past small viewports. The anchors live in the roadmap and chat notes.)
 const controlsPanel = document.createElement('div');
 controlsPanel.className = 'panel-border econ-panel';
 const controlsHeading = document.createElement('h2');
