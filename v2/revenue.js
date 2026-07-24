@@ -20,7 +20,7 @@
 
 import {
   computeEconomics, logSlider,
-  RATE, CARBON, CAPEX, RATE_PRESETS, CARBON_PRESETS,
+  RATE, CARBON, CAPEX, OPEX, PRECAPEX, RATE_PRESETS, CARBON_PRESETS,
   fmtMoney, fmtRate, fmtPayback, parseDisplay,
 } from './economics.js';
 
@@ -50,9 +50,9 @@ style.textContent = `
     grid-row: 1 / 3;
     display: grid;
     grid-template-columns: 1fr 1fr;
-    grid-template-rows: repeat(7, min-content);
+    grid-auto-rows: min-content;
     align-items: center;
-    gap: 1rem;
+    gap: 0.75rem 1rem;
   }
   .econ-recap {
     display: grid;
@@ -174,7 +174,14 @@ presetRow(carbonCtl, CARBON_PRESETS, (v) => { carbonCtl.slider.value = v; });
 
 const capexCtl = control('Capex per Sunship', '', { min: 0, max: 100, step: 'any', value: capexMap.toView(CAPEX.default) });
 
-controlsPanel.append(controlsHeading, rateCtl.wrap, carbonCtl.wrap, capexCtl.wrap);
+// Opex is ALL-IN per ship (crew, fuel, maintenance, insurance, share of ground
+// infrastructure) — linear slider, the range spans only 20x. Pre-capex is the one-off
+// programme cost (R&D, testing, approval, pre-revenue burn) — log, spans 200x.
+const preMap = logSlider(PRECAPEX.min, PRECAPEX.max);
+const opexCtl = control('Opex per Sunship (all-in)', '/ year', { min: OPEX.min, max: OPEX.max, step: 1e6, value: OPEX.default });
+const preCtl = control('Programme Pre-Capex (R&D, approval)', 'one-off', { min: 0, max: 100, step: 'any', value: preMap.toView(PRECAPEX.default) });
+
+controlsPanel.append(controlsHeading, rateCtl.wrap, carbonCtl.wrap, capexCtl.wrap, opexCtl.wrap, preCtl.wrap);
 
 // --- Panel 3: results (V1's fleet-results pattern, spanning both rows) ---
 const resultsPanel = document.createElement('div');
@@ -194,17 +201,27 @@ function statRow(headerText, { emphasis = false } = {}) {
   resultsPanel.append(h, d);
   return d;
 }
+const addRule = () => {
+  const hr = document.createElement('div');
+  hr.className = 'fleet-results-hr';
+  resultsPanel.appendChild(hr);
+};
 const outTotal = statRow('Total Revenue / year:', { emphasis: true });
-const hr = document.createElement('div');
-hr.className = 'fleet-results-hr';
-resultsPanel.appendChild(hr);
+addRule();
 const outFreight = statRow('Freight Revenue / year:');
 const outCarbon = statRow('Carbon Credits / year:');
+const outFleetOpex = statRow('Fleet Opex / year:');
+const outFleetProfit = statRow('Fleet Profit / year:');
+addRule();
 const outPerShip = statRow('Revenue per Sunship / year:');
-const outPayback = statRow('Simple Payback:');
+const outMargin = statRow('Margin per Sunship / year:');
+const outPayback = statRow('Payback per Sunship:');
+const outBreakeven = statRow('Programme Breakeven:');
 const note = document.createElement('div');
 note.className = 'econ-note';
-note.textContent = 'Payback is before operating costs — fuel & opex arrive with the aerodynamics module.';
+note.textContent =
+  'Steady state: fleet figures assume the full fleet is built and operating. ' +
+  'Breakeven repays pre-capex + full fleet capex from fleet profit; payback is per ship, after opex.';
 resultsPanel.appendChild(note);
 
 // Share: copy the whole scenario — numbers AND the assumptions that produced them —
@@ -222,8 +239,7 @@ resultsPanel.appendChild(shareRow);
 function buildSummary() {
   const i = readInputs();
   const e = computeEconomics(i);
-  const requiredRaw = parseDisplay($('[data-fleet="results-required"]')?.textContent);
-  const required = requiredRaw > 0 ? Math.round(requiredRaw).toLocaleString('en-US') : '—';
+  const required = e.requiredShips !== null ? Math.round(e.requiredShips).toLocaleString('en-US') : '—';
   const length = $('[data-ship="length-output"]')?.textContent ?? '—';
   const temp = $('[data-ship="temperature-output"]')?.textContent ?? '—';
   const shape = $('[data-shape="shape"]')?.textContent ?? '—';
@@ -235,12 +251,13 @@ function buildSummary() {
     `Airspeed: ${i.airSpeedKmh} km/h · Utilisation: ${i.utilisationPct}%`,
     `Market: ${i.marketSizeTtkm.toFixed(2)} Trillion Ton-km/yr`,
     `Total Airships Required: ${required}`,
-    `Assumptions: ${fmtRate(i.ratePerTkm)}/ton-km · Carbon $${i.carbonPerT}/t · Capex ${fmtMoney(i.capex)}/ship`,
+    `Assumptions: ${fmtRate(i.ratePerTkm)}/ton-km · Carbon $${i.carbonPerT}/t · Capex ${fmtMoney(i.capex)}/ship · Opex ${fmtMoney(i.opexPerShip)}/ship/yr · Pre-Capex ${fmtMoney(i.preCapex)}`,
     `TOTAL REVENUE: ${fmtMoney(e.totalRevenue)}/yr`,
     `— Freight: ${fmtMoney(e.freightRevenue)}/yr`,
     `— Carbon Credits: ${fmtMoney(e.carbonRevenue)}/yr`,
-    `Revenue per Sunship: ${fmtMoney(e.revenuePerShip)}/yr`,
-    `Simple Payback: ${fmtPayback(e.paybackYears)} (before operating costs)`,
+    `Fleet Opex: ${fmtMoney(e.fleetOpex)}/yr → FLEET PROFIT: ${fmtMoney(e.fleetProfit)}/yr`,
+    `Per Sunship: ${fmtMoney(e.revenuePerShip)}/yr revenue · ${fmtMoney(e.marginPerShip)}/yr margin · Payback ${fmtPayback(e.paybackYears)}`,
+    `PROGRAMME BREAKEVEN: ${fmtPayback(e.breakevenYears)} (repays pre-capex + full fleet capex, steady state)`,
     'eas-calc.pages.dev',
   ].join('\n');
 }
@@ -320,6 +337,8 @@ function readInputs() {
     ratePerTkm: rateMap.toValue(Number(rateCtl.slider.value)),
     carbonPerT: Number(carbonCtl.slider.value),
     capex: capexMap.toValue(Number(capexCtl.slider.value)),
+    opexPerShip: Number(opexCtl.slider.value),
+    preCapex: preMap.toValue(Number(preCtl.slider.value)),
   };
 }
 
@@ -335,6 +354,8 @@ function recompute() {
     rateCtl.valueSpan.textContent = fmtRate(inputs.ratePerTkm);
     carbonCtl.valueSpan.textContent = `$${inputs.carbonPerT}`;
     capexCtl.valueSpan.textContent = fmtMoney(inputs.capex);
+    opexCtl.valueSpan.textContent = fmtMoney(inputs.opexPerShip);
+    preCtl.valueSpan.textContent = fmtMoney(inputs.preCapex);
 
     recapFields.shape.textContent = $('[data-shape="shape"]')?.textContent || '—';
     recapFields.ve.textContent = $('[data-shape="input-volume-efficiency"]')?.value || '—';
@@ -346,15 +367,19 @@ function recompute() {
     outFreight.textContent = fmtMoney(e.freightRevenue);
     outCarbon.textContent = fmtMoney(e.carbonRevenue);
     outTotal.textContent = fmtMoney(e.totalRevenue);
+    outFleetOpex.textContent = fmtMoney(e.fleetOpex);
+    outFleetProfit.textContent = fmtMoney(e.fleetProfit);
     outPerShip.textContent = fmtMoney(e.revenuePerShip);
+    outMargin.textContent = fmtMoney(e.marginPerShip);
     outPayback.textContent = fmtPayback(e.paybackYears);
+    outBreakeven.textContent = fmtPayback(e.breakevenYears);
   }, 0);
 }
 window.__v2Econ = { readInputs, recompute, computeEconomics, showEconomics, buildSummary }; // for automated tests
 
 // ---------------------------------------------------------------- wiring
 
-for (const s of [rateCtl.slider, carbonCtl.slider, capexCtl.slider]) {
+for (const s of [rateCtl.slider, carbonCtl.slider, capexCtl.slider, opexCtl.slider, preCtl.slider]) {
   s.addEventListener('input', recompute);
 }
 

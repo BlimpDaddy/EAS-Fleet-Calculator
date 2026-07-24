@@ -19,12 +19,25 @@
  * @param {number} i.ratePerTkm      $ per tonne-km
  * @param {number} i.carbonPerT      $ per tonne CO2
  * @param {number} i.capex           $ per Sunship
+ * @param {number} i.opexPerShip     $ per Sunship per year, ALL-IN (crew, fuel,
+ *                                    maintenance, insurance, and its share of ground
+ *                                    infrastructure — barges/crews/heating scale with
+ *                                    the network, and the network scales with ships,
+ *                                    so per-ship is the correct allocation)
+ * @param {number} i.preCapex        $ one-off programme cost (R&D, testing, approval —
+ *                                    including corporate burn during the pre-revenue
+ *                                    decade; the truly fixed post-revenue overhead is
+ *                                    negligible against any operating fleet's revenue)
  */
 export function computeEconomics(i) {
   // Work one Sunship performs per year. Same formula as V1's tonKmPerYear
   // (netLift × speed × utilisation × hours-in-year). Negative net lift means the
   // ship cannot fly, let alone earn — clamp to zero rather than print nonsense.
   const tonKmPerShip = Math.max(0, i.netLiftT) * i.airSpeedKmh * (i.utilisationPct / 100) * 8760;
+
+  // Fleet size needed to serve the market — V1's own formula, computed here (exact,
+  // unrounded) rather than read from its display. null = the ship cannot fly.
+  const requiredShips = tonKmPerShip > 0 ? (i.marketSizeTtkm * 1e12) / tonKmPerShip : null;
 
   const freightRevenue = i.marketSizeTtkm * 1e12 * i.ratePerTkm;
 
@@ -33,20 +46,39 @@ export function computeEconomics(i) {
   // emissions model is future work (see roadmap).
   const co2AvoidedMt = i.marketSizeTtkm * (1000 / 122);
   const carbonRevenue = co2AvoidedMt * 1e6 * i.carbonPerT;
+  const totalRevenue = freightRevenue + carbonRevenue;
 
   const revenuePerShip = tonKmPerShip * i.ratePerTkm;
+  const marginPerShip = revenuePerShip - i.opexPerShip;
 
-  // Simple payback, before operating costs. null = not meaningful (ship earns nothing).
-  const paybackYears = revenuePerShip > 0 ? i.capex / revenuePerShip : null;
+  // REAL payback per ship: capex against margin, not revenue. null = never pays back
+  // (ship can't fly, or opex eats the revenue) — callers print "—", never negatives.
+  const paybackYears = revenuePerShip > 0 && marginPerShip > 0 ? i.capex / marginPerShip : null;
+
+  // Fleet- and programme-level figures. Steady-state by design: they assume the full
+  // fleet is built and operating (no ramp model — see the on-page note).
+  const fleetOpex = requiredShips !== null ? requiredShips * i.opexPerShip : null;
+  const fleetProfit = fleetOpex !== null ? totalRevenue - fleetOpex : null;
+  const programmeCost = requiredShips !== null ? i.preCapex + requiredShips * i.capex : null;
+  const breakevenYears =
+    programmeCost !== null && fleetProfit !== null && fleetProfit > 0
+      ? programmeCost / fleetProfit
+      : null;
 
   return {
     tonKmPerShip,
+    requiredShips,
     co2AvoidedMt,
     freightRevenue,
     carbonRevenue,
-    totalRevenue: freightRevenue + carbonRevenue,
+    totalRevenue,
     revenuePerShip,
+    marginPerShip,
     paybackYears,
+    fleetOpex,
+    fleetProfit,
+    programmeCost,
+    breakevenYears,
   };
 }
 
@@ -65,6 +97,8 @@ export const logSlider = (min, max) => ({
 export const RATE = { min: 0.005, max: 2.0, default: 0.10 };       // $/tonne-km
 export const CARBON = { min: 0, max: 400, default: 20 };           // $/tonne CO2
 export const CAPEX = { min: 10e6, max: 1e9, default: 150e6 };      // $/Sunship
+export const OPEX = { min: 10e6, max: 200e6, default: 80e6 };      // $/Sunship/yr, all-in (linear — only a 20x span)
+export const PRECAPEX = { min: 100e6, max: 20e9, default: 1e9 };   // $ one-off programme (log — 200x span)
 
 export const RATE_PRESETS = [
   { label: 'Ocean', value: 0.01 },
@@ -88,14 +122,15 @@ export const CARBON_PRESETS = [
 
 // ---------------------------------------------------------------- formatting
 
-/** "$650.00B", "$10.00T", "$418.7M" — one tier, two/one decimals, never NaN. */
+/** "$650.00B", "$10.00T", "$418.7M", "−$50.0M" — one tier, sign out front, never NaN. */
 export function fmtMoney(v) {
-  if (!Number.isFinite(v)) return '—';
+  if (v === null || !Number.isFinite(v)) return '—';
+  const sign = v < 0 ? '−' : '';
   const abs = Math.abs(v);
-  if (abs >= 1e12) return `$${(v / 1e12).toFixed(2)}T`;
-  if (abs >= 1e9) return `$${(v / 1e9).toFixed(2)}B`;
-  if (abs >= 1e6) return `$${(v / 1e6).toFixed(1)}M`;
-  return `$${Math.round(v).toLocaleString('en-US')}`;
+  if (abs >= 1e12) return `${sign}$${(abs / 1e12).toFixed(2)}T`;
+  if (abs >= 1e9) return `${sign}$${(abs / 1e9).toFixed(2)}B`;
+  if (abs >= 1e6) return `${sign}$${(abs / 1e6).toFixed(1)}M`;
+  return `${sign}$${Math.round(abs).toLocaleString('en-US')}`;
 }
 
 /** Rate shown in cents: "10.0¢" (sub-$1 territory is where all the anchors live). */
