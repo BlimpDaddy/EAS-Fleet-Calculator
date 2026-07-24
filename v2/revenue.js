@@ -52,7 +52,7 @@ style.textContent = `
     grid-template-columns: 1fr 1fr;
     grid-auto-rows: min-content;
     align-items: center;
-    gap: 0.75rem 1rem;
+    gap: 0.5rem 1rem;
   }
   .econ-recap {
     display: grid;
@@ -217,24 +217,22 @@ const outPerShip = statRow('Revenue per Sunship / year:');
 const outMargin = statRow('Margin per Sunship / year:');
 const outPayback = statRow('Payback per Sunship:');
 const outBreakeven = statRow('Programme Breakeven:');
-const note = document.createElement('div');
-note.className = 'econ-note';
-note.textContent =
-  'Steady state: fleet figures assume the full fleet is built and operating. ' +
-  'Breakeven repays pre-capex + full fleet capex from fleet profit; payback is per ship, after opex.';
-resultsPanel.appendChild(note);
+// No on-page caveat note by Toby's call — the COPY SUMMARY text still carries the
+// steady-state caveat inline on its breakeven line, so shared numbers keep their
+// context even though the page lets viewers interpret freely.
 
 // Share: copy the whole scenario — numbers AND the assumptions that produced them —
 // as plain text for chats/socials. Assumptions travel with results on purpose: a
 // revenue figure without its rate is noise; with it, it's an argument.
+// Lives in the LEFT column (under the recap) where there's spare height — keeping it
+// in the results column pushed the page past small viewports and hid the button.
 const shareRow = document.createElement('div');
 shareRow.className = 'fleet-chart-button-container';
-shareRow.style.gridColumn = '1 / 3';
 const shareBtn = document.createElement('button');
 shareBtn.className = 'fleet-chart-button';
 shareBtn.textContent = 'COPY SUMMARY';
 shareRow.appendChild(shareBtn);
-resultsPanel.appendChild(shareRow);
+recapPanel.appendChild(shareRow);
 
 function buildSummary() {
   const i = readInputs();
