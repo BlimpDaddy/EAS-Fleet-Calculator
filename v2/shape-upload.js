@@ -206,15 +206,23 @@ function loadObjText(name, text) {
     applyNumbers(m.metrics);
     replica.setShape(m.hullPoints, facesToEdges(m.hullFaces), m.metrics.centre, m.metrics.radius);
     showOverlay(true);
-    // V1 swaps the Ship/Fleet "Previous Properties" icons per PRESET, but knows
-    // nothing about uploads — without this the corner icon silently shows whatever
-    // preset was last active. Use a freeze-frame of the freshly loaded shape; any
-    // later preset click re-publishes V1's own PNG over it.
+    // V1 renders the Ship/Fleet "Previous Properties" panes (icon, shape name, VS)
+    // from its preset config on its own "shape" event, which uploads never fire — so
+    // all three go stale, showing whatever preset was last active. Stamp the uploaded
+    // shape's freeze-frame, name, and computed VS directly; any later preset click
+    // re-publishes V1's own values over them.
     const icon = replica.snapshot();
+    const displayName = $('[data-shape="shape"]').textContent;
     for (const sel of ['[data-ship="selected-icon"]', '[data-fleet="selected-icon"]']) {
       const el = $(sel);
       if (el) el.src = icon;
     }
+    for (const sel of ['[data-ship="selected-shape"]', '[data-fleet="selected-shape"]']) {
+      const el = $(sel);
+      if (el) el.textContent = displayName;
+    }
+    const vsPane = $('[data-ship="selected-volumescalar"]');
+    if (vsPane) vsPane.textContent = $('[data-shape="volume-scalar"]').textContent;
   });
 }
 window.__v2LoadObjText = loadObjText; // used by automated tests
