@@ -13,7 +13,7 @@
 
 import {
   computeEconomics, logSlider,
-  RATE, CARBON, CAPEX, RATE_PRESETS,
+  RATE, CARBON, CAPEX, RATE_PRESETS, CARBON_PRESETS,
   fmtMoney, fmtRate, fmtPayback, parseDisplay,
 } from './economics.js';
 
@@ -123,6 +123,21 @@ for (const p of RATE_PRESETS) {
 rateCtl.wrap.appendChild(ratePresetRow);
 
 const carbonCtl = control('Carbon Price', '/ Tonne CO₂', { min: CARBON.min, max: CARBON.max, step: 1, value: CARBON.default });
+// Same preset treatment as the rate slider: the carbon anchors ARE the policy story
+// (junk-vs-credible VCM, EU compliance, IMO's 2028 penalty tiers) — one click each.
+const carbonPresetRow = document.createElement('div');
+carbonPresetRow.className = 'fleet-chart-button-container';
+for (const p of CARBON_PRESETS) {
+  const b = document.createElement('button');
+  b.className = 'fleet-chart-button';
+  b.textContent = p.label;
+  b.addEventListener('click', () => {
+    carbonCtl.slider.value = p.value;
+    recompute();
+  });
+  carbonPresetRow.appendChild(b);
+}
+carbonCtl.wrap.appendChild(carbonPresetRow);
 const capexCtl = control('Capex per Sunship', '', { min: 0, max: 100, step: 'any', value: capexMap.toView(CAPEX.default) });
 
 controls.append(rateCtl.wrap, carbonCtl.wrap, capexCtl.wrap);

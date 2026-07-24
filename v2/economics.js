@@ -63,13 +63,27 @@ export const logSlider = (min, max) => ({
 });
 
 export const RATE = { min: 0.005, max: 2.0, default: 0.10 };       // $/tonne-km
-export const CARBON = { min: 0, max: 300, default: 80 };           // $/tonne CO2
+export const CARBON = { min: 0, max: 400, default: 20 };           // $/tonne CO2
 export const CAPEX = { min: 10e6, max: 1e9, default: 150e6 };      // $/Sunship
 
 export const RATE_PRESETS = [
   { label: 'Ocean', value: 0.01 },
   { label: 'EAS Target', value: 0.10 },
   { label: 'Air Freight', value: 0.40 },
+];
+
+// Carbon anchors, researched July 2026 (see V2-ROADMAP / chat notes):
+//   VCM      — credible voluntary-market avoidance credits trade ~$10–30/t today
+//              (the $1–5 headlines are the junk tier). Conservative default: $20.
+//   EU ETS   — allowances ~€80–82 (≈$85) in July 2026; shipping is already covered
+//              on EU-touching voyages, so this is a customer's avoided cost there.
+//   IMO Tier 2 — the Net-Zero Framework's higher remedial-unit price, $380/tCO2e
+//              fixed for 2028–2030; over-performing ships EARN tradeable surplus
+//              units, which is precisely EAS's position. Adoption re-vote Oct 2026.
+export const CARBON_PRESETS = [
+  { label: 'VCM', value: 15 },
+  { label: 'EU ETS', value: 85 },
+  { label: 'IMO Tier 2', value: 380 },
 ];
 
 // ---------------------------------------------------------------- formatting
