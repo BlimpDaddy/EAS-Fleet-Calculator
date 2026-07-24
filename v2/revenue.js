@@ -207,6 +207,63 @@ note.className = 'econ-note';
 note.textContent = 'Payback is before operating costs — fuel & opex arrive with the aerodynamics module.';
 resultsPanel.appendChild(note);
 
+// Share: copy the whole scenario — numbers AND the assumptions that produced them —
+// as plain text for chats/socials. Assumptions travel with results on purpose: a
+// revenue figure without its rate is noise; with it, it's an argument.
+const shareRow = document.createElement('div');
+shareRow.className = 'fleet-chart-button-container';
+shareRow.style.gridColumn = '1 / 3';
+const shareBtn = document.createElement('button');
+shareBtn.className = 'fleet-chart-button';
+shareBtn.textContent = 'COPY SUMMARY';
+shareRow.appendChild(shareBtn);
+resultsPanel.appendChild(shareRow);
+
+function buildSummary() {
+  const i = readInputs();
+  const e = computeEconomics(i);
+  const requiredRaw = parseDisplay($('[data-fleet="results-required"]')?.textContent);
+  const required = requiredRaw > 0 ? Math.round(requiredRaw).toLocaleString('en-US') : '—';
+  const length = $('[data-ship="length-output"]')?.textContent ?? '—';
+  const temp = $('[data-ship="temperature-output"]')?.textContent ?? '—';
+  const shape = $('[data-shape="shape"]')?.textContent ?? '—';
+  const ve = $('[data-shape="input-volume-efficiency"]')?.value ?? '—';
+  return [
+    'EAS FLEET CALCULATOR',
+    `Shape: ${shape} (VE ${ve})`,
+    `Ship: ${length}m @ ${temp}°C → Net Lift ${Math.round(i.netLiftT).toLocaleString('en-US')} tonnes`,
+    `Airspeed: ${i.airSpeedKmh} km/h · Utilisation: ${i.utilisationPct}%`,
+    `Market: ${i.marketSizeTtkm.toFixed(2)} Trillion Ton-km/yr`,
+    `Total Airships Required: ${required}`,
+    `Assumptions: ${fmtRate(i.ratePerTkm)}/ton-km · Carbon $${i.carbonPerT}/t · Capex ${fmtMoney(i.capex)}/ship`,
+    `TOTAL REVENUE: ${fmtMoney(e.totalRevenue)}/yr`,
+    `— Freight: ${fmtMoney(e.freightRevenue)}/yr`,
+    `— Carbon Credits: ${fmtMoney(e.carbonRevenue)}/yr`,
+    `Revenue per Sunship: ${fmtMoney(e.revenuePerShip)}/yr`,
+    `Simple Payback: ${fmtPayback(e.paybackYears)} (before operating costs)`,
+    'eas-calc.pages.dev',
+  ].join('\n');
+}
+
+shareBtn.addEventListener('click', async () => {
+  const text = buildSummary();
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    // Clipboard API can be blocked (non-secure context, permissions) — textarea fallback.
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;opacity:0;';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    ta.remove();
+  }
+  const old = shareBtn.textContent;
+  shareBtn.textContent = 'COPIED ✓';
+  setTimeout(() => { shareBtn.textContent = old; }, 1500);
+});
+
 section.append(recapPanel, controlsPanel, resultsPanel);
 $('[data-section="fleet"]').after(section);
 
@@ -293,7 +350,7 @@ function recompute() {
     outPayback.textContent = fmtPayback(e.paybackYears);
   }, 0);
 }
-window.__v2Econ = { readInputs, recompute, computeEconomics, showEconomics }; // for automated tests
+window.__v2Econ = { readInputs, recompute, computeEconomics, showEconomics, buildSummary }; // for automated tests
 
 // ---------------------------------------------------------------- wiring
 
