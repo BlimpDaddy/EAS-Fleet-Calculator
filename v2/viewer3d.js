@@ -125,12 +125,26 @@ export class ReplicaViewer {
 
   resize() {
     const { canvas, camera, renderer } = this;
+    if (!canvas.clientWidth || !canvas.clientHeight) return; // hidden — keep last size
     camera.aspect = canvas.clientWidth / canvas.clientHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
     for (const m of Object.values(this.materials)) {
       m.resolution.set(window.innerWidth, window.innerHeight);
     }
+  }
+
+  /**
+   * Freeze-frame of the current shape as a PNG data URL (front-on, transparent
+   * background). Rendered synchronously so the WebGL buffer is valid for toDataURL
+   * in the same task — no preserveDrawingBuffer needed. Used as the "Previous
+   * Properties" icon on the Ship/Fleet pages for uploaded shapes, which V1's own
+   * per-preset icon swap knows nothing about.
+   */
+  snapshot() {
+    this.resize();
+    this.renderer.render(this.scene, this.camera);
+    return this.canvas.toDataURL('image/png');
   }
 
   start() {

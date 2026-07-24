@@ -206,6 +206,15 @@ function loadObjText(name, text) {
     applyNumbers(m.metrics);
     replica.setShape(m.hullPoints, facesToEdges(m.hullFaces), m.metrics.centre, m.metrics.radius);
     showOverlay(true);
+    // V1 swaps the Ship/Fleet "Previous Properties" icons per PRESET, but knows
+    // nothing about uploads — without this the corner icon silently shows whatever
+    // preset was last active. Use a freeze-frame of the freshly loaded shape; any
+    // later preset click re-publishes V1's own PNG over it.
+    const icon = replica.snapshot();
+    for (const sel of ['[data-ship="selected-icon"]', '[data-fleet="selected-icon"]']) {
+      const el = $(sel);
+      if (el) el.src = icon;
+    }
   });
 }
 window.__v2LoadObjText = loadObjText; // used by automated tests
