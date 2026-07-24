@@ -114,6 +114,10 @@ function compute(payload, transfer, onDone) {
 function applyNumbers(metrics) {
   $('[data-shape="volume-scalar"]').textContent = round3(metrics.simpleVS);
   vsInfCell.textContent = metrics.vsInf.toFixed(3);
+  // VS∞ row on the Ship page's Previous Properties pane (a V2 addition to the
+  // static HTML) — ours alone, so this single write covers presets AND uploads.
+  const shipVsInf = $('[data-v2="ship-vs-inf"]');
+  if (shipVsInf) shipVsInf.textContent = metrics.vsInf.toFixed(3);
 
   const veInput = $('[data-shape="input-volume-efficiency"]');
   veInput.value = metrics.ve.toFixed(3); // plain number — V1's handler does value/100
