@@ -162,11 +162,21 @@ function facesToEdges(faces) {
   return edges;
 }
 
+// The V1 pause button's icon is the single source of truth for spin state: V1 sets
+// ⏸ while playing, ▶ while paused, and always keeps it correct. Reading it (rather
+// than keeping a second independent boolean) is what prevents the two viewers drifting.
+const animBtn = $('[data-shape="animation-button"]');
+const buttonWantsSpin = () => animBtn.textContent.includes('⏸');
+
 function showOverlay(on) {
   overlayCanvas.style.display = on ? 'block' : 'none';
   v1Canvas.style.visibility = on ? 'hidden' : 'visible';
-  if (on) replica.start();
-  else replica.stop();
+  if (on) {
+    replica.isSpinning = buttonWantsSpin(); // adopt whatever the button currently shows
+    replica.start();
+  } else {
+    replica.stop();
+  }
 }
 
 // ---------------------------------------------------------------- wiring
@@ -178,7 +188,9 @@ fileInput.addEventListener('change', (e) => {
   fileInput.value = '';
 });
 
-// V1's pause button drives its own viewer; mirror it for the replica.
-$('[data-shape="animation-button"]').addEventListener('click', () => {
-  replica.isSpinning = !replica.isSpinning;
+// V1's pause button drives its own viewer; mirror its resulting state onto the replica.
+// The mirror is deferred to a microtask so V1's (synchronous) click handler has already
+// flipped the button icon — we read the truth rather than guessing a toggle direction.
+animBtn.addEventListener('click', () => {
+  queueMicrotask(() => { replica.isSpinning = buttonWantsSpin(); });
 });
