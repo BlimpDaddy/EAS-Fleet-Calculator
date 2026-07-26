@@ -164,10 +164,22 @@ recapPanel.append(recapHeading, recapGrid);
 // page past small viewports. The anchors live in the roadmap and chat notes.)
 const controlsPanel = document.createElement('div');
 controlsPanel.className = 'panel-border econ-panel';
+// Heading + pink EAS ideal button, exactly V1's fleet-page pattern. The defaults ARE
+// the EAS scenario, so the button is simply "return to defaults" after any changes.
+const headingContainer = document.createElement('div');
+headingContainer.className = 'fleet-controls-heading-container';
 const controlsHeading = document.createElement('h2');
 controlsHeading.className = 'fleet-controls-heading';
-controlsHeading.style.cssText = 'display:block;text-align:center;color:var(--color-secondary);font-size:var(--font-lg);';
 controlsHeading.textContent = 'Current Properties';
+const idealBtn = document.createElement('button');
+idealBtn.className = 'fleet-control-preset';
+idealBtn.dataset.v2 = 'econ-ideal';
+const idealIcon = document.createElement('img');
+idealIcon.className = 'fleet-control-preset-icon';
+idealIcon.src = '/assets/logo_circles.svg';
+idealIcon.alt = 'EAS ideal economics';
+idealBtn.appendChild(idealIcon);
+headingContainer.append(controlsHeading, idealBtn);
 
 const rateCtl = control('Freight Rate', '/ Ton-km', { min: 0, max: 100, step: 'any', value: rateMap.toView(RATE.default) });
 presetRow(rateCtl, RATE_PRESETS, (v) => { rateCtl.slider.value = rateMap.toView(v); });
@@ -184,7 +196,16 @@ const preMap = logSlider(PRECAPEX.min, PRECAPEX.max);
 const opexCtl = control('Opex per Sunship (all-in)', '/ year', { min: OPEX.min, max: OPEX.max, step: 1e6, value: OPEX.default });
 const preCtl = control('Programme Pre-Capex (R&D, approval)', 'one-off', { min: 0, max: 100, step: 'any', value: preMap.toView(PRECAPEX.default) });
 
-controlsPanel.append(controlsHeading, rateCtl.wrap, carbonCtl.wrap, capexCtl.wrap, opexCtl.wrap, preCtl.wrap);
+controlsPanel.append(headingContainer, rateCtl.wrap, carbonCtl.wrap, capexCtl.wrap, opexCtl.wrap, preCtl.wrap);
+
+idealBtn.addEventListener('click', () => {
+  rateCtl.slider.value = rateMap.toView(RATE.default);
+  carbonCtl.slider.value = CARBON.default;
+  capexCtl.slider.value = capexMap.toView(CAPEX.default);
+  opexCtl.slider.value = OPEX.default;
+  preCtl.slider.value = preMap.toView(PRECAPEX.default);
+  recompute();
+});
 
 // --- Panel 3: results (V1's fleet-results pattern, spanning both rows) ---
 const resultsPanel = document.createElement('div');
@@ -259,7 +280,7 @@ function buildSummary() {
     `Fleet Opex: ${fmtMoney(e.fleetOpex)}/yr → FLEET PROFIT: ${fmtMoney(e.fleetProfit)}/yr`,
     `Per Sunship: ${fmtMoney(e.revenuePerShip)}/yr revenue · ${fmtMoney(e.marginPerShip)}/yr margin · Payback ${fmtPayback(e.paybackYears)}`,
     `PROGRAMME BREAKEVEN: ${fmtPayback(e.breakevenYears)} (repays pre-capex + full fleet capex, steady state)`,
-    'eas-calc.pages.dev',
+    'www.electricairshipping.com/calc',
   ].join('\n');
 }
 

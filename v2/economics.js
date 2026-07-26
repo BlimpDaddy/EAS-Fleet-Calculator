@@ -96,11 +96,16 @@ export const logSlider = (min, max) => ({
   toView: (value) => (100 * Math.log(value / min)) / Math.log(max / min),
 });
 
-export const RATE = { min: 0.005, max: 2.0, default: 0.10 };       // $/tonne-km
-export const CARBON = { min: 0, max: 400, default: 20 };           // $/tonne CO2
+// Defaults are the EAS "ideal" scenario (Toby, 2026-07-24) — the page loads on them,
+// and the pink EAS button on the Economics page returns to them after any changes:
+//   rate 28¢ — a solid undercut of ~40¢ air freight for the beachhead segment
+//   carbon $80 — EU-ETS-class pricing
+//   capex $150M, opex $80M all-in, pre-capex $10B programme
+export const RATE = { min: 0.005, max: 2.0, default: 0.28 };       // $/tonne-km
+export const CARBON = { min: 0, max: 400, default: 80 };           // $/tonne CO2
 export const CAPEX = { min: 10e6, max: 1e9, default: 150e6 };      // $/Sunship
 export const OPEX = { min: 10e6, max: 200e6, default: 80e6 };      // $/Sunship/yr, all-in (linear — only a 20x span)
-export const PRECAPEX = { min: 100e6, max: 20e9, default: 1e9 };   // $ one-off programme (log — 200x span)
+export const PRECAPEX = { min: 100e6, max: 20e9, default: 10e9 };  // $ one-off programme (log — 200x span)
 
 export const RATE_PRESETS = [
   { label: 'Ocean', value: 0.01 },
@@ -121,6 +126,7 @@ export const CARBON_PRESETS = [
   { label: 'EU ETS', value: 85 },
   { label: 'IMO Tier 2', value: 380 },
 ];
+
 
 // ---------------------------------------------------------------- formatting
 
