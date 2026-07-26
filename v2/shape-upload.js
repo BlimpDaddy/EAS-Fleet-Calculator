@@ -197,7 +197,7 @@ function loadObjText(name, text) {
   compute({ text }, null, (m) => {
     $('[data-shape="shape"]').textContent = name.replace(/\.obj$/i, '').toUpperCase();
     applyNumbers(m.metrics);
-    replica.setShape(m.meshSegments, m.hullPoints, facesToEdges(m.hullFaces), m.hullFaces, m.metrics.centre, m.metrics.radius);
+    replica.setShape(m.meshSegments, m.meshPoints, m.hullPoints, facesToEdges(m.hullFaces), m.hullFaces, m.metrics.centre, m.metrics.radius);
     showOverlay(true);
     // V1 renders the Ship/Fleet "Previous Properties" panes (icon, shape name, VS)
     // from its preset config on its own "shape" event, which uploads never fire — so

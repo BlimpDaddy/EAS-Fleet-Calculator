@@ -25,6 +25,7 @@ import {
   Scene, PerspectiveCamera, WebGLRenderer, Group, Vector2,
   SphereGeometry, WireframeGeometry, LineBasicMaterial, LineSegments,
   BufferGeometry, BufferAttribute, Mesh, MeshBasicMaterial, DoubleSide,
+  Points, PointsMaterial,
 } from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
@@ -66,6 +67,8 @@ export class ReplicaViewer {
     const res = new Vector2(window.innerWidth, window.innerHeight);
     this.materials = {
       mesh: new LineMaterial({ color: ORANGE, linewidth: 1.5, resolution: res.clone() }),
+      // Point-cloud files: the true input data drawn as dots (constant pixel size).
+      dots: new PointsMaterial({ color: ORANGE, size: 4, sizeAttenuation: false }),
       hullLine: new LineMaterial({
         color: MAGENTA, linewidth: 1, transparent: true, opacity: 0.35,
         resolution: res.clone(), depthWrite: false,
@@ -84,13 +87,17 @@ export class ReplicaViewer {
   /**
    * @param {Float32Array|null} meshSegments  original-mesh edges, pre-normalised flat
    *                                          [ax,ay,az,bx,by,bz,...]; null = point cloud
+   * @param {Float32Array|null} meshPoints    for point-cloud files: the original
+   *                                          vertices themselves, pre-normalised —
+   *                                          drawn as orange dots so orange is ALWAYS
+   *                                          the input data, never the hull
    * @param {number[][]} hullPoints  hull vertices (raw)
    * @param {number[][]} hullEdges   [a,b] pairs into hullPoints
    * @param {number[][]} hullFaces   triangles into hullPoints (for the bubble skin)
    * @param {number[]} centre        miniball centre
    * @param {number} radius          miniball radius
    */
-  setShape(meshSegments, hullPoints, hullEdges, hullFaces, centre, radius) {
+  setShape(meshSegments, meshPoints, hullPoints, hullEdges, hullFaces, centre, radius) {
     // Normalise hull data into the unit measuring sphere (mesh arrives normalised).
     const p = hullPoints.map((v) => [
       (v[0] - centre[0]) / radius,
@@ -106,17 +113,18 @@ export class ReplicaViewer {
       }
     }
 
-    // ORANGE — the true shape. Falls back to hull edges for point-cloud files.
-    let orangeFlat = meshSegments;
-    if (!orangeFlat) {
-      orangeFlat = new Float32Array(hullEdges.length * 6);
-      hullEdges.forEach(([a, b], i) => {
-        orangeFlat.set([...p[a], ...p[b]], i * 6);
-      });
+    // ORANGE — always the true input: mesh edges when the file has faces, the raw
+    // points as dots when it doesn't. Never the hull (that's pink's job — the old
+    // hull-edge fallback made point-cloud files look like "distorted" shapes).
+    if (meshSegments) {
+      const meshGeom = new LineSegmentsGeometry();
+      meshGeom.setPositions(meshSegments);
+      this.parts.mesh = new LineSegments2(meshGeom, this.materials.mesh);
+    } else {
+      const dotGeom = new BufferGeometry();
+      dotGeom.setAttribute('position', new BufferAttribute(meshPoints ?? new Float32Array(0), 3));
+      this.parts.mesh = new Points(dotGeom, this.materials.dots);
     }
-    const meshGeom = new LineSegmentsGeometry();
-    meshGeom.setPositions(orangeFlat);
-    this.parts.mesh = new LineSegments2(meshGeom, this.materials.mesh);
     this.parts.mesh.renderOrder = 2; // orange stays most visible: drawn last
 
     // PINK — the measured hull: translucent bubble skin + whisper-thin lines.
