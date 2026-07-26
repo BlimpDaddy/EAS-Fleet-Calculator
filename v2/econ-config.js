@@ -1,0 +1,66 @@
+/**
+ * ECONOMICS PAGE CONFIG — safe to edit by hand (Toby-friendly).
+ *
+ * Change the numbers, save, refresh the browser. That's it.
+ * Keep the commas and braces exactly as they are — if the page stops working
+ * after an edit, undo your change (or ask Claude to `git checkout` this file).
+ *
+ * Underscores in numbers are just thousand-separators: 150_000_000 = $150 million.
+ *
+ * NOT in this file (they live inside V1's compiled bundle, ask Claude to change):
+ * ship page defaults (0m / 0°C), fleet ideal button (0.33 Ttkm), fleet market
+ * preset buttons (Air Freight / Container / Global Maritime).
+ */
+
+// Each slider: minimum, maximum, and default. The DEFAULTS are also what the pink
+// EAS button on the Economics page restores — defaults ARE the EAS scenario.
+
+export const RATE = {                 // Freight rate, $ per tonne-km
+  min: 0.005,                         //   0.5¢
+  max: 2.0,                           //   $2.00
+  default: 0.28,                      //   28¢ — solid undercut of ~40¢ air freight
+};
+
+export const CARBON = {               // Carbon price, $ per tonne CO2
+  min: 0,
+  max: 400,
+  default: 80,                        //   EU-ETS-class
+};
+
+export const CAPEX = {                // Build cost, $ per Sunship
+  min: 10_000_000,                    //   $10M
+  max: 1_000_000_000,                 //   $1B
+  default: 150_000_000,               //   $150M
+};
+
+export const OPEX = {                 // Operating cost, $ per Sunship per year, all-in
+  min: 10_000_000,                    //   $10M
+  max: 200_000_000,                   //   $200M
+  default: 80_000_000,                //   $80M
+};
+
+export const PRECAPEX = {             // One-off programme cost (R&D, testing, approval)
+  min: 100_000_000,                   //   $100M
+  max: 20_000_000_000,                //   $20B
+  default: 10_000_000_000,            //   $10B
+};
+
+// Preset buttons under the Freight Rate slider (label shown on the button, value in $/tkm)
+export const RATE_PRESETS = [
+  { label: 'Ocean', value: 0.01 },          // ~1¢
+  { label: 'EAS Target', value: 0.10 },     // 10¢
+  { label: 'Air Freight', value: 0.40 },    // ~40¢
+];
+
+// Preset buttons under the Carbon Price slider (researched July 2026:
+// VCM = credible voluntary credits; EU ETS = ~€80-82 allowances, shipping already
+// covered on EU voyages; IMO Tier 2 = Net-Zero Framework remedial units 2028-2030,
+// adoption re-vote Oct 2026 — over-performing ships EARN tradeable surplus units)
+export const CARBON_PRESETS = [
+  { label: 'VCM', value: 15 },
+  { label: 'EU ETS', value: 85 },
+  { label: 'IMO Tier 2', value: 380 },
+];
+
+// The link at the bottom of the COPY SUMMARY text
+export const SUMMARY_LINK = 'www.electricairshipping.com/calc';

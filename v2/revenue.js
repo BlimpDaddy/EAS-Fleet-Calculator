@@ -20,7 +20,7 @@
 
 import {
   computeEconomics, logSlider,
-  RATE, CARBON, CAPEX, OPEX, PRECAPEX, RATE_PRESETS, CARBON_PRESETS,
+  RATE, CARBON, CAPEX, OPEX, PRECAPEX, RATE_PRESETS, CARBON_PRESETS, SUMMARY_LINK,
   fmtMoney, fmtRate, fmtPayback, parseDisplay,
 } from './economics.js';
 
@@ -280,7 +280,7 @@ function buildSummary() {
     `Fleet Opex: ${fmtMoney(e.fleetOpex)}/yr → FLEET PROFIT: ${fmtMoney(e.fleetProfit)}/yr`,
     `Per Sunship: ${fmtMoney(e.revenuePerShip)}/yr revenue · ${fmtMoney(e.marginPerShip)}/yr margin · Payback ${fmtPayback(e.paybackYears)}`,
     `PROGRAMME BREAKEVEN: ${fmtPayback(e.breakevenYears)} (repays pre-capex + full fleet capex, steady state)`,
-    'www.electricairshipping.com/calc',
+    SUMMARY_LINK,
   ].join('\n');
 }
 

@@ -96,36 +96,14 @@ export const logSlider = (min, max) => ({
   toView: (value) => (100 * Math.log(value / min)) / Math.log(max / min),
 });
 
-// Defaults are the EAS "ideal" scenario (Toby, 2026-07-24) — the page loads on them,
-// and the pink EAS button on the Economics page returns to them after any changes:
-//   rate 28¢ — a solid undercut of ~40¢ air freight for the beachhead segment
-//   carbon $80 — EU-ETS-class pricing
-//   capex $150M, opex $80M all-in, pre-capex $10B programme
-export const RATE = { min: 0.005, max: 2.0, default: 0.28 };       // $/tonne-km
-export const CARBON = { min: 0, max: 400, default: 80 };           // $/tonne CO2
-export const CAPEX = { min: 10e6, max: 1e9, default: 150e6 };      // $/Sunship
-export const OPEX = { min: 10e6, max: 200e6, default: 80e6 };      // $/Sunship/yr, all-in (linear — only a 20x span)
-export const PRECAPEX = { min: 100e6, max: 20e9, default: 10e9 };  // $ one-off programme (log — 200x span)
-
-export const RATE_PRESETS = [
-  { label: 'Ocean', value: 0.01 },
-  { label: 'EAS Target', value: 0.10 },
-  { label: 'Air Freight', value: 0.40 },
-];
-
-// Carbon anchors, researched July 2026 (see V2-ROADMAP / chat notes):
-//   VCM      — credible voluntary-market avoidance credits trade ~$10–30/t today
-//              (the $1–5 headlines are the junk tier). Conservative default: $20.
-//   EU ETS   — allowances ~€80–82 (≈$85) in July 2026; shipping is already covered
-//              on EU-touching voyages, so this is a customer's avoided cost there.
-//   IMO Tier 2 — the Net-Zero Framework's higher remedial-unit price, $380/tCO2e
-//              fixed for 2028–2030; over-performing ships EARN tradeable surplus
-//              units, which is precisely EAS's position. Adoption re-vote Oct 2026.
-export const CARBON_PRESETS = [
-  { label: 'VCM', value: 15 },
-  { label: 'EU ETS', value: 85 },
-  { label: 'IMO Tier 2', value: 380 },
-];
+// All slider ranges, defaults (= the EAS scenario the pink button restores), preset
+// buttons and the summary link live in econ-config.js — a hand-editable file with no
+// logic in it, so Toby can tune presets without touching code. Re-exported here so
+// the rest of the app keeps importing everything from one module.
+export {
+  RATE, CARBON, CAPEX, OPEX, PRECAPEX,
+  RATE_PRESETS, CARBON_PRESETS, SUMMARY_LINK,
+} from './econ-config.js';
 
 
 // ---------------------------------------------------------------- formatting
