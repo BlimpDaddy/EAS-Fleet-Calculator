@@ -30,7 +30,7 @@ export const CARBON = {               // Carbon price, $ per tonne CO2
 export const CAPEX = {                // Build cost, $ per Sunship
   min: 10_000_000,                    //   $10M
   max: 1_000_000_000,                 //   $1B
-  default: 150_000_000,               //   $150M
+  default: 260_000_000,               //   $260M — in line with LTA's Pathfinder 1
 };
 
 export const OPEX = {                 // Operating cost, $ per Sunship per year, all-in

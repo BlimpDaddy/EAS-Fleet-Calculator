@@ -194,7 +194,7 @@ const capexCtl = control('Capex per Sunship', '', { min: 0, max: 100, step: 'any
 // programme cost (R&D, testing, approval, pre-revenue burn) — log, spans 200x.
 const preMap = logSlider(PRECAPEX.min, PRECAPEX.max);
 const opexCtl = control('Opex per Sunship (all-in)', '/ year', { min: OPEX.min, max: OPEX.max, step: 1e6, value: OPEX.default });
-const preCtl = control('Programme Pre-Capex (R&D, approval)', 'one-off', { min: 0, max: 100, step: 'any', value: preMap.toView(PRECAPEX.default) });
+const preCtl = control('Program Pre-Capex', 'one-off', { min: 0, max: 100, step: 'any', value: preMap.toView(PRECAPEX.default) });
 
 controlsPanel.append(headingContainer, rateCtl.wrap, carbonCtl.wrap, capexCtl.wrap, opexCtl.wrap, preCtl.wrap);
 
@@ -240,7 +240,7 @@ addRule();
 const outPerShip = statRow('Revenue per Sunship / year:');
 const outMargin = statRow('Margin per Sunship / year:');
 const outPayback = statRow('Payback per Sunship:');
-const outBreakeven = statRow('Programme Breakeven:');
+const outBreakeven = statRow('Program Breakeven:');
 // No on-page caveat note by Toby's call — the COPY SUMMARY text still carries the
 // steady-state caveat inline on its breakeven line, so shared numbers keep their
 // context even though the page lets viewers interpret freely.
@@ -279,7 +279,7 @@ function buildSummary() {
     `— Carbon Credits: ${fmtMoney(e.carbonRevenue)}/yr`,
     `Fleet Opex: ${fmtMoney(e.fleetOpex)}/yr → FLEET PROFIT: ${fmtMoney(e.fleetProfit)}/yr`,
     `Per Sunship: ${fmtMoney(e.revenuePerShip)}/yr revenue · ${fmtMoney(e.marginPerShip)}/yr margin · Payback ${fmtPayback(e.paybackYears)}`,
-    `PROGRAMME BREAKEVEN: ${fmtPayback(e.breakevenYears)} (repays pre-capex + full fleet capex, steady state)`,
+    `PROGRAM BREAKEVEN: ${fmtPayback(e.breakevenYears)} (repays pre-capex + full fleet capex, steady state)`,
     SUMMARY_LINK,
   ].join('\n');
 }
