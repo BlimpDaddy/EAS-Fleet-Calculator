@@ -32,26 +32,32 @@
  *                                    negligible against any operating fleet's revenue)
  */
 export function computeEconomics(i) {
+  // An unfliable ship (net lift <= 0) earns nothing and serves nothing: EVERY output
+  // goes null so callers print "—" across the board. The revenue lines used to keep
+  // showing the market-level opportunity regardless (documented as intentional at the
+  // V1.3 audit) — Toby reversed that 2026-08-02: a dead ship beside a live profit
+  // figure reads as a bug, not an opportunity.
+  const canFly = i.netLiftT > 0;
+
   // Work one Sunship performs per year. Same formula as V1's tonKmPerYear
-  // (netLift × speed × utilisation × hours-in-year). Negative net lift means the
-  // ship cannot fly, let alone earn — clamp to zero rather than print nonsense.
-  const tonKmPerShip = Math.max(0, i.netLiftT) * i.airSpeedKmh * (i.utilisationPct / 100) * 8760;
+  // (netLift × speed × utilisation × hours-in-year).
+  const tonKmPerShip = canFly ? i.netLiftT * i.airSpeedKmh * (i.utilisationPct / 100) * 8760 : 0;
 
   // Fleet size needed to serve the market — V1's own formula, computed here (exact,
   // unrounded) rather than read from its display. null = the ship cannot fly.
   const requiredShips = tonKmPerShip > 0 ? (i.marketSizeTtkm * 1e12) / tonKmPerShip : null;
 
-  const freightRevenue = i.marketSizeTtkm * 1e12 * i.ratePerTkm;
+  const freightRevenue = canFly ? i.marketSizeTtkm * 1e12 * i.ratePerTkm : null;
 
   // CO2 avoided: V1's own linear proxy (1000 Mt per 122 Ttkm), recomputed here from
   // the raw market size for precision. Inherited deliberately — refining the
   // emissions model is future work (see roadmap).
-  const co2AvoidedMt = i.marketSizeTtkm * (1000 / 122);
-  const carbonRevenue = co2AvoidedMt * 1e6 * i.carbonPerT;
-  const totalRevenue = freightRevenue + carbonRevenue;
+  const co2AvoidedMt = canFly ? i.marketSizeTtkm * (1000 / 122) : null;
+  const carbonRevenue = canFly ? co2AvoidedMt * 1e6 * i.carbonPerT : null;
+  const totalRevenue = canFly ? freightRevenue + carbonRevenue : null;
 
-  const revenuePerShip = tonKmPerShip * i.ratePerTkm;
-  const marginPerShip = revenuePerShip - i.opexPerShip;
+  const revenuePerShip = canFly ? tonKmPerShip * i.ratePerTkm : null;
+  const marginPerShip = canFly ? revenuePerShip - i.opexPerShip : null;
 
   // REAL payback per ship: capex against margin, not revenue. null = never pays back
   // (ship can't fly, or opex eats the revenue) — callers print "—", never negatives.
@@ -68,6 +74,7 @@ export function computeEconomics(i) {
       : null;
 
   return {
+    canFly,
     tonKmPerShip,
     requiredShips,
     co2AvoidedMt,

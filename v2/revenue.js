@@ -415,6 +415,19 @@ for (const sel of ['[data-ship="netlift-output"]', '[data-fleet="airSpeed-output
   const el = $(sel);
   if (el) observer.observe(el, { childList: true, characterData: true, subtree: true });
 }
+
+// V1's own Fleet page prints a NEGATIVE Required Sunships figure when the ship can't
+// fly (pre-existing bundle behaviour). Rewrite it to N/A whenever it goes negative —
+// the rewrite re-fires the observer, which then parses "N/A" as NaN and stops, so
+// there's no loop.
+const requiredCell = $('[data-fleet="results-required"]');
+if (requiredCell) {
+  const guardRequired = () => {
+    if (parseDisplay(requiredCell.textContent) < 0) requiredCell.textContent = 'N/A';
+  };
+  new MutationObserver(guardRequired).observe(requiredCell, { childList: true, characterData: true, subtree: true });
+  guardRequired();
+}
 const marketInput = $('[data-fleet="marketsize-output"]');
 for (const evt of ['input', 'change', 'focusout']) marketInput?.addEventListener(evt, recompute);
 for (const sel of ['[data-fleet="marketsize"]', '[data-fleet="marketsize-preset-1"]', '[data-fleet="marketsize-preset-2"]', '[data-fleet="marketsize-preset-3"]', '[data-fleet="ideal-button"]']) {
