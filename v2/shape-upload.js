@@ -129,7 +129,10 @@ const warnStyle = document.createElement('style');
 warnStyle.textContent =
   '.v2-warn{margin-left:.35em;cursor:help;display:inline-block;vertical-align:baseline;line-height:1;}' +
   '.v2-warn svg{display:inline-block;vertical-align:-0.05em;}' +
-  '.v2-warn-ve{position:absolute;margin:0;display:none;}';
+  '.v2-warn-ve{position:absolute;margin:0;display:none;}' +
+  // Cap the VE field's width so its right-edge glyph lines up under the VS glyphs
+  // (the input otherwise stretches across the whole grid column).
+  'input.shape-ve-input{width:7em;min-width:0;justify-self:start;}';
 document.head.appendChild(warnStyle);
 
 // VE's figure lives in V1's input field (deliberately editable — the quick-override
@@ -142,13 +145,21 @@ const veWarnEl = warnGlyph('');
 veWarnEl.classList.add('v2-warn-ve');
 resultsPanel.appendChild(veWarnEl);
 
+const veMeasure = document.createElement('canvas').getContext('2d');
 function setVeWarning(vePercent) {
   const w = Number.isFinite(vePercent) ? warnFor(vePercent, VS_WARNINGS.ve) : null;
   if (!w) { veWarnEl.style.display = 'none'; return; }
   veWarnEl.title = w;
   veWarnEl.style.display = 'inline-block';
-  veWarnEl.style.fontSize = getComputedStyle(veInputEl).fontSize; // match sibling glyphs
-  veWarnEl.style.left = `${veInputEl.offsetLeft + veInputEl.offsetWidth - veWarnEl.offsetWidth - 10}px`;
+  const cs = getComputedStyle(veInputEl);
+  veWarnEl.style.fontSize = cs.fontSize; // match sibling glyphs
+  // Hug the number like the VS glyphs do: measure the field's text and sit just
+  // after it (clamped inside the field's right edge).
+  veMeasure.font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+  const textW = veMeasure.measureText(veInputEl.value).width;
+  const afterText = veInputEl.offsetLeft + parseFloat(cs.paddingLeft) + parseFloat(cs.borderLeftWidth) + textW + 8;
+  const maxLeft = veInputEl.offsetLeft + veInputEl.offsetWidth - veWarnEl.offsetWidth - 6;
+  veWarnEl.style.left = `${Math.min(afterText, maxLeft)}px`;
   veWarnEl.style.top = `${veInputEl.offsetTop + (veInputEl.offsetHeight - veWarnEl.offsetHeight) / 2}px`;
 }
 window.addEventListener('resize', () => {
@@ -157,6 +168,12 @@ window.addEventListener('resize', () => {
 // Manual override typed into the field re-judges the warning against the typed value
 // (listener attaches after V1's own focusout handler, so V1 ingests first).
 veInputEl.addEventListener('focusout', () => setVeWarning(parseFloat(veInputEl.value)));
+// Long-standing V1 trap: the field displays "54.394%" but V1's focusout parser can't
+// digest the "%" (Number("54.394%") is NaN, and the whole chain freaks out). Strip it
+// the moment the field gains focus, so editing always starts from a clean number.
+veInputEl.addEventListener('focusin', () => {
+  veInputEl.value = veInputEl.value.replace(/[%\s]/g, '');
+});
 
 /** Write the three figures and push VE through V1's own input pathway. */
 function applyNumbers(metrics) {
