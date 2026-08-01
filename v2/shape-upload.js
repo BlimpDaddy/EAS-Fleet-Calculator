@@ -19,6 +19,7 @@
  */
 
 import { ReplicaViewer } from './viewer3d.js';
+import { VS_WARNINGS } from './shape-config.js';
 
 const SAMPLES = 69420; // reference figure from the Shape-Volume Scalar paper
 const PRESETS = ['sunship', 'cigar', 'bottle', 'car', 'washingmachine', 'aerosmena'];
@@ -99,10 +100,43 @@ function compute(payload, transfer, onDone) {
   worker.postMessage({ samples: SAMPLES, seed: 1, ...payload }, transfer ?? []);
 }
 
+// ---------------------------------------------------------------- warnings
+// Threshold flags (shape-config.js). The glyph is an amber warning triangle drawn
+// with paths only — no SVG text nodes — so the cell's textContent stays exactly the
+// number and the guard observer's string comparison is unaffected.
+
+const warnFor = (value, t) => (value < t.low ? t.lowText : value > t.high ? t.highText : null);
+
+function warnGlyph(text) {
+  const s = document.createElement('span');
+  s.className = 'v2-warn';
+  s.title = text;
+  s.innerHTML =
+    '<svg viewBox="0 0 24 22" width="0.85em" height="0.85em" aria-label="warning">' +
+    '<path d="M12 1 L23 21 H1 Z" fill="#FF9900"/>' +
+    '<rect x="10.9" y="7.5" width="2.2" height="7" rx="1.1" fill="#111111"/>' +
+    '<circle cx="12" cy="17.5" r="1.4" fill="#111111"/></svg>';
+  return s;
+}
+
+/** Set a results cell to a value, with an optional trailing warning triangle. */
+function writeCell(cell, valueText, warning) {
+  cell.textContent = valueText;
+  if (warning) cell.appendChild(warnGlyph(warning));
+}
+
+const warnStyle = document.createElement('style');
+warnStyle.textContent =
+  '.v2-warn{margin-left:.35em;cursor:help;display:inline-block;vertical-align:baseline;line-height:1;}' +
+  '.v2-warn svg{display:inline-block;vertical-align:-0.05em;}';
+document.head.appendChild(warnStyle);
+
 /** Write the three figures and push VE through V1's own input pathway. */
 function applyNumbers(metrics) {
-  $('[data-shape="volume-scalar"]').textContent = round3(metrics.simpleVS);
-  vsInfCell.textContent = metrics.vsInf.toFixed(3);
+  writeCell($('[data-shape="volume-scalar"]'), round3(metrics.simpleVS),
+    warnFor(metrics.simpleVS, VS_WARNINGS.simpleVS));
+  writeCell(vsInfCell, metrics.vsInf.toFixed(3),
+    warnFor(metrics.vsInf, VS_WARNINGS.vsInf));
   // VS∞ row on the Ship page's Previous Properties pane (a V2 addition to the
   // static HTML) — ours alone, so this single write covers presets AND uploads.
   const shipVsInf = $('[data-v2="ship-vs-inf"]');
@@ -178,7 +212,13 @@ const vsCellGuard = new MutationObserver(() => {
   if (!currentPreset) return;
   const m = presetCache.get(currentPreset);
   if (!m) return;
-  if ($('[data-shape="volume-scalar"]').textContent !== round3(m.simpleVS)) {
+  const cell = $('[data-shape="volume-scalar"]');
+  // A V1 repaint replaces the cell's content wholesale, which also strips our
+  // warning glyph — so check both the number AND the glyph, not just the text
+  // (V1 could write the identical numeric string and the glyph would vanish).
+  const glyphOk = (cell.querySelector('.v2-warn')?.title ?? null)
+    === warnFor(m.simpleVS, VS_WARNINGS.simpleVS);
+  if (cell.textContent !== round3(m.simpleVS) || !glyphOk) {
     const expect = currentPreset;
     setTimeout(() => { if (currentPreset === expect) applyNumbers(m); }, 0);
   }
