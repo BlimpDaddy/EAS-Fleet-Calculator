@@ -10,9 +10,12 @@ import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
 
 const ROOT = fileURLToPath(new URL('.', import.meta.url));
-// V2 additions: the shape pipeline is served from its own folder (single source of
-// truth — no copies), and the neighbouring OBJ library is exposed read-only.
-const CALCV2 = fileURLToPath(new URL('../CalcV2/', import.meta.url));
+// V2 additions: the shape pipeline. Prefer the BAKED local copy (./calcv2 — what
+// Cloudflare Pages actually deploys, created by bake-calcv2.mjs) so local testing
+// exercises exactly the deployed tree; fall back to the canonical dev sibling.
+import { existsSync } from 'node:fs';
+const BAKED = fileURLToPath(new URL('./calcv2/', import.meta.url));
+const CALCV2 = existsSync(BAKED) ? BAKED : fileURLToPath(new URL('../CalcV2/', import.meta.url));
 const OBJ_DIR = fileURLToPath(new URL('../3D OBJ/', import.meta.url));
 const PORT = Number(process.env.PORT) || 5179;
 const TYPES = {

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EAS — Shape Inspector</title>
+  <style>
+    /* Deliberately plain. Borrows the V1 palette so the numbers feel in-context,
+       but this page is a diagnostic tool and is meant to be thrown away. */
+    :root {
+      --fg: #eee;
+      --dim: #888;
+      --border: hsl(0, 0%, 25%);
+      --accent-1: #C628A5;
+      --accent-2: #FF9900;
+      --bg: #111;
+      --panel: hsl(0, 0%, 4%);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0; min-height: 100vh; background: var(--bg); color: var(--fg);
+      font: 15px/1.5 system-ui, sans-serif; padding: 1.5rem;
+    }
+
+    h1 { font-size: 1.4rem; margin: 0 0 .25rem; font-weight: 600; }
+    .sub { color: var(--dim); margin: 0 0 1.25rem; font-size: .9rem; }
+
+    .layout { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; align-items: start; max-width: 1200px; }
+    @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+
+    .panel { border: 1px solid var(--border); border-radius: .25rem; background: var(--panel); padding: 1rem; }
+
+    #drop {
+      border: 2px dashed var(--border); border-radius: .25rem; padding: 1.5rem;
+      text-align: center; color: var(--dim); cursor: pointer; margin-bottom: 1rem;
+      transition: border-color .15s, color .15s;
+    }
+    #drop.over, #drop:hover { border-color: var(--accent-1); color: var(--fg); }
+
+    .controls { display: flex; gap: .75rem; align-items: center; flex-wrap: wrap; margin-bottom: 1rem; }
+    select, button {
+      background: var(--panel); color: var(--fg); border: 1px solid var(--border);
+      border-radius: .25rem; padding: .4rem .6rem; font: inherit; cursor: pointer;
+    }
+    select:hover, button:hover { border-color: var(--accent-1); }
+    label { color: var(--dim); font-size: .85rem; }
+
+    canvas { width: 100%; aspect-ratio: 1; display: block; background: #000; border-radius: .25rem; }
+
+    table { width: 100%; border-collapse: collapse; }
+    td { padding: .35rem .25rem; border-bottom: 1px solid #1c1c1c; }
+    td:first-child { color: var(--dim); }
+    td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+    .big td:last-child { font-size: 1.5rem; color: var(--accent-2); }
+    .big td { border-bottom: 1px solid var(--border); }
+
+    #status { color: var(--dim); font-size: .85rem; min-height: 1.4em; margin-top: .75rem; }
+    #status.err { color: #ff5555; }
+    .bar { height: 3px; background: #222; border-radius: 2px; overflow: hidden; margin-top: .5rem; }
+    .bar > div { height: 100%; width: 0; background: var(--accent-1); transition: width .1s linear; }
+    .warn { color: var(--accent-2); }
+    .ok { color: #4caf50; }
+  </style>
+</head>
+
+<body>
+  <h1>EAS Shape Inspector</h1>
+  <p class="sub">Drop in any .obj file to measure simple VS, VS<sub>∞</sub> and VE. The wireframe sphere is
+    the actual minimum bounding sphere that VE is divided by — not a decoration.</p>
+
+  <div class="layout">
+    <div>
+      <div class="panel">
+        <div id="drop">Drop an .obj file here, or click to choose one</div>
+        <input type="file" id="file" accept=".obj" hidden>
+
+        <div class="controls">
+          <label for="library">Library</label>
+          <select id="library"><option value="">— pick a shape —</option></select>
+
+          <label for="samples">Samples</label>
+          <select id="samples">
+            <option value="5000">5,000 (fast)</option>
+            <option value="20000">20,000</option>
+            <option value="69420" selected>69,420 (reference)</option>
+          </select>
+        </div>
+
+        <div id="status">Ready.</div>
+        <div class="bar"><div id="progress"></div></div>
+      </div>
+
+      <div class="panel" style="margin-top:1.5rem">
+        <table>
+          <tr class="big"><td>Simple VS</td><td id="r-svs">—</td></tr>
+          <tr class="big"><td>VS<sub>∞</sub></td><td id="r-vsi">—</td></tr>
+          <tr class="big"><td>Volume Efficiency</td><td id="r-ve">—</td></tr>
+          <tr><td>Hull volume</td><td id="r-hv">—</td></tr>
+          <tr><td>Bounding sphere radius</td><td id="r-rad">—</td></tr>
+          <tr><td>Sphere volume</td><td id="r-sv">—</td></tr>
+          <tr><td>Vertices (file / hull)</td><td id="r-vc">—</td></tr>
+          <tr><td>Hull faces</td><td id="r-fc">—</td></tr>
+          <tr><td>Bounding sphere check</td><td id="r-ball">—</td></tr>
+          <tr><td>Compute time</td><td id="r-time">—</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel">
+      <canvas id="view" width="700" height="700"></canvas>
+      <div class="controls" style="margin:1rem 0 0">
+        <button id="spin">Pause</button>
+        <label><input type="checkbox" id="showSphere" checked> bounding sphere</label>
+        <label><input type="checkbox" id="showHull" checked> hull wireframe</label>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./app.js"></script>
+</body>
+
+</html>
