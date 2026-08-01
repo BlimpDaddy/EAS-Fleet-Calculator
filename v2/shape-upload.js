@@ -128,8 +128,35 @@ function writeCell(cell, valueText, warning) {
 const warnStyle = document.createElement('style');
 warnStyle.textContent =
   '.v2-warn{margin-left:.35em;cursor:help;display:inline-block;vertical-align:baseline;line-height:1;}' +
-  '.v2-warn svg{display:inline-block;vertical-align:-0.05em;}';
+  '.v2-warn svg{display:inline-block;vertical-align:-0.05em;}' +
+  '.v2-warn-ve{position:absolute;margin:0;display:none;}';
 document.head.appendChild(warnStyle);
+
+// VE's figure lives in V1's input field (deliberately editable — the quick-override
+// easter egg), and an input can't hold child elements. The glyph is instead an
+// absolutely-positioned overlay pinned to the field's right edge: as an abs-positioned
+// child of the results grid it takes no grid cell, so the layout never shifts.
+const veInputEl = $('[data-shape="input-volume-efficiency"]');
+resultsPanel.style.position = 'relative';
+const veWarnEl = warnGlyph('');
+veWarnEl.classList.add('v2-warn-ve');
+resultsPanel.appendChild(veWarnEl);
+
+function setVeWarning(vePercent) {
+  const w = Number.isFinite(vePercent) ? warnFor(vePercent, VS_WARNINGS.ve) : null;
+  if (!w) { veWarnEl.style.display = 'none'; return; }
+  veWarnEl.title = w;
+  veWarnEl.style.display = 'inline-block';
+  veWarnEl.style.fontSize = getComputedStyle(veInputEl).fontSize; // match sibling glyphs
+  veWarnEl.style.left = `${veInputEl.offsetLeft + veInputEl.offsetWidth - veWarnEl.offsetWidth - 10}px`;
+  veWarnEl.style.top = `${veInputEl.offsetTop + (veInputEl.offsetHeight - veWarnEl.offsetHeight) / 2}px`;
+}
+window.addEventListener('resize', () => {
+  if (veWarnEl.style.display !== 'none') setVeWarning(parseFloat(veInputEl.value));
+});
+// Manual override typed into the field re-judges the warning against the typed value
+// (listener attaches after V1's own focusout handler, so V1 ingests first).
+veInputEl.addEventListener('focusout', () => setVeWarning(parseFloat(veInputEl.value)));
 
 /** Write the three figures and push VE through V1's own input pathway. */
 function applyNumbers(metrics) {
@@ -147,6 +174,7 @@ function applyNumbers(metrics) {
   veInput.dispatchEvent(new Event('focusout'));
   // V1 re-renders the field ceil'd ("55%"); show the measured figure instead.
   veInput.value = `${metrics.ve.toFixed(3)}%`;
+  setVeWarning(metrics.ve);
 
   if (metrics.ballExpanded || metrics.ballMaxExcess > 1e-9) {
     console.warn('[v2] bounding sphere check degraded:', metrics);

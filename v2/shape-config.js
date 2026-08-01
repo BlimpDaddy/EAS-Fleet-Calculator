@@ -20,4 +20,10 @@ export const VS_WARNINGS = {
     lowText: 'VSinf too low!',
     highText: 'VSinf too high!',
   },
+  ve: { // percent, matching the displayed figure
+    low: 35,
+    high: 80,
+    lowText: 'VE too low!',
+    highText: 'VE too high!',
+  },
 };
