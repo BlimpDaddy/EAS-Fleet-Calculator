@@ -25,5 +25,7 @@ export const VS_WARNINGS = {
     high: 80,
     lowText: 'VE too low!',
     highText: 'VE too high!',
+    critical: 10, // below this the triangle turns red
+    criticalText: 'VE critically low!',
   },
 };

@@ -107,15 +107,17 @@ function compute(payload, transfer, onDone) {
 
 const warnFor = (value, t) => (value < t.low ? t.lowText : value > t.high ? t.highText : null);
 
+const warnSvg = (fill, mark) =>
+  '<svg viewBox="0 0 24 22" width="0.85em" height="0.85em" aria-label="warning">' +
+  `<path d="M12 1 L23 21 H1 Z" fill="${fill}"/>` +
+  `<rect x="10.9" y="7.5" width="2.2" height="7" rx="1.1" fill="${mark}"/>` +
+  `<circle cx="12" cy="17.5" r="1.4" fill="${mark}"/></svg>`;
+
 function warnGlyph(text) {
   const s = document.createElement('span');
   s.className = 'v2-warn';
   s.title = text;
-  s.innerHTML =
-    '<svg viewBox="0 0 24 22" width="0.85em" height="0.85em" aria-label="warning">' +
-    '<path d="M12 1 L23 21 H1 Z" fill="#FF9900"/>' +
-    '<rect x="10.9" y="7.5" width="2.2" height="7" rx="1.1" fill="#111111"/>' +
-    '<circle cx="12" cy="17.5" r="1.4" fill="#111111"/></svg>';
+  s.innerHTML = warnSvg('#FF9900', '#111111');
   return s;
 }
 
@@ -147,9 +149,14 @@ resultsPanel.appendChild(veWarnEl);
 
 const veMeasure = document.createElement('canvas').getContext('2d');
 function setVeWarning(vePercent) {
-  const w = Number.isFinite(vePercent) ? warnFor(vePercent, VS_WARNINGS.ve) : null;
+  const t = VS_WARNINGS.ve;
+  const critical = Number.isFinite(vePercent) && vePercent < t.critical;
+  const w = !Number.isFinite(vePercent) ? null
+    : critical ? t.criticalText
+    : warnFor(vePercent, t);
   if (!w) { veWarnEl.style.display = 'none'; return; }
   veWarnEl.title = w;
+  veWarnEl.innerHTML = critical ? warnSvg('#FF2A2A', '#FFFFFF') : warnSvg('#FF9900', '#111111');
   veWarnEl.style.display = 'inline-block';
   const cs = getComputedStyle(veInputEl);
   veWarnEl.style.fontSize = cs.fontSize; // match sibling glyphs
@@ -165,9 +172,21 @@ function setVeWarning(vePercent) {
 window.addEventListener('resize', () => {
   if (veWarnEl.style.display !== 'none') setVeWarning(parseFloat(veInputEl.value));
 });
-// Manual override typed into the field re-judges the warning against the typed value
-// (listener attaches after V1's own focusout handler, so V1 ingests first).
-veInputEl.addEventListener('focusout', () => setVeWarning(parseFloat(veInputEl.value)));
+// Manual override typed into the field: V1's focusout handler ingests value/100 and
+// re-renders the field ceil'd — with float noise, so a typed "7" (0.07*100 =
+// 7.000000000000001) displays as "8%". Grab the raw typed value FIRST (capture-phase
+// listeners on the target run before V1's bubble listener), then after V1 has
+// ingested, restore the typed figure and judge the warning against it — the same
+// cosmetic rewrite applyNumbers already does for computed figures.
+veInputEl.addEventListener('focusout', () => {
+  const typed = parseFloat(veInputEl.value);
+  // Defer past V1's handler — its listener attaches LATER than ours (V1's init is
+  // async), so a synchronous rewrite here would hand V1 "7%" and NaN its model.
+  setTimeout(() => {
+    if (Number.isFinite(typed)) veInputEl.value = `${typed}%`;
+    setVeWarning(typed);
+  }, 0);
+});
 // Long-standing V1 trap: the field displays "54.394%" but V1's focusout parser can't
 // digest the "%" (Number("54.394%") is NaN, and the whole chain freaks out). Strip it
 // the moment the field gains focus, so editing always starts from a clean number.
