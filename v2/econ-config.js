@@ -63,4 +63,4 @@ export const CARBON_PRESETS = [
 ];
 
 // The link at the bottom of the COPY SUMMARY text
-export const SUMMARY_LINK = 'www.electricairshipping.com/calc';
+export const SUMMARY_LINK = 'calc.electricairshipping.com';
