@@ -266,9 +266,11 @@ function buildSummary() {
   const temp = $('[data-ship="temperature-output"]')?.textContent ?? '—';
   const shape = $('[data-shape="shape"]')?.textContent ?? '—';
   const ve = $('[data-shape="input-volume-efficiency"]')?.value ?? '—';
+  const vs = $('[data-shape="volume-scalar"]')?.textContent ?? '—';
+  const vsInf = $('[data-v2="vs-inf"]')?.textContent ?? '—';
   return [
     'EAS FLEET CALCULATOR',
-    `Shape: ${shape} (VE ${ve})`,
+    `Shape: ${shape} (VS ${vs} · VS∞ ${vsInf} · VE ${ve})`,
     `Ship: ${length}m @ ${temp}°C → Net Lift ${Math.round(i.netLiftT).toLocaleString('en-US')} tonnes`,
     `Airspeed: ${i.airSpeedKmh} km/h · Utilisation: ${i.utilisationPct}%`,
     `Market: ${i.marketSizeTtkm.toFixed(2)} Trillion Ton-km/yr`,
