@@ -148,10 +148,17 @@ recapHeading.style.cssText = 'display:block;text-align:center;';
 recapHeading.textContent = 'Previous Properties';
 const recapGrid = document.createElement('div');
 recapGrid.className = 'econ-recap';
+// Shape picture, same device as pages 2 & 3 (reusing V1's own class gets the
+// identical centred/dimmed look); src mirrors the Fleet panel's icon, which
+// the upload adapter already stamps for non-preset shapes.
+const recapIcon = document.createElement('img');
+recapIcon.className = 'fleet-selected-icon';
+recapIcon.alt = 'selected shape icon';
+recapGrid.appendChild(recapIcon);
 const recapFields = {};
 for (const [key, label] of [
-  ['shape', 'Shape:'], ['ve', 'Volume Efficiency (VE%):'], ['netLift', 'Net Lift:'],
-  ['airSpeed', 'Airspeed:'], ['util', 'Utilisation:'], ['market', 'Market Size:'],
+  ['shape', 'Shape:'], ['ve', 'VS/VE:'], ['netLift', 'Net Lift:'],
+  ['airSpeed', 'Avg. Airspeed:'], ['util', 'Utilisation:'], ['market', 'Work Performed:'],
 ]) {
   const h = document.createElement('div');
   h.className = 'fleet-selected-data';
@@ -404,9 +411,15 @@ function recompute() {
     preCtl.valueSpan.textContent = fmtMoney(inputs.preCapex);
 
     recapFields.shape.textContent = $('[data-shape="shape"]')?.textContent || '—';
-    // 1dp truncated like the Ship/Fleet mirrors (only page 1 shows full 3dp)
+    // Combined VS/VE, 1dp truncated like the Ship/Fleet mirrors (only page 1
+    // shows full 3dp); icon mirrors the Fleet panel's current image.
     const veRaw = parseFloat($('[data-shape="input-volume-efficiency"]')?.value);
-    recapFields.ve.textContent = Number.isFinite(veRaw) ? `${(Math.floor(veRaw * 10) / 10).toFixed(1)}%` : '—';
+    const vsRaw = parseFloat($('[data-shape="volume-scalar"]')?.textContent);
+    const t1 = (x) => (Math.floor(x * 10) / 10).toFixed(1);
+    recapFields.ve.textContent = Number.isFinite(veRaw) && Number.isFinite(vsRaw)
+      ? `${t1(vsRaw)} / ${t1(veRaw)}%` : '—';
+    const fleetIcon = $('[data-fleet="selected-icon"]');
+    if (fleetIcon?.src && recapIcon.src !== fleetIcon.src) recapIcon.src = fleetIcon.src;
     recapFields.netLift.textContent = `${$('[data-ship="netlift-output"]')?.textContent ?? '—'} tonnes`;
     recapFields.airSpeed.textContent = `${inputs.airSpeedKmh} km/hr`;
     recapFields.util.textContent = `${inputs.utilisationPct}%`;

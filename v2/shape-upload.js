@@ -173,20 +173,23 @@ function setVeWarning(vePercent) {
 window.addEventListener('resize', () => {
   if (veWarnEl.style.display !== 'none') setVeWarning(parseFloat(veInputEl.value));
 });
-// Ship & Fleet "Previous Properties" VE mirrors: V1 renders its model CEIL'd
-// (54.394 -> "55") on Ship, and on Fleet the stale preset CONFIG value
-// (sunship 0.5297 -> "53") — three pages, three answers. Both spans are
-// guarded to the computed figure at 1dp; page 1's field keeps full 3dp
-// (Toby's call 2026-08-10). Source of truth is the VE input, which carries
-// computed presets, uploads, and manual overrides alike.
-const veMirrors = ['[data-ship="selected-volumeefficiency"]', '[data-fleet="selected-volumeefficiency"]']
+// Ship & Fleet "Previous Properties" now share one combined device — "VS/VE:
+// 1.6 / 54.3%" (Toby's 2026-08-10 recap redesign) — written into the Ship
+// panel's VS cell and the Fleet panel's (relabelled) VE cell. Both truncated
+// to 1dp, never rounded up; page 1 keeps full 3dp. This also retires the old
+// three-pages-three-answers bug: V1 CEIL'd its model on Ship ("55") and
+// rendered the stale preset CONFIG on Fleet (0.5297 -> "53"). V1 still writes
+// its own values into these cells (and into the now-hidden Ship VE cell); the
+// observers rewrite them on sight. Source of truth: the computed VS cell and
+// the VE input, which carry presets, uploads, and manual overrides alike.
+const veMirrors = ['[data-ship="selected-volumescalar"]', '[data-fleet="selected-volumeefficiency"]']
   .map((s) => $(s)).filter(Boolean);
+const trunc1 = (x) => (Math.floor(x * 10) / 10).toFixed(1);
 function fixVeMirrors() {
-  const v = parseFloat(veInputEl.value);
-  if (!Number.isFinite(v)) return;
-  // Truncated, not rounded: 54.394 shows "54.3" — never display more VE than
-  // was measured (Toby's call; V1's own ceil to "55" was the worst offender).
-  const want = (Math.floor(v * 10) / 10).toFixed(1);
+  const ve = parseFloat(veInputEl.value);
+  const vs = parseFloat($('[data-shape="volume-scalar"]')?.textContent);
+  if (!Number.isFinite(ve) || !Number.isFinite(vs)) return;
+  const want = `${trunc1(vs)} / ${trunc1(ve)}%`;
   for (const el of veMirrors) if (el.textContent !== want) el.textContent = want;
 }
 const veMirrorObs = new MutationObserver(fixVeMirrors);
