@@ -374,7 +374,12 @@ body {
 .ship-selected-shape {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    grid-template-rows: auto auto 1fr 1fr;
+    /* rows pack tight at the top (matching the Economic recap); leftover panel
+       height stays blank at the bottom — 2026-08-10, was: auto auto 1fr 1fr
+       which stretched the data rows apart */
+    grid-template-rows: auto auto;
+    grid-auto-rows: min-content;
+    align-content: start;
     width: 100%;
     height: 100%;
     min-width: 0;
@@ -587,7 +592,11 @@ body {
     padding: 0 var(--space-base) var(--space-base) var(--space-base);
     background-color: var(--color-bg-secondary);
     grid-template-columns: repeat(2, 1fr);
-    grid-template-rows: auto auto 1fr 1fr 1fr 1fr;
+    /* rows pack tight at the top, blank space at the bottom — 2026-08-10,
+       was: auto auto 1fr 1fr 1fr 1fr */
+    grid-template-rows: auto auto;
+    grid-auto-rows: min-content;
+    align-content: start;
 
 }
 
