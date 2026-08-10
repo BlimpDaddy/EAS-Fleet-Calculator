@@ -429,6 +429,28 @@ for (const sel of ['[data-ship="netlift-output"]', '[data-fleet="airSpeed-output
 // fly (pre-existing bundle behaviour). Rewrite it to N/A whenever it goes negative —
 // the rewrite re-fires the observer, which then parses "N/A" as NaN and stops, so
 // there's no loop.
+// First-load UX: Toby wants average trip distance to START at 0 like the other
+// fleet inputs. V1's boot validator FORBIDS initial state 0 (its assertion
+// "initial average distance must equal its configured max" caused the
+// 2026-08-10 black-page incident) — but runtime 0 is perfectly legal: the
+// slider's own minimum is 0 and every derived formula zero-guards. So V1 boots
+// at its mandated 12000, and the moment its first render writes the output
+// span, the slider is pushed to 0 through V1's own input pathway. One-shot:
+// after that the slider is entirely the user's (and the ideal button's).
+{
+  const distOut = $('[data-fleet="averagetripdistance-output"]');
+  const distSlider = $('[data-fleet="averagedistance"]');
+  if (distOut && distSlider) {
+    const zeroOnce = new MutationObserver(() => {
+      if (distOut.textContent.trim() === '') return; // not V1's render yet
+      zeroOnce.disconnect();
+      distSlider.value = '0';
+      distSlider.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    zeroOnce.observe(distOut, { childList: true, characterData: true, subtree: true });
+  }
+}
+
 const requiredCell = $('[data-fleet="results-required"]');
 if (requiredCell) {
   const guardRequired = () => {
