@@ -62,6 +62,12 @@ style.textContent = `
     align-content: start;
     gap: 0 1rem; /* compact rows, matching the Fleet panel */
   }
+  /* Controls panel: NO horizontal padding, exactly like V1's .fleet-controls —
+     the .fleet-control children carry their own margins. The extra padding was
+     shrinking the sliders and shifting the pink ideal button vs pages 2 & 3. */
+  .econ-controls-panel {
+    padding: 0;
+  }
   .econ-note {
     grid-column: 1 / 3;
     font-size: var(--font-base);
@@ -165,8 +171,7 @@ for (const [key, label] of [
   h.className = 'fleet-selected-data';
   h.textContent = label;
   const d = document.createElement('div');
-  d.className = 'fleet-selected-data';
-  d.style.color = 'var(--color-primary)';
+  d.className = 'fleet-selected-data'; // grey via the class, matching pages 2 & 3
   d.textContent = '—';
   recapGrid.append(h, d);
   recapFields[key] = d;
@@ -178,7 +183,7 @@ recapPanel.append(recapHeading, recapGrid);
 // 747-8F ~$400M — are deliberately NOT buttons: a third preset row would push the
 // page past small viewports. The anchors live in the roadmap and chat notes.)
 const controlsPanel = document.createElement('div');
-controlsPanel.className = 'panel-border econ-panel';
+controlsPanel.className = 'panel-border econ-panel econ-controls-panel';
 // Heading + pink EAS ideal button, exactly V1's fleet-page pattern. The defaults ARE
 // the EAS scenario, so the button is simply "return to defaults" after any changes.
 const headingContainer = document.createElement('div');
