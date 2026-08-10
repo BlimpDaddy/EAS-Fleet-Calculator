@@ -68,6 +68,13 @@ style.textContent = `
   .econ-controls-panel {
     padding: 0;
   }
+  /* Fleet market preset whose value matches the CURRENT market size — pink and
+     bright, so Air Freight (0.33) reads as the default on first load and the
+     highlight follows the user honestly thereafter. */
+  .market-preset-active {
+    background-color: var(--color-accent-1);
+    color: var(--color-primary);
+  }
   .econ-note {
     grid-column: 1 / 3;
     font-size: var(--font-base);
@@ -476,6 +483,13 @@ function recompute() {
     };
     fixMarketField();
     setTimeout(fixMarketField, 250);
+
+    // Pink the market preset matching the current market (values = the bundle's
+    // presets a/b/c; c was patched 122 -> 124.33 with the displacement model).
+    for (const [n, v] of [[1, 0.33], [2, 14], [3, 124.33]]) {
+      $(`[data-fleet="marketsize-preset-${n}"]`)?.classList.toggle(
+        'market-preset-active', Math.abs(inputs.marketSizeTtkm - v) < 0.005);
+    }
 
     outFreight.textContent = fmtMoney(e.freightRevenue);
     outCarbon.textContent = fmtMoney(e.carbonRevenue);
