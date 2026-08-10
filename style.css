@@ -380,7 +380,9 @@ body {
     min-width: 0;
     min-height: 0;
     padding: 0 var(--space-base) var(--space-base) var(--space-base);
-    gap: 1rem;
+    /* row-gap removed 2026-08-10: matches the Fleet panel's compact rows and
+       lifts the icon to the same position as pages 3 & 4 */
+    gap: 0 1rem;
     background-color: var(--color-bg-secondary);
 }
 

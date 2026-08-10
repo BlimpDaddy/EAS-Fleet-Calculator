@@ -59,7 +59,7 @@ style.textContent = `
     display: grid;
     grid-template-columns: 1fr 1fr;
     align-content: start;
-    gap: 0.5rem 1rem;
+    gap: 0 1rem; /* compact rows, matching the Fleet panel */
   }
   .econ-note {
     grid-column: 1 / 3;
