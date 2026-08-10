@@ -149,6 +149,7 @@ resultsPanel.appendChild(veWarnEl);
 
 const veMeasure = document.createElement('canvas').getContext('2d');
 function setVeWarning(vePercent) {
+  fixVeMirrors(); // every VE change (computed or typed) re-syncs the Ship/Fleet mirrors
   const t = VS_WARNINGS.ve;
   const critical = Number.isFinite(vePercent) && vePercent < t.critical;
   const w = !Number.isFinite(vePercent) ? null
@@ -172,6 +173,25 @@ function setVeWarning(vePercent) {
 window.addEventListener('resize', () => {
   if (veWarnEl.style.display !== 'none') setVeWarning(parseFloat(veInputEl.value));
 });
+// Ship & Fleet "Previous Properties" VE mirrors: V1 renders its model CEIL'd
+// (54.394 -> "55") on Ship, and on Fleet the stale preset CONFIG value
+// (sunship 0.5297 -> "53") — three pages, three answers. Both spans are
+// guarded to the computed figure at 1dp; page 1's field keeps full 3dp
+// (Toby's call 2026-08-10). Source of truth is the VE input, which carries
+// computed presets, uploads, and manual overrides alike.
+const veMirrors = ['[data-ship="selected-volumeefficiency"]', '[data-fleet="selected-volumeefficiency"]']
+  .map((s) => $(s)).filter(Boolean);
+function fixVeMirrors() {
+  const v = parseFloat(veInputEl.value);
+  if (!Number.isFinite(v)) return;
+  // Truncated, not rounded: 54.394 shows "54.3" — never display more VE than
+  // was measured (Toby's call; V1's own ceil to "55" was the worst offender).
+  const want = (Math.floor(v * 10) / 10).toFixed(1);
+  for (const el of veMirrors) if (el.textContent !== want) el.textContent = want;
+}
+const veMirrorObs = new MutationObserver(fixVeMirrors);
+for (const el of veMirrors) veMirrorObs.observe(el, { childList: true, characterData: true, subtree: true });
+
 // Manual override typed into the field: V1's focusout handler ingests value/100 and
 // re-renders the field ceil'd — with float noise, so a typed "7" (0.07*100 =
 // 7.000000000000001) displays as "8%". Grab the raw typed value FIRST (capture-phase

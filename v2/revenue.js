@@ -93,7 +93,7 @@ const econLink = document.createElement('a');
 econLink.className = 'header-nav-link';
 econLink.href = '/economics';
 econLink.dataset.navV2 = 'economics';
-econLink.textContent = 'Economics';
+econLink.textContent = 'Economic';
 nav.append(sep, econLink);
 
 // ---------------------------------------------------------------- build page
@@ -404,7 +404,9 @@ function recompute() {
     preCtl.valueSpan.textContent = fmtMoney(inputs.preCapex);
 
     recapFields.shape.textContent = $('[data-shape="shape"]')?.textContent || '—';
-    recapFields.ve.textContent = $('[data-shape="input-volume-efficiency"]')?.value || '—';
+    // 1dp truncated like the Ship/Fleet mirrors (only page 1 shows full 3dp)
+    const veRaw = parseFloat($('[data-shape="input-volume-efficiency"]')?.value);
+    recapFields.ve.textContent = Number.isFinite(veRaw) ? `${(Math.floor(veRaw * 10) / 10).toFixed(1)}%` : '—';
     recapFields.netLift.textContent = `${$('[data-ship="netlift-output"]')?.textContent ?? '—'} tonnes`;
     recapFields.airSpeed.textContent = `${inputs.airSpeedKmh} km/hr`;
     recapFields.util.textContent = `${inputs.utilisationPct}%`;
