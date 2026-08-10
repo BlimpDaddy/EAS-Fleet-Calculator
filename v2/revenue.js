@@ -350,12 +350,27 @@ V1_LINKS.forEach((link, i) => {
 
 // ---------------------------------------------------------------- recompute
 
-/** Model-truth market size via V1's CAPTURED raw CO2 proxy (the Mt cell itself now
- * shows displacement values — see the interception above), input only when they agree. */
+// The user's literally-typed market value, captured on focusout BEFORE V1's
+// (later-attached) handler ingests and re-renders it rounded. Highest-precision
+// source for tiny beachhead markets: typed 0.001 renders as "0.00" (input, 2dp)
+// AND recovers as ~0.0012 (raw Mt cell, 2dp quantised) — only the capture keeps
+// the exact figure. Nulled whenever the slider/presets/ideal set the market
+// instead (see wiring), so a stale typed value can never override them.
+let typedMarket = null;
+
+/** Model-truth market size: the typed capture when it matches the model, else V1's
+ * CAPTURED raw CO2 proxy (the Mt cell itself now shows displacement values — see the
+ * interception), else the input field — never a rounded-to-zero swallow. */
 function readMarketSize() {
   const fromInput = parseDisplay($('[data-fleet="marketsize-output"]')?.value);
   const fromModel = v1Co2RawMt * 122 / 1000;
+  if (typedMarket !== null && Math.abs(typedMarket - fromModel) <= 0.02 + 0.01 * fromModel) {
+    return typedMarket; // exact figure the user entered, model agrees
+  }
   if (!(fromModel > 0)) return fromInput;
+  // Input can be V1's 2dp re-render: "0.00" for any market under 0.005 — a
+  // rounded-to-zero display must never override a nonzero model.
+  if (fromInput === 0) return fromModel;
   return Math.abs(fromInput - fromModel) <= 0.02 + 0.001 * fromModel ? fromInput : fromModel;
 }
 
@@ -393,7 +408,31 @@ function recompute() {
     recapFields.netLift.textContent = `${$('[data-ship="netlift-output"]')?.textContent ?? '—'} tonnes`;
     recapFields.airSpeed.textContent = `${inputs.airSpeedKmh} km/hr`;
     recapFields.util.textContent = `${inputs.utilisationPct}%`;
-    recapFields.market.textContent = `${inputs.marketSizeTtkm.toFixed(2)} Trillion Ton-km / year`;
+    // Sub-1 markets get a third decimal everywhere — the ultra-small beachhead
+    // scenarios (0.001 Ttkm) round to 0.00 at two places.
+    const mktDp = inputs.marketSizeTtkm > 0 && inputs.marketSizeTtkm < 1 ? 3 : 2;
+    recapFields.market.textContent = `${inputs.marketSizeTtkm.toFixed(mktDp)} Trillion Ton-km / year`;
+    // Cosmetic re-render of V1's fleet-page market input to the same precision
+    // (V1 renders it 2dp, so 0.001 displays as "0.00"). Model-truth is the
+    // recovered value; never touched while the user is typing in it.
+    // Correct the field when it's a rounded render of the model — within 2dp
+    // rounding, or V1's integer re-render of a typed value (its "type 6.5,
+    // see 7" quirk). Precision repair, never a value fight. Re-asserted on a
+    // short delay because V1 repaints the input on every fleet render and can
+    // land after us.
+    const fixMarketField = () => {
+      const mktField = $('[data-fleet="marketsize-output"]');
+      if (!mktField || document.activeElement === mktField) return;
+      const m = inputs.marketSizeTtkm;
+      const want = m.toFixed(m > 0 && m < 1 ? 3 : 2);
+      const fieldOff = Math.abs(parseDisplay(mktField.value) - m);
+      const typedMatch = typedMarket !== null && Math.abs(typedMarket - m) < 1e-9;
+      if (mktField.value !== want && (fieldOff < 0.005 || typedMatch)) {
+        mktField.value = want;
+      }
+    };
+    fixMarketField();
+    setTimeout(fixMarketField, 250);
 
     outFreight.textContent = fmtMoney(e.freightRevenue);
     outCarbon.textContent = fmtMoney(e.carbonRevenue);
@@ -491,20 +530,29 @@ let v1Co2RawMt = 0; // V1's proxy figure — feeds readMarketSize, never display
 let ourMtText = null;
 let ourPctText = null;
 if (co2PctCell && co2AmtCell) {
+  // Our writes carry a trailing ZERO-WIDTH SPACE so V1's writes are always
+  // distinguishable — comparing displayed numbers is NOT enough: V1's raw for
+  // market m2 can exactly equal our displaced text for m1 (e.g. raw(0.05) =
+  // "0.41" = displaced(0.001)), which silently broke the capture at small
+  // markets. Invisible on screen; parseFloat ignores it.
+  const OURS = '​';
   const applyCo2Cells = () => {
     if (!isOperating()) {
-      ourMtText = '0.00';
-      ourPctText = '0';
+      ourMtText = '0.00' + OURS;
+      ourPctText = '0' + OURS;
     } else {
-      const d = computeDisplacement(v1Co2RawMt * 122 / 1000);
-      ourMtText = d.totalCO2Mt.toFixed(2);
-      ourPctText = String(Math.round(d.percent));
+      // readMarketSize (not raw directly): folds in the typed-value capture, so
+      // a hand-entered 0.001 displaces exactly 0.001's worth, not the raw Mt
+      // cell's 2dp-quantised approximation of it.
+      const d = computeDisplacement(readMarketSize());
+      ourMtText = d.totalCO2Mt.toFixed(2) + OURS;
+      ourPctText = String(Math.round(d.percent)) + OURS;
     }
     if (co2AmtCell.textContent !== ourMtText) co2AmtCell.textContent = ourMtText;
     if (co2PctCell.textContent !== ourPctText) co2PctCell.textContent = ourPctText;
   };
   const onCo2Write = () => {
-    if (co2AmtCell.textContent !== ourMtText) {
+    if (!co2AmtCell.textContent.endsWith(OURS)) {
       v1Co2RawMt = parseDisplay(co2AmtCell.textContent); // V1 wrote — capture raw
     }
     applyCo2Cells(); // reasserts ours on either cell (V1 repaints % separately)
@@ -523,12 +571,18 @@ if (co2PctCell && co2AmtCell) {
   }
 }
 const marketInput = $('[data-fleet="marketsize-output"]');
+// Capture the raw typed value first (this listener registers before V1's
+// late-attached one, so it sees the field pre-rounding) — then recompute.
+marketInput?.addEventListener('focusout', () => {
+  const v = parseFloat(marketInput.value);
+  typedMarket = Number.isFinite(v) && v >= 0 ? v : null;
+});
 for (const evt of ['input', 'change', 'focusout']) marketInput?.addEventListener(evt, recompute);
 for (const sel of ['[data-fleet="marketsize"]', '[data-fleet="marketsize-preset-1"]', '[data-fleet="marketsize-preset-2"]', '[data-fleet="marketsize-preset-3"]', '[data-fleet="ideal-button"]']) {
   const el = $(sel);
   if (!el) continue;
-  el.addEventListener('input', recompute);
-  el.addEventListener('click', recompute);
+  el.addEventListener('input', () => { typedMarket = null; recompute(); });
+  el.addEventListener('click', () => { typedMarket = null; recompute(); });
 }
 
 recompute();
