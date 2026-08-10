@@ -18,7 +18,7 @@
 export const RATE = {                 // Freight rate, $ per tonne-km
   min: 0.005,                         //   0.5¢
   max: 2.0,                           //   $2.00
-  default: 0.28,                      //   28¢ — solid undercut of ~40¢ air freight
+  default: 0.25,                      //   25¢ — solid undercut of ~40¢ air freight
 };
 
 export const CARBON = {               // Carbon price, $ per tonne CO2
@@ -30,13 +30,13 @@ export const CARBON = {               // Carbon price, $ per tonne CO2
 export const CAPEX = {                // Build cost, $ per Sunship
   min: 10_000_000,                    //   $10M
   max: 1_000_000_000,                 //   $1B
-  default: 260_000_000,               //   $260M — in line with LTA's Pathfinder 1
+  default: 300_000_000,               //   $300M
 };
 
 export const OPEX = {                 // Operating cost, $ per Sunship per year, all-in
   min: 10_000_000,                    //   $10M
   max: 200_000_000,                   //   $200M
-  default: 80_000_000,                //   $80M
+  default: 100_000_000,               //   $100M
 };
 
 export const PRECAPEX = {             // One-off programme cost (R&D, testing, approval)
@@ -48,7 +48,7 @@ export const PRECAPEX = {             // One-off programme cost (R&D, testing, a
 // Preset buttons under the Freight Rate slider (label shown on the button, value in $/tkm)
 export const RATE_PRESETS = [
   { label: 'Ocean', value: 0.01 },          // ~1¢
-  { label: 'EAS Target', value: 0.10 },     // 10¢
+  { label: 'Middle Option', value: 0.20 },  // 20¢
   { label: 'Air Freight', value: 0.40 },    // ~40¢
 ];
 

@@ -65,6 +65,12 @@ style.textContent = `
     font-size: var(--font-base);
     color: var(--color-secondary);
   }
+  /* Our preset rows live INSIDE .fleet-control (V1's own live outside it), so
+     V1's .fleet-control:focus-within turns a clicked button's text pink — pink
+     on pink-hover = invisible. Pin button text to the normal text colour. */
+  .section-economics .fleet-chart-button {
+    color: var(--color-primary);
+  }
   @media (max-width: 1200px) {
     .section-economics { grid-template-columns: 1fr 1fr; grid-template-rows: repeat(3, auto); min-height: auto; }
     .econ-results-panel { grid-column: 1 / 3; grid-row: auto; }
