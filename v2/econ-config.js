@@ -47,7 +47,7 @@ export const PRECAPEX = {             // One-off programme cost (R&D, testing, a
 
 // Preset buttons under the Freight Rate slider (label shown on the button, value in $/tkm)
 export const RATE_PRESETS = [
-  { label: 'Ocean', value: 0.01 },          // ~1¢
+  { label: 'Ocean', value: 0.02 },          // 2¢
   { label: 'Middle Option', value: 0.20 },  // 20¢
   { label: 'Air Freight', value: 0.40 },    // ~40¢
 ];

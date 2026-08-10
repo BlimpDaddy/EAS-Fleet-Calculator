@@ -436,6 +436,29 @@ if (requiredCell) {
   new MutationObserver(guardRequired).observe(requiredCell, { childList: true, characterData: true, subtree: true });
   guardRequired();
 }
+
+// "Total Emissions Eliminated" floor: V1's linear proxy (% of the ~1000 Mt maritime
+// baseline) undersells the default 0.33 Ttkm scenario, which displaces AIR freight
+// (~20-30x the CO2 per tonne-km of ocean) — the proper displaced-mode emissions
+// model is parked on the roadmap. Until then, a sub-1% (but nonzero) display is
+// floored at 1%. Only this % span is touched: the Mt figure stays exact because the
+// market-size recovery and carbon revenue read from it.
+const co2PctCell = $('[data-fleet="resuls-c02reducedpercent"]');
+const co2AmtCell = $('[data-fleet="resuls-c02reducedamount"]');
+if (co2PctCell && co2AmtCell) {
+  // V1 rounds the % to an integer, so sub-1% displays as "0" — the genuine-zero
+  // check must come from the (exact) Mt amount, and BOTH spans need watching:
+  // V1 can rewrite the % after the Mt, or vice versa.
+  const floorPct = () => {
+    if (parseDisplay(co2AmtCell.textContent) > 0 && parseDisplay(co2PctCell.textContent) < 1) {
+      co2PctCell.textContent = '1';
+    }
+  };
+  const obs = new MutationObserver(floorPct);
+  obs.observe(co2PctCell, { childList: true, characterData: true, subtree: true });
+  obs.observe(co2AmtCell, { childList: true, characterData: true, subtree: true });
+  floorPct();
+}
 const marketInput = $('[data-fleet="marketsize-output"]');
 for (const evt of ['input', 'change', 'focusout']) marketInput?.addEventListener(evt, recompute);
 for (const sel of ['[data-fleet="marketsize"]', '[data-fleet="marketsize-preset-1"]', '[data-fleet="marketsize-preset-2"]', '[data-fleet="marketsize-preset-3"]', '[data-fleet="ideal-button"]']) {
