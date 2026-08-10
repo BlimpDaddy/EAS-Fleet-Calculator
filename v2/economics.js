@@ -31,6 +31,32 @@
  *                                    decade; the truly fixed post-revenue overhead is
  *                                    negligible against any operating fleet's revenue)
  */
+// ---------------------------------------------------------------- displacement
+
+import {
+  AIR_TRANSITION_TTR, AIR_CO2_MT, MARINE_WORK_TTR, MARINE_CO2_MT,
+  TOTAL_CO2_MT, CREDIT_FRACTION,
+} from './co2-config.js';
+
+/**
+ * Two-stage CO2 displacement: EAS freight work fills the long-haul air-freight
+ * pool first (0 -> 0.33 TTr releases 135 Mt), then global seaborne freight
+ * (the remaining ~124 TTr releases 1,000 Mt). Pool-fraction allocation, so the
+ * model can never claim more avoidance than a pool contains. See co2-config.js
+ * for the philosophy, the 20% revenue nerf, and every source.
+ */
+export function computeDisplacement(marketSizeTtkm) {
+  const m = Math.max(0, marketSizeTtkm);
+  const airWork = Math.min(m, AIR_TRANSITION_TTR);
+  const airCO2Mt = (airWork / AIR_TRANSITION_TTR) * AIR_CO2_MT;
+  const marineWork = Math.max(0, Math.min(m - AIR_TRANSITION_TTR, MARINE_WORK_TTR));
+  const marineCO2Mt = (marineWork / MARINE_WORK_TTR) * MARINE_CO2_MT;
+  const totalCO2Mt = airCO2Mt + marineCO2Mt;
+  return { airCO2Mt, marineCO2Mt, totalCO2Mt, percent: (100 * totalCO2Mt) / TOTAL_CO2_MT };
+}
+
+export { CREDIT_FRACTION };
+
 export function computeEconomics(i) {
   // An unfliable ship (net lift <= 0) earns nothing and serves nothing: EVERY output
   // goes null so callers print "—" across the board. The revenue lines used to keep
@@ -49,11 +75,12 @@ export function computeEconomics(i) {
 
   const freightRevenue = canFly ? i.marketSizeTtkm * 1e12 * i.ratePerTkm : null;
 
-  // CO2 avoided: V1's own linear proxy (1000 Mt per 122 Ttkm), recomputed here from
-  // the raw market size for precision. Inherited deliberately — refining the
-  // emissions model is future work (see roadmap).
-  const co2AvoidedMt = canFly ? i.marketSizeTtkm * (1000 / 122) : null;
-  const carbonRevenue = canFly ? co2AvoidedMt * 1e6 * i.carbonPerT : null;
+  // CO2 avoided: the two-stage displacement model (air freight first, then
+  // marine — see computeDisplacement/co2-config.js; replaced V1's linear
+  // 1000-per-122 proxy 2026-08-10). Carbon revenue takes the 20% nerf:
+  // displaced CO2 displays at full strength, only the money is discounted.
+  const co2AvoidedMt = canFly ? computeDisplacement(i.marketSizeTtkm).totalCO2Mt : null;
+  const carbonRevenue = canFly ? co2AvoidedMt * 1e6 * i.carbonPerT * CREDIT_FRACTION : null;
   const totalRevenue = canFly ? freightRevenue + carbonRevenue : null;
 
   const revenuePerShip = canFly ? tonKmPerShip * i.ratePerTkm : null;

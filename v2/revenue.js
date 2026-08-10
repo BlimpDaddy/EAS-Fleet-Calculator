@@ -22,6 +22,7 @@ import {
   computeEconomics, logSlider,
   RATE, CARBON, CAPEX, OPEX, PRECAPEX, RATE_PRESETS, CARBON_PRESETS, SUMMARY_LINK,
   fmtMoney, fmtRate, fmtPayback, parseDisplay,
+  computeDisplacement, CREDIT_FRACTION,
 } from './economics.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -239,7 +240,7 @@ const addRule = () => {
 const outTotal = statRow('Total Revenue / year:', { emphasis: true });
 addRule();
 const outFreight = statRow('Freight Revenue / year:');
-const outCarbon = statRow('Carbon Credits / year:');
+const outCarbon = statRow(`Carbon Credits (${Math.round(CREDIT_FRACTION * 100)}% creditable) / year:`);
 const outFleetOpex = statRow('Fleet Opex / year:');
 const outFleetProfit = statRow('Fleet Profit / year:');
 addRule();
@@ -284,7 +285,7 @@ function buildSummary() {
     `Assumptions: ${fmtRate(i.ratePerTkm)}/ton-km · Carbon $${i.carbonPerT}/t · Capex ${fmtMoney(i.capex)}/ship · Opex ${fmtMoney(i.opexPerShip)}/ship/yr · Pre-Capex ${fmtMoney(i.preCapex)}`,
     `TOTAL REVENUE: ${fmtMoney(e.totalRevenue)}/yr`,
     `— Freight: ${fmtMoney(e.freightRevenue)}/yr`,
-    `— Carbon Credits: ${fmtMoney(e.carbonRevenue)}/yr`,
+    `— Carbon Credits (${Math.round(CREDIT_FRACTION * 100)}% creditable): ${fmtMoney(e.carbonRevenue)}/yr`,
     `Fleet Opex: ${fmtMoney(e.fleetOpex)}/yr → FLEET PROFIT: ${fmtMoney(e.fleetProfit)}/yr`,
     `Per Sunship: ${fmtMoney(e.revenuePerShip)}/yr revenue · ${fmtMoney(e.marginPerShip)}/yr margin · Payback ${fmtPayback(e.paybackYears)}`,
     `PROGRAM BREAKEVEN: ${fmtPayback(e.breakevenYears)} (repays pre-capex + full fleet capex, steady state)`,
@@ -349,11 +350,11 @@ V1_LINKS.forEach((link, i) => {
 
 // ---------------------------------------------------------------- recompute
 
-/** See module doc: model-truth market size via the CO2 span, input only when they agree. */
+/** Model-truth market size via V1's CAPTURED raw CO2 proxy (the Mt cell itself now
+ * shows displacement values — see the interception above), input only when they agree. */
 function readMarketSize() {
   const fromInput = parseDisplay($('[data-fleet="marketsize-output"]')?.value);
-  const co2 = parseDisplay($('[data-fleet="resuls-c02reducedamount"]')?.textContent);
-  const fromModel = co2 * 122 / 1000;
+  const fromModel = v1Co2RawMt * 122 / 1000;
   if (!(fromModel > 0)) return fromInput;
   return Math.abs(fromInput - fromModel) <= 0.02 + 0.001 * fromModel ? fromInput : fromModel;
 }
@@ -437,27 +438,37 @@ if (requiredCell) {
   guardRequired();
 }
 
-// "Total Emissions Eliminated" floor: V1's linear proxy (% of the ~1000 Mt maritime
-// baseline) undersells the default 0.33 Ttkm scenario, which displaces AIR freight
-// (~20-30x the CO2 per tonne-km of ocean) — the proper displaced-mode emissions
-// model is parked on the roadmap. Until then, a sub-1% (but nonzero) display is
-// floored at 1%. Only this % span is touched: the Mt figure stays exact because the
-// market-size recovery and carbon revenue read from it.
+// Fleet-page CO2 cells now show the two-stage DISPLACEMENT model (2026-08-10,
+// replaced the old 1% display floor — see co2-config.js). V1's bundle still
+// writes its linear proxy (market x 1000/122) into the Mt cell; that raw value
+// is our most precise source of model-truth market size (V1 rounds the visible
+// input), so it's CAPTURED into v1Co2RawMt the moment V1 writes it, and only
+// then are both cells rewritten with displacement values. A cell containing
+// our own text is recognised and skipped, so the observers settle instead of
+// looping; V1's raw and our displaced figures can never coincide in-range.
 const co2PctCell = $('[data-fleet="resuls-c02reducedpercent"]');
 const co2AmtCell = $('[data-fleet="resuls-c02reducedamount"]');
+let v1Co2RawMt = 0; // V1's proxy figure — feeds readMarketSize, never displayed
+let ourMtText = null;
+let ourPctText = null;
 if (co2PctCell && co2AmtCell) {
-  // V1 rounds the % to an integer, so sub-1% displays as "0" — the genuine-zero
-  // check must come from the (exact) Mt amount, and BOTH spans need watching:
-  // V1 can rewrite the % after the Mt, or vice versa.
-  const floorPct = () => {
-    if (parseDisplay(co2AmtCell.textContent) > 0 && parseDisplay(co2PctCell.textContent) < 1) {
-      co2PctCell.textContent = '1';
-    }
+  const applyCo2Cells = () => {
+    const d = computeDisplacement(v1Co2RawMt * 122 / 1000);
+    ourMtText = d.totalCO2Mt.toFixed(2);
+    ourPctText = String(Math.round(d.percent));
+    if (co2AmtCell.textContent !== ourMtText) co2AmtCell.textContent = ourMtText;
+    if (co2PctCell.textContent !== ourPctText) co2PctCell.textContent = ourPctText;
   };
-  const obs = new MutationObserver(floorPct);
-  obs.observe(co2PctCell, { childList: true, characterData: true, subtree: true });
+  const onCo2Write = () => {
+    if (co2AmtCell.textContent !== ourMtText) {
+      v1Co2RawMt = parseDisplay(co2AmtCell.textContent); // V1 wrote — capture raw
+    }
+    applyCo2Cells(); // reasserts ours on either cell (V1 repaints % separately)
+  };
+  const obs = new MutationObserver(onCo2Write);
   obs.observe(co2AmtCell, { childList: true, characterData: true, subtree: true });
-  floorPct();
+  obs.observe(co2PctCell, { childList: true, characterData: true, subtree: true });
+  onCo2Write();
 }
 const marketInput = $('[data-fleet="marketsize-output"]');
 for (const evt of ['input', 'change', 'focusout']) marketInput?.addEventListener(evt, recompute);
