@@ -24,6 +24,7 @@ import {
   fmtMoney, fmtRate, fmtPayback, parseDisplay,
   computeDisplacement, CREDIT_FRACTION,
 } from './economics.js';
+import { TOTAL_CO2_MT } from './co2-config.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -272,30 +273,54 @@ shareBtn.textContent = 'COPY SUMMARY';
 shareRow.appendChild(shareBtn);
 recapPanel.appendChild(shareRow);
 
+// Template: Toby's v4, 2026-08-10 (sectioned SHAPE/SHIP/FLEET/ECONOMIC; "."
+// spacer lines survive copy-paste where blank lines get eaten). Deliberate
+// cuts, confirmed in revision: VS-inf, per-ship revenue/margin/payback, the
+// capex/opex-per-ship assumptions, and the "(80% creditable)" qualifier.
 function buildSummary() {
   const i = readInputs();
   const e = computeEconomics(i);
-  const required = e.requiredShips !== null ? Math.round(e.requiredShips).toLocaleString('en-US') : '—';
+  const trunc1 = (x) => (Math.floor(x * 10) / 10).toFixed(1);
+  const required = e.requiredShips !== null ? Math.round(e.requiredShips).toLocaleString('en-US') : 'N/A';
   const length = $('[data-ship="length-output"]')?.textContent ?? '—';
   const temp = $('[data-ship="temperature-output"]')?.textContent ?? '—';
   const shape = $('[data-shape="shape"]')?.textContent ?? '—';
-  const ve = $('[data-shape="input-volume-efficiency"]')?.value ?? '—';
+  const ve = parseFloat($('[data-shape="input-volume-efficiency"]')?.value);
   const vs = $('[data-shape="volume-scalar"]')?.textContent ?? '—';
-  const vsInf = $('[data-v2="vs-inf"]')?.textContent ?? '—';
+  const dist = parseDisplay($('[data-fleet="averagetripdistance-output"]')?.textContent);
+  const co2Mt = e.co2AvoidedMt; // operating-gated: idle fleet avoids nothing
+  const co2Pct = co2Mt !== null ? (100 * co2Mt) / TOTAL_CO2_MT : null;
   return [
-    'EAS FLEET CALCULATOR',
-    `Shape: ${shape} (VS ${vs} · VS∞ ${vsInf} · VE ${ve})`,
-    `Ship: ${length}m @ ${temp}°C → Net Lift ${Math.round(i.netLiftT).toLocaleString('en-US')} tonnes`,
-    `Airspeed: ${i.airSpeedKmh} km/h · Utilisation: ${i.utilisationPct}%`,
-    `Market: ${i.marketSizeTtkm.toFixed(2)} Trillion Ton-km/yr`,
+    'EAS FLEET CALCULATOR (Ver 1.6)',
+    '.',
+    `SHAPE: ${shape}`,
+    `VS/VE ${vs} / ${Number.isFinite(ve) ? trunc1(ve) : '—'}%`,
+    '.',
+    'SHIP (Static):',
+    `${length}m @ ${temp}°C → Net Lift ${Math.round(i.netLiftT).toLocaleString('en-US')}t`,
+    'SHIP (Dynamic):',
+    `Airspeed: ${i.airSpeedKmh} km/h`,
+    '.',
+    'FLEET:',
+    `Work Performed: ${i.marketSizeTtkm.toFixed(i.marketSizeTtkm > 0 && i.marketSizeTtkm < 1 ? 3 : 2)} Trillion Ton-km/yr`,
     `Total Airships Required: ${required}`,
-    `Assumptions: ${fmtRate(i.ratePerTkm)}/ton-km · Carbon $${i.carbonPerT}/t · Capex ${fmtMoney(i.capex)}/ship · Opex ${fmtMoney(i.opexPerShip)}/ship/yr · Pre-Capex ${fmtMoney(i.preCapex)}`,
-    `TOTAL REVENUE: ${fmtMoney(e.totalRevenue)}/yr`,
-    `— Freight: ${fmtMoney(e.freightRevenue)}/yr`,
-    `— Carbon Credits (${Math.round(CREDIT_FRACTION * 100)}% creditable): ${fmtMoney(e.carbonRevenue)}/yr`,
-    `Fleet Opex: ${fmtMoney(e.fleetOpex)}/yr → FLEET PROFIT: ${fmtMoney(e.fleetProfit)}/yr`,
-    `Per Sunship: ${fmtMoney(e.revenuePerShip)}/yr revenue · ${fmtMoney(e.marginPerShip)}/yr margin · Payback ${fmtPayback(e.paybackYears)}`,
-    `PROGRAM BREAKEVEN: ${fmtPayback(e.breakevenYears)} (repays pre-capex + full fleet capex, steady state)`,
+    `Utilisation: ${i.utilisationPct}%`,
+    `Average Trip Distance: ${dist.toLocaleString('en-US')} km`,
+    `CO2 Avoided: ${co2Mt !== null ? trunc1(co2Mt) : '—'} Million t/yr (${co2Pct !== null ? trunc1(co2Pct) : '—'}% global over-ocean freight)`,
+    '.',
+    'ECONOMIC:',
+    `Rate: ${fmtRate(i.ratePerTkm)} / Ton-km`,
+    `Carbon Credits: $${i.carbonPerT}/t`,
+    `Total Revenue: ${fmtMoney(e.totalRevenue)}/yr`,
+    `Freight: ${fmtMoney(e.freightRevenue)}/yr`,
+    `Carbon Credits: ${fmtMoney(e.carbonRevenue)}/yr`,
+    `Opex: ${fmtMoney(e.fleetOpex)}/yr`,
+    `Fleet Profit: ${fmtMoney(e.fleetProfit)}/yr`,
+    `Pre Capex: ${fmtMoney(i.preCapex)}`,
+    `Program Breakeven: ${fmtPayback(e.breakevenYears)} (from completion)`,
+    '.',
+    '(Design for planet + humanity)',
+    '.',
     SUMMARY_LINK,
   ].join('\n');
 }
