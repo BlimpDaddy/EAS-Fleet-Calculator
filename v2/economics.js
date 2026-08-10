@@ -79,8 +79,10 @@ export function computeEconomics(i) {
   // marine — see computeDisplacement/co2-config.js; replaced V1's linear
   // 1000-per-122 proxy 2026-08-10). Carbon revenue takes the 20% nerf:
   // displaced CO2 displays at full strength, only the money is discounted.
-  const co2AvoidedMt = canFly ? computeDisplacement(i.marketSizeTtkm).totalCO2Mt : null;
-  const carbonRevenue = canFly ? co2AvoidedMt * 1e6 * i.carbonPerT * CREDIT_FRACTION : null;
+  // An IDLE fleet (fliable ship but zero airspeed/utilisation) avoids nothing:
+  // 0, not null — the ship works, it just isn't flying yet.
+  const co2AvoidedMt = !canFly ? null : tonKmPerShip > 0 ? computeDisplacement(i.marketSizeTtkm).totalCO2Mt : 0;
+  const carbonRevenue = co2AvoidedMt === null ? null : co2AvoidedMt * 1e6 * i.carbonPerT * CREDIT_FRACTION;
   const totalRevenue = canFly ? freightRevenue + carbonRevenue : null;
 
   const revenuePerShip = canFly ? tonKmPerShip * i.ratePerTkm : null;

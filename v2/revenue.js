@@ -444,6 +444,10 @@ for (const sel of ['[data-ship="netlift-output"]', '[data-fleet="airSpeed-output
     const zeroOnce = new MutationObserver(() => {
       if (distOut.textContent.trim() === '') return; // not V1's render yet
       zeroOnce.disconnect();
+      // V1's fleet sliders are 0-100 VIEW units (no min/max attrs; V1 maps to
+      // real values internally). View 0 = the domain minimum, which the bundle
+      // patch floors at 1,000 km — distance is deliberately never zero: an
+      // average trip below ~1,000 km isn't a scenario the calculator argues.
       distSlider.value = '0';
       distSlider.dispatchEvent(new Event('input', { bubbles: true }));
     });
@@ -451,11 +455,24 @@ for (const sel of ['[data-ship="netlift-output"]', '[data-fleet="airSpeed-output
   }
 }
 
+// "Is the fleet actually OPERATING?" — the single gate (Toby, 2026-08-10) for
+// the impact displays: net lift > 0 (length and temperature fold into it) AND
+// airspeed > 0 AND utilisation > 0. An idle or unfliable fleet avoids nothing,
+// so CO2 cells show 0.00 / 0% and Required Sunships shows N/A. Total Work is
+// deliberately ungated — the goal is real even while the ship can't chase it.
+const isOperating = () =>
+  parseDisplay($('[data-ship="netlift-output"]')?.textContent) > 0 &&
+  parseDisplay($('[data-fleet="airSpeed-output"]')?.textContent) > 0 &&
+  parseDisplay($('[data-fleet="utilisation-output"]')?.textContent) > 0;
+
 const requiredCell = $('[data-fleet="results-required"]');
+const guardRequired = () => {
+  if (!requiredCell) return;
+  if (parseDisplay(requiredCell.textContent) < 0 || !isOperating()) {
+    if (requiredCell.textContent !== 'N/A') requiredCell.textContent = 'N/A';
+  }
+};
 if (requiredCell) {
-  const guardRequired = () => {
-    if (parseDisplay(requiredCell.textContent) < 0) requiredCell.textContent = 'N/A';
-  };
   new MutationObserver(guardRequired).observe(requiredCell, { childList: true, characterData: true, subtree: true });
   guardRequired();
 }
@@ -475,9 +492,14 @@ let ourMtText = null;
 let ourPctText = null;
 if (co2PctCell && co2AmtCell) {
   const applyCo2Cells = () => {
-    const d = computeDisplacement(v1Co2RawMt * 122 / 1000);
-    ourMtText = d.totalCO2Mt.toFixed(2);
-    ourPctText = String(Math.round(d.percent));
+    if (!isOperating()) {
+      ourMtText = '0.00';
+      ourPctText = '0';
+    } else {
+      const d = computeDisplacement(v1Co2RawMt * 122 / 1000);
+      ourMtText = d.totalCO2Mt.toFixed(2);
+      ourPctText = String(Math.round(d.percent));
+    }
     if (co2AmtCell.textContent !== ourMtText) co2AmtCell.textContent = ourMtText;
     if (co2PctCell.textContent !== ourPctText) co2PctCell.textContent = ourPctText;
   };
@@ -491,6 +513,14 @@ if (co2PctCell && co2AmtCell) {
   obs.observe(co2AmtCell, { childList: true, characterData: true, subtree: true });
   obs.observe(co2PctCell, { childList: true, characterData: true, subtree: true });
   onCo2Write();
+  // Operating state can change without V1 touching the CO2/required cells
+  // (e.g. dragging utilisation to 0) — watch the three viability spans and
+  // re-judge both gates whenever any of them move.
+  const viaObs = new MutationObserver(() => { applyCo2Cells(); guardRequired(); });
+  for (const sel of ['[data-ship="netlift-output"]', '[data-fleet="airSpeed-output"]', '[data-fleet="utilisation-output"]']) {
+    const el = $(sel);
+    if (el) viaObs.observe(el, { childList: true, characterData: true, subtree: true });
+  }
 }
 const marketInput = $('[data-fleet="marketsize-output"]');
 for (const evt of ['input', 'change', 'focusout']) marketInput?.addEventListener(evt, recompute);
