@@ -292,7 +292,6 @@ function buildSummary() {
   const shape = $('[data-shape="shape"]')?.textContent ?? '—';
   const ve = parseFloat($('[data-shape="input-volume-efficiency"]')?.value);
   const vs = $('[data-shape="volume-scalar"]')?.textContent ?? '—';
-  const dist = parseDisplay($('[data-fleet="averagetripdistance-output"]')?.textContent);
   const co2Mt = e.co2AvoidedMt; // operating-gated: idle fleet avoids nothing
   const co2Pct = co2Mt !== null ? (100 * co2Mt) / TOTAL_CO2_MT : null;
   return [
@@ -310,24 +309,23 @@ function buildSummary() {
     `Work Performed: ${i.marketSizeTtkm.toFixed(i.marketSizeTtkm > 0 && i.marketSizeTtkm < 1 ? 3 : 2)} Trillion Ton-km/yr`,
     `Total Airships Required: ${required}`,
     `Utilisation: ${i.utilisationPct}%`,
-    `Average Trip Distance: ${dist.toLocaleString('en-US')} km`,
     `CO2 Avoided: ${co2Mt !== null ? trunc1(co2Mt) : '—'} Million t/yr (${co2Pct !== null ? trunc1(co2Pct) : '—'}% global over-ocean freight)`,
     '.',
     'ECONOMIC:',
-    `Rate: ${fmtRate(i.ratePerTkm)} / Ton-km`,
-    `Carbon Credits: $${i.carbonPerT}/t`,
     `Total Revenue: ${fmtMoney(e.totalRevenue)}/yr`,
-    `Freight: ${fmtMoney(e.freightRevenue)}/yr`,
-    `Carbon Credits: ${fmtMoney(e.carbonRevenue)}/yr`,
-    `Opex: ${fmtMoney(e.fleetOpex)}/yr`,
-    `Fleet Profit: ${fmtMoney(e.fleetProfit)}/yr`,
-    `Pre Capex: ${fmtMoney(i.preCapex)}`,
+    `Rate: ${fmtRate(i.ratePerTkm)} / Ton-km → Revenue: ${fmtMoney(e.freightRevenue)}/yr`,
+    `Carbon Credits: $${i.carbonPerT}/t → Revenue: ${fmtMoney(e.carbonRevenue)}/yr`,
+    `Fleet Opex: ${fmtMoney(e.fleetOpex)}/yr`,
+    `Fleet Profit: ${fmtMoney(e.fleetProfit)}/yr → Margin: ${e.fleetProfit !== null && e.totalRevenue > 0 ? (100 * e.fleetProfit / e.totalRevenue).toFixed(1) + '%' : '—'}`,
+    `Capex Per Sunship: ${fmtMoney(i.capex)}`,
+    `Program Pre Capex: ${fmtMoney(i.preCapex)}`,
     `Program Breakeven: ${fmtPayback(e.breakevenYears)} (from completion)`,
     '.',
     '(Design for planet + humanity)',
     '.',
     SUMMARY_LINK,
-  ].join('\n');
+  ].join('\n').replace(/—/g, '-'); // printout uses plain hyphens (Toby's call);
+  // the em-dash placeholders stay as-is in the on-page cells
 }
 
 shareBtn.addEventListener('click', async () => {
