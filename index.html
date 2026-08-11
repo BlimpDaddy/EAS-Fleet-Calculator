@@ -12,7 +12,14 @@
 
 <body>
     <header class="header">
-        <img class="header-logo" src="/assets/logo.svg" alt="Electric Air Shipping Logo">
+        <!-- display:contents keeps the header grid seeing the img as its
+             direct child; the anchor adds navigation without touching layout.
+             NOTE: /knowledgebase only exists once the website release ships —
+             release order is website first, then this. -->
+        <a href="https://electricairshipping.com/knowledgebase" style="display: contents"
+            aria-label="Electric Air Shipping knowledge base">
+            <img class="header-logo" src="/assets/logo.svg" alt="Electric Air Shipping Logo">
+        </a>
         <nav class="header-nav">
             <a class="header-nav-link current-page" href="/shape" data-nav="shape">Shape</a>
             <span class="header-nav-separator">></span>
