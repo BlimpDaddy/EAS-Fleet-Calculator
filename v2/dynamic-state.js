@@ -175,20 +175,24 @@ export function renderModel(contract, geometry = SUNSHIP_GEOMETRY) {
         ['Propulsion power', DASH], ['Energy / 1,000 km', DASH],
         ['LH2 / 1,000 km', DASH], ['Fuel system weight', DASH],
       ],
-      powerTag: '', warnings: [], provenance: '',
+      powerTag: '', warnings: [],
     };
   }
   const savingPct = Math.round(contract.selectedS * 100);
-  const warnings = [...contract.warnings];
   // Statuses are warnings-only (rulings: silence is good news; ORANGE/RED
-  // surface, green ticks parked calc-wide or nowhere).
-  if (contract.aerodynamicStatus !== 'GREEN') {
-    warnings.push(`⚠ drag coefficient ${contract.selectedCd.toFixed(3)} is in the ${contract.aerodynamicStatus} band`);
+  // surface, green ticks parked calc-wide or nowhere). MINIMAL WORDS
+  // (Toby ruling 2026-08-15, M3 first pass): short labels, no sentences —
+  // the engine's long-form warnings stay in the contract for engineers.
+  const warnings = [];
+  if (contract.aerodynamicStatus === 'ORANGE') warnings.push({ level: 'orange', text: 'Inefficient dynamics' });
+  if (contract.aerodynamicStatus === 'RED') warnings.push({ level: 'red', text: 'Critically inefficient' });
+  if (contract.fuelMassStatus === 'ORANGE') warnings.push({ level: 'orange', text: 'High fuel weight' });
+  if (contract.fuelMassStatus === 'RED') warnings.push({ level: 'red', text: 'Critical fuel weight' });
+  for (const w of contract.warnings) {
+    if (w.startsWith('cd-below-friction-estimate')) warnings.push({ level: 'red', text: 'Cd below friction floor' });
+    else if (w.startsWith('below-screening-floor')) warnings.push({ level: 'red', text: 'Below screening floor' });
+    else warnings.push({ level: 'orange', text: w }); // unmapped engine warning: surface raw (draft)
   }
-  if (contract.fuelMassStatus !== 'GREEN') {
-    warnings.push(`⚠ fuel system ${fmt.t0(contract.refTripFuelSystemT)} (10,000 km reference) is ${contract.fuelMassStatus} against lift`);
-  }
-  // floorStatus RED already ships explanatory warnings in the contract.
   return {
     parked: false,
     rows: [
@@ -202,7 +206,7 @@ export function renderModel(contract, geometry = SUNSHIP_GEOMETRY) {
     ],
     powerTag: savingPct > 0 ? `(−${savingPct}%)` : '',
     warnings,
-    provenance: contract.provenance.summary
-      + ' · Sunship geometry MEASURED 2026-08-13',
+    // NO provenance copy on the page (Toby ruling 2026-08-15) — the
+    // contract's provenance object remains the engineer-facing truth.
   };
 }

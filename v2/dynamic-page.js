@@ -1,18 +1,27 @@
 /**
  * The DYNAMIC page — M3 shell (DYNAMIC-SPEC §14 step 3; Display Rulings
- * v1.0 2026-08-13; M3 display amendments 2026-08-15; review pins r6).
+ * v1.0 2026-08-13; M3 display amendments 2026-08-15; review pins r6;
+ * Toby first-pass rulings 2026-08-15).
  *
  * Fifth page of the pipeline, inserted between Ship and Fleet in the nav —
- * the physics order (shape → lift → flight → fleet → economics); FLEET
- * consumes DYNAMIC's rate at M8. Follows revenue.js's injection pattern:
- * V1's bundle untouched, a nav link + section coexisting with V1's
- * click-only navigation, all styling in V1's own tokens.
+ * the physics order (shape → lift → flight → fleet → economics). NOTE
+ * (Toby 2026-08-15, backlog): eventually MUST become a sub-button of the
+ * Ship page; top-level link is the M3 draft position. Follows revenue.js's
+ * injection pattern: V1's bundle untouched, a nav link + section
+ * coexisting with V1's click-only navigation, V1 tokens throughout.
+ *
+ * LAYOUT (Toby ruling 2026-08-15): HORIZONTAL bands — Properties on top,
+ * visualiser reservation centre, Results along the bottom. Different from
+ * the other pages' columns on purpose: horizontal = dynamic flow over
+ * time; the visualiser will stream L→R across the middle.
  *
  * WHAT THE SHELL IS (r6: "M3 does not consume M4/M5"): parked load, the
- * pink EAS IDEAL button, three sliders, condensed outputs, provenance,
- * warnings-only statuses, a blank centre reservation for the visualiser
- * (its own major job, NOT this phase). Toggles are rendered but INERT —
- * they become operational at M4 (tail) / M5 (BLI).
+ * pink EAS IDEAL button, three sliders, condensed outputs, warnings-only
+ * statuses (MINIMAL WORDS, Toby 2026-08-15), a blank centre reservation
+ * for the visualiser. Toggles are rendered but INERT — operational at M4
+ * (tail) / M5 (BLI). No provenance copy on the page (Toby 2026-08-15:
+ * "obviously it's calc using the settings live — that's the point");
+ * provenance stays in the contract for engineers and the COPY step later.
  *
  * ALL state logic and display selection lives in dynamic-state.js (pure,
  * Node-tested — test/dynamic-state-fixtures.mjs). This file is DOM only:
@@ -28,13 +37,13 @@ const $ = (sel) => document.querySelector(sel);
 
 // ---------------------------------------------------------------- styles
 
-// Entirely V1 tokens; grid mirrors .section-economics / .section-fleet.
+// Entirely V1 tokens; horizontal three-band grid, unique to this page.
 const style = document.createElement('style');
 style.textContent = `
   .section-dynamic {
     display: none;
-    grid-template-columns: 1fr 1.5fr 1fr;
-    grid-template-rows: 1fr auto;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr auto;
     min-height: 0;
     padding: var(--space-base);
     gap: var(--space-base);
@@ -45,16 +54,26 @@ style.textContent = `
     min-height: 0;
     min-width: 0;
   }
-  /* Controls: no horizontal padding, exactly like V1's .fleet-controls. */
+  /* Top band: heading + pink button, then the controls in a row. */
   .dyn-controls-panel { padding: 0; }
-  /* The visualiser reservation: centre-page, dominant, deliberately empty.
-     (M7 fills it; M3 only holds the ground — rulings 2026-08-13.) */
+  .dyn-controls-row {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-base);
+  }
+  .dyn-controls-row .fleet-control { flex: 1 1 0; min-width: 160px; }
+  .dyn-toggle-col {
+    display: flex; flex-direction: column; gap: 0.5em;
+    padding: 0 var(--space-base);
+    align-self: center;
+  }
+  /* Centre band: the visualiser reservation — dominant, deliberately
+     empty. Flow will run horizontally through here (M7). */
   .dyn-visual-panel {
-    grid-row: 1 / 3;
-    grid-column: 2;
     display: flex;
     align-items: center;
     justify-content: center;
+    min-height: 32vh;
   }
   .dyn-visual-note {
     color: var(--color-secondary);
@@ -62,28 +81,25 @@ style.textContent = `
     opacity: 0.5;
     text-align: center;
   }
-  .dyn-results-panel {
-    grid-column: 3;
-    grid-row: 1 / 3;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    grid-auto-rows: min-content;
-    align-items: center;
-    gap: 0.5rem 1rem;
+  /* Bottom band: results as a horizontal strip of stat blocks. */
+  .dyn-results-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem var(--space-base);
+    justify-content: space-between;
+    align-items: stretch;
   }
+  .dyn-stat { min-width: 110px; }
+  .dyn-stat .fleet-results-data-header { margin: 0; }
+  .dyn-stat .fleet-results-data { margin: 0; }
   /* The bare (−x%) tag rides the power value, pink — the number IS the S
      setting (M3 display amendment 1). */
   .dyn-power-tag { color: var(--color-accent-1); margin-left: 0.4em; }
-  /* Warnings-only status area: silence is good news. */
-  .dyn-warnings { grid-column: 1 / 3; }
-  .dyn-warning { color: var(--color-critical, #ff2a2a); font-size: var(--font-base); margin-top: 0.5rem; }
+  /* Warnings-only status area: minimal words, silence is good news. */
+  .dyn-warnings { display: flex; gap: var(--space-base); flex-wrap: wrap; margin-top: 0.6rem; }
+  .dyn-warning { font-size: var(--font-base); font-weight: 600; }
+  .dyn-warning.red { color: var(--color-critical, #ff2a2a); }
   .dyn-warning.orange { color: var(--color-accent-2, #ff9900); }
-  .dyn-provenance {
-    grid-column: 1 / 3;
-    color: var(--color-secondary);
-    font-size: calc(var(--font-base) * 0.85);
-    margin-top: 1rem;
-  }
   /* S evidence zoning ON the slider (r6: zoning survives; the floors/status
      box is gone). Subtle segment bar directly under the S slider. */
   .dyn-s-zones {
@@ -95,19 +111,14 @@ style.textContent = `
   /* Inert toggles (M3 shell): visible state, no interaction until M4/M5. */
   .dyn-toggle-row {
     display: flex; align-items: center; gap: 0.5em;
-    margin: 0.6rem var(--space-base) 0 var(--space-base);
     color: var(--color-primary); font-size: var(--font-base);
+    white-space: nowrap;
   }
   .dyn-toggle-row input { accent-color: var(--color-accent-1); }
   .dyn-toggle-row .dyn-toggle-note { color: var(--color-secondary); font-size: 0.85em; }
-  @media (max-width: 1200px) {
-    .section-dynamic { grid-template-columns: 1fr 1fr; grid-template-rows: repeat(3, auto); min-height: auto; }
-    .dyn-visual-panel { grid-column: 1 / 3; grid-row: auto; min-height: 30vh; }
-    .dyn-results-panel { grid-column: 1 / 3; grid-row: auto; }
-  }
-  @media (max-width: 768px) {
-    .section-dynamic { grid-template-columns: auto; }
-    .dyn-visual-panel, .dyn-results-panel { grid-column: auto; }
+  @media (max-width: 900px) {
+    .dyn-controls-row { flex-wrap: wrap; }
+    .dyn-visual-panel { min-height: 22vh; }
   }
 `;
 document.head.appendChild(style);
@@ -116,6 +127,8 @@ document.head.appendChild(style);
 
 // Between Ship and Fleet: the physics order. V1's nav presenter selects by
 // data-nav attributes, not child order, so inserting mid-row is safe.
+// V1's own separator already sits between Ship and Fleet; inserting
+// [Dynamic, >] before Fleet reads: Ship > Dynamic > Fleet.
 const fleetLink = $('[data-nav="fleet"]');
 const sep = document.createElement('span');
 sep.className = 'header-nav-separator';
@@ -125,8 +138,6 @@ dynLink.className = 'header-nav-link';
 dynLink.href = '/dynamic';
 dynLink.dataset.navV2 = 'dynamic';
 dynLink.textContent = 'Dynamic';
-// V1's own separator already sits between Ship and Fleet; inserting
-// [Dynamic, >] before Fleet reads: Ship > Dynamic > Fleet.
 fleetLink.before(dynLink, sep);
 
 // ---------------------------------------------------------------- build page
@@ -137,7 +148,7 @@ const section = document.createElement('section');
 section.className = 'section-dynamic';
 section.dataset.sectionV2 = 'dynamic';
 
-// --- Panel 1: controls ("Current Properties" + the one pink button) ---
+// --- Band 1 (top): controls ---
 const controlsPanel = document.createElement('div');
 controlsPanel.className = 'panel-border dyn-panel dyn-controls-panel';
 const headingContainer = document.createElement('div');
@@ -205,12 +216,19 @@ function toggleRow(labelText, note) {
   row.append(box, label, noteSpan);
   return row;
 }
-const tailRow = toggleRow('Smart Tail', 'ON');
-const bliRow = toggleRow('BLI', 'ON');
+const toggleCol = document.createElement('div');
+toggleCol.className = 'dyn-toggle-col';
+toggleCol.append(
+  toggleRow('Smart Tail', 'ON · live at M4'),
+  toggleRow('BLI', 'ON · live at M5'),
+);
 
-controlsPanel.append(headingContainer, speedCtl.wrap, cdCtl.wrap, sCtl.wrap, tailRow, bliRow);
+const controlsRow = document.createElement('div');
+controlsRow.className = 'dyn-controls-row';
+controlsRow.append(speedCtl.wrap, cdCtl.wrap, sCtl.wrap, toggleCol);
+controlsPanel.append(headingContainer, controlsRow);
 
-// --- Panel 2 (centre, dominant): the visualiser reservation ---
+// --- Band 2 (centre, dominant): the visualiser reservation ---
 const visualPanel = document.createElement('div');
 visualPanel.className = 'panel-border dyn-panel dyn-visual-panel';
 const visualNote = document.createElement('div');
@@ -218,35 +236,37 @@ visualNote.className = 'dyn-visual-note';
 visualNote.textContent = ' ';
 visualPanel.appendChild(visualNote);
 
-// --- Panel 3: the condensed output box ---
+// --- Band 3 (bottom): the condensed output strip ---
 const resultsPanel = document.createElement('div');
-resultsPanel.className = 'panel-border dyn-panel dyn-results-panel';
+resultsPanel.className = 'panel-border dyn-panel';
 const resultsHeading = document.createElement('h2');
 resultsHeading.className = 'fleet-results-header';
 resultsHeading.textContent = 'Results';
-resultsPanel.appendChild(resultsHeading);
+const resultsRow = document.createElement('div');
+resultsRow.className = 'dyn-results-row';
 
 const outCells = new Map();
-function resultRow(label) {
+function statBlock(label) {
+  const block = document.createElement('div');
+  block.className = 'dyn-stat';
   const h = document.createElement('div');
   h.className = 'fleet-results-data-header';
-  h.textContent = `${label}:`;
+  h.textContent = label;
   const d = document.createElement('div');
   d.className = 'fleet-results-data';
   d.textContent = '—';
-  resultsPanel.append(h, d);
+  block.append(h, d);
+  resultsRow.appendChild(block);
   outCells.set(label, d);
 }
 for (const label of [
   'Frontal area', 'Wetted area', 'Drag', 'Propulsion power',
   'Energy / 1,000 km', 'LH2 / 1,000 km', 'Fuel system weight',
-]) resultRow(label);
+]) statBlock(label);
 
 const warningsBox = document.createElement('div');
 warningsBox.className = 'dyn-warnings';
-const provLine = document.createElement('div');
-provLine.className = 'dyn-provenance';
-resultsPanel.append(warningsBox, provLine);
+resultsPanel.append(resultsHeading, resultsRow, warningsBox);
 
 section.append(controlsPanel, visualPanel, resultsPanel);
 $('[data-section="fleet"]').after(section);
@@ -278,11 +298,10 @@ function paint() {
   }
   warningsBox.replaceChildren(...rm.warnings.map((w) => {
     const div = document.createElement('div');
-    div.className = 'dyn-warning' + (/ORANGE/.test(w) ? ' orange' : '');
-    div.textContent = w;
+    div.className = `dyn-warning ${w.level}`;
+    div.textContent = w.text;
     return div;
   }));
-  provLine.textContent = rm.parked ? '' : rm.provenance;
 }
 
 speedCtl.slider.addEventListener('input', () => { state = setInput(state, 'airspeedKmh', Number(speedCtl.slider.value)); paint(); });

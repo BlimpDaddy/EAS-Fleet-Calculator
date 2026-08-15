@@ -69,7 +69,10 @@ console.log('\n== r6: 0→100 yields exact engine contract values ==');
     row['Fuel system weight'].startsWith('379 t') && row['Fuel system weight'].includes('10,000 km'));
   check('frontal area echoes contract', row['Frontal area'] === '40,522 m²');
   check('wetted area echoes measured record', row['Wetted area'] === '206,795 m²');
-  check('provenance visible and CALCULATED-from', rm.provenance.includes('CALCULATED from Cd'));
+  // Provenance is OFF the page (Toby ruling 2026-08-15) but stays the
+  // contract's engineer-facing truth — assert at the contract level.
+  check('no provenance copy in the display model', !('provenance' in rm));
+  check('contract still carries full provenance', contract.provenance.summary.startsWith('CALCULATED from Cd'));
 }
 
 console.log('\n== r6: 100→0 dashes without destroying state ==');
@@ -113,19 +116,25 @@ console.log('\n== r6: Ideal idempotent + authored provenance ==');
   check('ideal scenario self-identifies', contract.scenario === 'VISION');
 }
 
-console.log('\n== r6: ORANGE/RED = correct warning ==');
+console.log('\n== r6: ORANGE/RED = correct warning (minimal words, Toby 2026-08-15) ==');
 {
   const { engine } = countingEngine();
-  // ORANGE aero band: Cd 0.18 (GREEN max 0.12, ORANGE max 0.22)
+  // ORANGE aero band: Cd 0.18 (GREEN max 0.12, ORANGE max 0.22). At this
+  // Cd the reference-trip fuel also goes RED — both must surface, short.
   const orange = compute(setInput(setInput(initialState(), 'cd', 0.18), 'airspeedKmh', 100), engine);
   const rmO = renderModel(orange);
-  check('ORANGE Cd surfaces exactly one aero warning',
-    rmO.warnings.filter((w) => w.includes('ORANGE')).length === 1, rmO.warnings.join(' | '));
+  check('ORANGE Cd → exactly one orange "Inefficient dynamics"',
+    rmO.warnings.filter((w) => w.level === 'orange' && w.text === 'Inefficient dynamics').length === 1,
+    JSON.stringify(rmO.warnings));
+  check('fuel RED → red "Critical fuel weight"',
+    rmO.warnings.some((w) => w.level === 'red' && w.text === 'Critical fuel weight'));
+  check('warnings are short labels, no sentences',
+    rmO.warnings.every((w) => w.text.split(' ').length <= 4), JSON.stringify(rmO.warnings));
   // RED floor breach: Cd below the friction estimate (~0.0084)
   const red = compute(setInput(setInput(initialState(), 'cd', 0.005), 'airspeedKmh', 100), engine);
   const rmR = renderModel(red);
-  check('below-floor RED carries the contract floor warnings',
-    red.floorStatus === 'RED' && rmR.warnings.some((w) => w.includes('cd-below-friction-estimate')));
+  check('below-floor RED → red "Cd below friction floor"',
+    red.floorStatus === 'RED' && rmR.warnings.some((w) => w.level === 'red' && w.text === 'Cd below friction floor'));
   check('warnings never hide outputs (flagged, not hidden)',
     rmR.rows.every(([, v]) => v !== '—'));
 }
