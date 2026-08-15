@@ -12,7 +12,7 @@
 import { computeDynamics } from '../calcv2/src/dynamicsCore.js';
 import {
   SUNSHIP_GEOMETRY, EAS_IDEAL, BODY_ONLY_CD,
-  initialState, isParked, setInput, applyIdeal, compute, renderModel,
+  initialState, isParked, setInput, setToggle, applyIdeal, compute, renderModel,
 } from '../v2/dynamic-state.js';
 
 let passed = 0, failed = 0;
@@ -139,16 +139,35 @@ console.log('\n== r6: ORANGE/RED = correct warning (minimal words, Toby 2026-08-
     rmR.rows.every(([, v]) => v !== '—'));
 }
 
-console.log('\n== toggle semantics pinned for M4/M5 (wired now, inert in UI) ==');
+console.log('\n== M4/M5 toggles LIVE (pulled forward, Toby 2026-08-15) ==');
 {
   const { engine } = countingEngine();
   const moving = setInput(initialState(), 'airspeedKmh', 100);
-  const tailOff = compute({ ...moving, tailOn: false }, engine);
+  const tailOff = compute(setToggle(moving, 'tailOn', false), engine);
   check('tail OFF forces body-only Cd 0.26', tailOff.selectedCd === BODY_ONLY_CD);
   check('tail OFF does not touch S', tailOff.selectedS === moving.s);
-  const bliOff = compute({ ...moving, bliOn: false }, engine);
+  check('tail OFF re-labels Cd as authored (body-only, not a user claim)',
+    tailOff.cdSource === 'authored');
+  const bliOff = compute(setToggle(moving, 'bliOn', false), engine);
   check('BLI OFF forces S = 0 without touching Cd',
     bliOff.selectedS === 0 && bliOff.selectedCd === moving.cd);
+  check('BLI OFF power = exactly the no-credit cubic',
+    bliOff.powerMW === bliOff.powerNoCreditMW);
+  // Reveal-by-removal round trip: selections survive the excursion.
+  const roundTrip = setToggle(setToggle(moving, 'tailOn', false), 'tailOn', true);
+  const restored = compute(roundTrip, engine);
+  check('re-enabling the tail restores the pre-toggle Cd exactly',
+    restored.selectedCd === moving.cd);
+  // Both OFF at speed: the naked-body worst case computes, flagged not hidden.
+  const naked = compute(setToggle(setToggle(moving, 'tailOn', false), 'bliOn', false), engine);
+  check('both OFF = body-only no-credit (0.26, S 0)',
+    naked.selectedCd === BODY_ONLY_CD && naked.selectedS === 0);
+  // Toggles are selections too: changed while parked, they persist (r6).
+  const { engine: e2, calls: c2 } = countingEngine();
+  const parkedToggle = setToggle(initialState(), 'bliOn', false);
+  check('toggle while parked calls engine zero times', compute(parkedToggle, e2) === null && c2() === 0);
+  const firstMove = compute(setInput(parkedToggle, 'airspeedKmh', 100), e2);
+  check('parked toggle carries into first movement', firstMove.selectedS === 0);
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);

@@ -102,6 +102,16 @@ export function setInput(state, field, value) {
   return next;
 }
 
+/** Toggle a system (M4 Smart Tail / M5 BLI — live per Toby 2026-08-15).
+ *  Toggles force the value IN USE (tail off → body-only Cd; BLI off →
+ *  S = 0, each affecting only its own term, spec §7.1) but never destroy
+ *  the underlying slider selection — re-enabling restores it exactly
+ *  (bench ruling cea306a). Persists while parked like any selection. */
+export function setToggle(state, field, on) {
+  if (field !== 'tailOn' && field !== 'bliOn') throw new Error(`setToggle: unknown field '${field}'`);
+  return { ...state, [field]: !!on };
+}
+
 /** The pink button. Idempotent by construction: applying it twice yields
  *  the same state (r6 fixture). Restores authored provenance. */
 export function applyIdeal(state) {

@@ -15,11 +15,12 @@
  * the other pages' columns on purpose: horizontal = dynamic flow over
  * time; the visualiser will stream L→R across the middle.
  *
- * WHAT THE SHELL IS (r6: "M3 does not consume M4/M5"): parked load, the
- * pink EAS IDEAL button, three sliders, condensed outputs, warnings-only
- * statuses (MINIMAL WORDS, Toby 2026-08-15), a blank centre reservation
- * for the visualiser. Toggles are rendered but INERT — operational at M4
- * (tail) / M5 (BLI). No provenance copy on the page (Toby 2026-08-15:
+ * WHAT THIS IS: the M3 shell (parked load, the pink EAS IDEAL button,
+ * three sliders, condensed outputs, warnings-only statuses — MINIMAL
+ * WORDS, Toby 2026-08-15 — and the blank centre reservation) PLUS the
+ * M4/M5 toggles, pulled forward live on Toby's call 2026-08-15: both ON
+ * at load, reveal-by-removal complete. No provenance copy on the page
+ * (Toby 2026-08-15:
  * "obviously it's calc using the settings live — that's the point");
  * provenance stays in the contract for engineers and the COPY step later.
  *
@@ -29,8 +30,8 @@
  */
 import { computeDynamics } from '/calcv2/src/dynamicsCore.js';
 import {
-  EAS_IDEAL, SPEED_MIN, SPEED_MAX, S_MAX,
-  initialState, isParked, setInput, applyIdeal, compute, renderModel,
+  EAS_IDEAL, BODY_ONLY_CD, SPEED_MIN, SPEED_MAX, S_MAX,
+  initialState, isParked, setInput, setToggle, applyIdeal, compute, renderModel,
 } from './dynamic-state.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -200,28 +201,24 @@ zoneBar.title = '0–15% within published BLI results · 15–35% at the current
 for (let i = 0; i < 3; i++) zoneBar.appendChild(document.createElement('div'));
 sCtl.slider.after(zoneBar);
 
-// Inert toggles — the shell renders the ON state; M4/M5 wire them live.
-function toggleRow(labelText, note) {
+// Live toggles (M4 Smart Tail / M5 BLI — pulled forward, Toby 2026-08-15).
+// The reveal is REMOVAL: both load ON; toggling OFF is how users learn.
+function toggleRow(labelText) {
   const row = document.createElement('div');
   row.className = 'dyn-toggle-row';
   const box = document.createElement('input');
   box.type = 'checkbox';
   box.checked = true;
-  box.disabled = true; // M3 shell: present, inert (r6)
   const label = document.createElement('span');
   label.textContent = labelText;
-  const noteSpan = document.createElement('span');
-  noteSpan.className = 'dyn-toggle-note';
-  noteSpan.textContent = note;
-  row.append(box, label, noteSpan);
-  return row;
+  row.append(box, label);
+  return { row, box };
 }
+const tailToggle = toggleRow('Smart Tail');
+const bliToggle = toggleRow('BLI');
 const toggleCol = document.createElement('div');
 toggleCol.className = 'dyn-toggle-col';
-toggleCol.append(
-  toggleRow('Smart Tail', 'ON · live at M4'),
-  toggleRow('BLI', 'ON · live at M5'),
-);
+toggleCol.append(tailToggle.row, bliToggle.row);
 
 const controlsRow = document.createElement('div');
 controlsRow.className = 'dyn-controls-row';
@@ -275,12 +272,23 @@ $('[data-section="fleet"]').after(section);
 
 function paint() {
   // Slider positions always mirror state (the ideal button moves them).
+  // A toggled-off system SNAPS its slider to the forced value and greys
+  // it; the underlying selection survives and restores on re-enable
+  // (bench ruling cea306a — the value in force is never ambiguous).
+  const cdInForce = state.tailOn ? state.cd : BODY_ONLY_CD;
+  const sInForce = state.bliOn ? state.s : 0;
   speedCtl.slider.value = state.airspeedKmh;
-  cdCtl.slider.value = state.cd;
-  sCtl.slider.value = state.s;
+  cdCtl.slider.value = cdInForce;
+  sCtl.slider.value = sInForce;
+  cdCtl.slider.disabled = !state.tailOn;
+  sCtl.slider.disabled = !state.bliOn;
+  cdCtl.wrap.style.opacity = state.tailOn ? '' : '0.5';
+  sCtl.wrap.style.opacity = state.bliOn ? '' : '0.5';
+  tailToggle.box.checked = state.tailOn;
+  bliToggle.box.checked = state.bliOn;
   speedCtl.valueSpan.textContent = String(state.airspeedKmh);
-  cdCtl.valueSpan.textContent = state.cd.toFixed(3);
-  sCtl.valueSpan.textContent = `${Math.round(state.s * 100)}%`;
+  cdCtl.valueSpan.textContent = cdInForce.toFixed(3);
+  sCtl.valueSpan.textContent = `${Math.round(sInForce * 100)}%`;
 
   // State → engine (UI-level parked gate) → ruled display model → DOM.
   const rm = renderModel(compute(state, computeDynamics));
@@ -307,6 +315,8 @@ function paint() {
 speedCtl.slider.addEventListener('input', () => { state = setInput(state, 'airspeedKmh', Number(speedCtl.slider.value)); paint(); });
 cdCtl.slider.addEventListener('input', () => { state = setInput(state, 'cd', Number(cdCtl.slider.value)); paint(); });
 sCtl.slider.addEventListener('input', () => { state = setInput(state, 's', Number(sCtl.slider.value)); paint(); });
+tailToggle.box.addEventListener('change', () => { state = setToggle(state, 'tailOn', tailToggle.box.checked); paint(); });
+bliToggle.box.addEventListener('change', () => { state = setToggle(state, 'bliOn', bliToggle.box.checked); paint(); });
 idealBtn.addEventListener('click', () => { state = applyIdeal(state); paint(); });
 
 paint(); // loads PARKED: dashes, engine not consulted (fixture-proven)
