@@ -69,7 +69,16 @@
 <body>
   <h1>EAS Shape Inspector</h1>
   <p class="sub">Drop in any .obj file to measure simple VS, VS<sub>∞</sub> and VE. The wireframe sphere is
-    the actual minimum bounding sphere that VE is divided by — not a decoration.</p>
+    the actual minimum bounding sphere that VE is divided by — not a decoration.
+    <!-- Dev-only nav: the DYNAMIC bench is excluded from the deployed bake
+         (bake-calcv2.mjs BAKE_EXCLUDE), so this link only reveals on the
+         local CalcV2 server (launch.json calcv2-bench, port 5178). -->
+    <span id="bench-link" hidden>&nbsp;·&nbsp; <a href="dynamic-bench.html"
+      style="color: var(--accent-2)">→ DYNAMIC bench</a>
+    (the flight-physics engine control panel)</span></p>
+  <script>
+    if (location.port === '5178') document.getElementById('bench-link').hidden = false;
+  </script>
 
   <div class="layout">
     <div>
