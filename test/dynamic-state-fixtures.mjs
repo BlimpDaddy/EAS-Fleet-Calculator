@@ -65,8 +65,14 @@ console.log('\n== r6: 0→100 yields exact engine contract values ==');
   check('power row formats contract.powerMW', row['Propulsion power'] === `${contract.powerMW.toFixed(1)} MW`);
   check('bare tag is the S SETTING (−27%)', rm.powerTag === '(−27%)', rm.powerTag);
   check('LH2 rate row formats contract.fuelPer1000kmT', row['LH2 / 1,000 km'] === `${contract.fuelPer1000kmT.toFixed(1)} t`);
-  check('fuel system row is the 10,000 km reference, labelled',
-    row['Fuel system weight'].startsWith('379 t') && row['Fuel system weight'].includes('10,000 km'));
+  // Fuel trio (Toby 2026-08-15): rate · LH2 weight · LH2 + Storage, the
+  // reference distance labelled in the headers; energy row CUT.
+  check('LH2 weight row is the reference-trip LH2 (75.8 t)',
+    row['LH2 weight (10,000 km)'] === `${contract.refTripFuelT.toFixed(1)} t`);
+  check('LH2 + Storage row is the tankage-system total (379 t)',
+    row['LH2 + Storage (10,000 km)'] === '379 t');
+  check('energy row is CUT (it is power in other units)',
+    !rm.rows.some(([k]) => /energy/i.test(k)));
   check('frontal area echoes contract', row['Frontal area'] === '40,522 m²');
   check('wetted area echoes measured record', row['Wetted area'] === '206,795 m²');
   // Provenance is OFF the page (Toby ruling 2026-08-15) but stays the

@@ -258,7 +258,7 @@ function statBlock(label) {
 }
 for (const label of [
   'Frontal area', 'Wetted area', 'Drag', 'Propulsion power',
-  'Energy / 1,000 km', 'LH2 / 1,000 km', 'Fuel system weight',
+  'LH2 / 1,000 km', 'LH2 weight (10,000 km)', 'LH2 + Storage (10,000 km)',
 ]) statBlock(label);
 
 const warningsBox = document.createElement('div');
