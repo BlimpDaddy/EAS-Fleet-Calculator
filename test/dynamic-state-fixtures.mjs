@@ -12,7 +12,8 @@
 import { computeDynamics } from '../calcv2/src/dynamicsCore.js';
 import {
   SUNSHIP_GEOMETRY, EAS_IDEAL, BODY_ONLY_CD,
-  initialState, isParked, setInput, setToggle, applyIdeal, compute, renderModel,
+  initialState, isParked, setInput, setToggle, applyIdeal,
+  effectiveControls, compute, renderModel,
 } from '../v2/dynamic-state.js';
 
 let passed = 0, failed = 0;
@@ -174,6 +175,58 @@ console.log('\n== M4/M5 toggles LIVE (pulled forward, Toby 2026-08-15) ==');
   check('toggle while parked calls engine zero times', compute(parkedToggle, e2) === null && c2() === 0);
   const firstMove = compute(setInput(parkedToggle, 'airspeedKmh', 100), e2);
   check('parked toggle carries into first movement', firstMove.selectedS === 0);
+}
+
+console.log('\n== r7 send-back #1: Ideal restores the COMPLETE ruled configuration ==');
+{
+  const { engine } = countingEngine();
+  const moving = setInput(initialState(), 'airspeedKmh', 100);
+  for (const [name, wrecked] of [
+    ['tail-off → Ideal', setToggle(moving, 'tailOn', false)],
+    ['BLI-off → Ideal', setToggle(moving, 'bliOn', false)],
+    ['both-off → Ideal', setToggle(setToggle(moving, 'tailOn', false), 'bliOn', false)],
+  ]) {
+    const ideal = applyIdeal(wrecked);
+    const contract = compute(ideal, engine);
+    check(`${name}: both toggles back ON`, ideal.tailOn && ideal.bliOn);
+    check(`${name}: engine receives Cd 0.043, not body-only`, contract.selectedCd === EAS_IDEAL.cd);
+    check(`${name}: the 379 t state exactly`, contract.refTripFuelSystemT.toFixed(0) === '379');
+  }
+}
+
+console.log('\n== r7 send-back #2: forced values carry truthful provenance ==');
+{
+  const { engine } = countingEngine();
+  // Wander to USER, then force each system off — the forced value must
+  // never travel under the user's (or the Ideal's) label.
+  const userState = setInput(setInput(setInput(initialState(), 'airspeedKmh', 100), 'cd', 0.10), 's', 0.20);
+  const tailOff = compute(setToggle(userState, 'tailOn', false), engine);
+  check('tail OFF: cdSource authored', tailOff.cdSource === 'authored');
+  check('tail OFF: cdLabel names BODY-ONLY, not the user',
+    tailOff.provenance.cdLabel.includes('BODY-ONLY'), tailOff.provenance.cdLabel);
+  check('tail OFF: S keeps the user label untouched',
+    tailOff.provenance.sLabel === 'USER SETTING');
+  const bliOff = compute(setToggle(userState, 'bliOn', false), engine);
+  check('BLI OFF: sSource authored', bliOff.sSource === 'authored');
+  check('BLI OFF: sLabel names BLI OFF, not the user',
+    bliOff.provenance.sLabel.includes('BLI OFF'), bliOff.provenance.sLabel);
+  check('BLI OFF: Cd keeps the user label untouched',
+    bliOff.provenance.cdLabel === 'USER SETTING');
+  // Ideal-after-Ideal still idempotent with the toggle restore in place.
+  check('applyIdeal still idempotent with toggles',
+    JSON.stringify(applyIdeal(applyIdeal(userState))) === JSON.stringify(applyIdeal(userState)));
+}
+
+console.log('\n== r7 #6: one derivation for values-in-force ==');
+{
+  const { engine } = countingEngine();
+  const moving = setInput(initialState(), 'airspeedKmh', 100);
+  for (const st of [moving, setToggle(moving, 'tailOn', false), setToggle(moving, 'bliOn', false)]) {
+    const eff = effectiveControls(st);
+    const c = compute(st, engine);
+    check(`effectiveControls matches engine input (tail ${st.tailOn ? 'on' : 'off'}, BLI ${st.bliOn ? 'on' : 'off'})`,
+      c.selectedCd === eff.cd && c.selectedS === eff.s);
+  }
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);

@@ -30,8 +30,9 @@
  */
 import { computeDynamics } from '/calcv2/src/dynamicsCore.js';
 import {
-  EAS_IDEAL, BODY_ONLY_CD, SPEED_MIN, SPEED_MAX, S_MAX,
-  initialState, isParked, setInput, setToggle, applyIdeal, compute, renderModel,
+  EAS_IDEAL, SPEED_MIN, SPEED_MAX, S_MAX,
+  initialState, isParked, setInput, setToggle, applyIdeal,
+  effectiveControls, compute, renderModel,
 } from './dynamic-state.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -275,8 +276,9 @@ function paint() {
   // A toggled-off system SNAPS its slider to the forced value and greys
   // it; the underlying selection survives and restores on re-enable
   // (bench ruling cea306a — the value in force is never ambiguous).
-  const cdInForce = state.tailOn ? state.cd : BODY_ONLY_CD;
-  const sInForce = state.bliOn ? state.s : 0;
+  // The forcing itself lives in dynamic-state.js (r7 #6: one derivation,
+  // shared with compute(), so DOM display can never drift from it).
+  const { cd: cdInForce, s: sInForce } = effectiveControls(state);
   speedCtl.slider.value = state.airspeedKmh;
   cdCtl.slider.value = cdInForce;
   sCtl.slider.value = sInForce;

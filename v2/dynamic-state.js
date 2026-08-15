@@ -113,15 +113,29 @@ export function setToggle(state, field, on) {
 }
 
 /** The pink button. Idempotent by construction: applying it twice yields
- *  the same state (r6 fixture). Restores authored provenance. */
+ *  the same state (r6 fixture). Restores authored provenance AND both
+ *  toggles ON — the Ideal is the complete ruled configuration, not just
+ *  slider positions (review r7 send-back #1: tail-off → Ideal must yield
+ *  the 75.8 t / 379 t state, never body-only 0.26 under an Ideal label). */
 export function applyIdeal(state) {
   return {
     ...state,
     airspeedKmh: EAS_IDEAL.airspeedKmh,
     cd: EAS_IDEAL.cd, s: EAS_IDEAL.s,
+    tailOn: true, bliOn: true,
     scenario: EAS_IDEAL.scenario,
     cdSource: EAS_IDEAL.cdSource, sSource: EAS_IDEAL.sSource,
     cdLabel: EAS_IDEAL.cdLabel, sLabel: EAS_IDEAL.sLabel,
+  };
+}
+
+/** The control values IN FORCE — the single home for toggle-forcing
+ *  (review r7 #6: DOM code must not re-derive these and drift from
+ *  compute()). Tail OFF forces body-only Cd; BLI OFF forces S = 0. */
+export function effectiveControls(state) {
+  return {
+    cd: state.tailOn ? state.cd : BODY_ONLY_CD,
+    s: state.bliOn ? state.s : 0,
   };
 }
 
@@ -136,10 +150,12 @@ const configurationId = (state) =>
  */
 export function compute(state, computeDynamics, geometry = SUNSHIP_GEOMETRY) {
   if (isParked(state)) return null;
-  // Toggle semantics (spec §7.1) — wired here so M4/M5 are UI enablement,
-  // not new maths. At M3 both toggles are ON (inert controls).
-  const cdUsed = state.tailOn ? state.cd : BODY_ONLY_CD;
-  const sUsed = state.bliOn ? state.s : 0;
+  // Toggle semantics (spec §7.1): the values IN FORCE come from the one
+  // shared derivation. A forced value carries its OWN truthful provenance
+  // (review r7 send-back #2): a body-only 0.26 must never travel under an
+  // "EAS IDEAL" or "USER SETTING" label, and a forced S = 0 is authored,
+  // not whatever the parked slider claims.
+  const { cd: cdUsed, s: sUsed } = effectiveControls(state);
   return computeDynamics(geometry, {
     airspeedKmh: state.airspeedKmh,
     cd: cdUsed,
@@ -147,8 +163,9 @@ export function compute(state, computeDynamics, geometry = SUNSHIP_GEOMETRY) {
     scenario: state.scenario,
     configurationId: configurationId(state),
     cdSource: state.tailOn ? state.cdSource : 'authored',
-    sSource: state.sSource,
-    cdLabel: state.cdLabel, sLabel: state.sLabel,
+    sSource: state.bliOn ? state.sSource : 'authored',
+    cdLabel: state.tailOn ? state.cdLabel : 'BODY-ONLY 0.26 (Smart Tail OFF, ruled 2026-08-13)',
+    sLabel: state.bliOn ? state.sLabel : 'BLI OFF — S = 0 (spec §7.1)',
   });
 }
 
