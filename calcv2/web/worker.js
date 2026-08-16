@@ -7,6 +7,8 @@
 import { parseObjVertices, parseObjMesh, facesToEdgeList } from '../src/obj.js';
 import { parseGlbVertices } from '../src/glb.js';
 import { computeShapeMetrics } from '../src/shapeMetrics.js';
+import { measureDynamicsGeometry } from '../src/dynamicsGeometry.js';
+import { measureSectionalProxy } from '../src/cdEstimator.js';
 
 function remapFaces(faces, indices) {
   const origToLocal = new Map(indices.map((orig, local) => [orig, local]));
@@ -99,6 +101,41 @@ self.onmessage = async (e) => {
     const segs = meshSegments(vertices, meshFaces, meshLineEdges, m.centre, m.radius);
     const points = segs ? null : (glb ? null : pointCloud(vertices, m.centre, m.radius));
 
+    // M6 stage 2 (opt-in via payload.dynamics): DYNAMIC's raw geometry +
+    // sectional proxies for UPLOADS, measured off the main thread in the
+    // same pass that parsed the mesh. Point-cloud/faceless input falls
+    // back to the CONVEX HULL faces (the hull is already computed for
+    // VS) — a closed manifold the estimator can ray-cast; the source is
+    // labelled so provenance never claims skin that was not measured.
+    // Preset records never come from here (they are precomputed at bake
+    // time — presetDynamics.js); stale results are discarded by the
+    // caller's runId guard exactly like every other worker reply.
+    let dynamics = null;
+    if (e.data.dynamics) {
+      const solidFaces = meshFaces.length ? meshFaces : m.hull.faces;
+      const geometrySource = meshFaces.length ? 'mesh' : 'convex-hull(points)';
+      const per = {};
+      for (const ax of ['X', 'Y', 'Z']) per[ax] = measureDynamicsGeometry(vertices, solidFaces, { flightAxis: ax });
+      const proxies = {};
+      for (const ax of ['+X', '-X', '+Y', '-Y', '+Z', '-Z']) {
+        const p = measureSectionalProxy(vertices, solidFaces, { axis: ax });
+        proxies[ax] = { proxy: p.proxy, oddFraction: p.quality ? p.quality.oddFraction : null };
+      }
+      dynamics = {
+        geometrySource,
+        raw: {
+          extents: per.Z.extents,
+          frontalRaw: { X: per.X.frontalArea, Y: per.Y.frontalArea, Z: per.Z.frontalArea },
+          wettedRaw: per.Z.wettedArea,
+          hullRaw: per.Z.hullArea,
+          meshRaw: per.Z.meshArea,
+          wettedSource: per.Z.wettedSource,
+          warnings: per.Z.warnings,
+        },
+        proxies,
+      };
+    }
+
     // Structured-clone can't carry the nested hull/ball objects cheaply; send just
     // what the viewer needs, flattened. The mesh segment buffer is transferred.
     self.postMessage({
@@ -129,6 +166,7 @@ self.onmessage = async (e) => {
       // meshPoints (normalised vertex positions for dot rendering) instead.
       meshSegments: segs,
       meshPoints: points,
+      dynamics, // M6 stage 2: null unless requested (uploads only)
     }, [segs, points].filter(Boolean).map((b) => b.buffer));
   } catch (err) {
     self.postMessage({ type: 'error', message: err.message });

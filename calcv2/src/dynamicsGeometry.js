@@ -184,6 +184,57 @@ const WETTED_OPEN_FACTOR = 0.98;
  * }} areas in units^2; `wettedArea` is always a TRUSTED value (mesh sum or
  *    hull fallback); `meshArea` is the raw sum, diagnostics only
  */
+/**
+ * Raw (mesh-units) measurement record → the metres-grade M1 geometry
+ * record, without touching the mesh (M6 stage 2 — the hybrid geometry
+ * inheritance rule: preset records are PRECOMPUTED at bake time; only
+ * the cheap scaling runs at page time; live length changes re-scale).
+ *
+ * The raw record is produced by tools/gen-preset-dynamics.mjs from the
+ * same measureDynamicsGeometry() below — this function is ONLY the
+ * scaling algebra factored out (areas × scale², extents × scale), so a
+ * scaled record is identical to measuring the mesh at that length
+ * directly (parity fixture in the estimator suite). The wetted TRUST
+ * DECISION (mesh vs hull-fallback) was made at measurement time and
+ * travels in the raw record — scaling never re-decides it.
+ *
+ * @param {{extents:number[], frontalRaw:{X:number,Y:number,Z:number},
+ *          wettedRaw:number, hullRaw:number, meshRaw:number,
+ *          wettedSource:string, warnings:string[]}} raw
+ * @param {'X'|'Y'|'Z'} flightAxis
+ * @param {number} lengthM  physical length along the flight axis, > 0
+ */
+export function scaleGeometryRecord(raw, flightAxis, lengthM) {
+  if (!FLIGHT_AXES.includes(flightAxis)) {
+    throw new Error(`scaleGeometryRecord: flightAxis must be X, Y or Z, got ${flightAxis}`);
+  }
+  if (!(typeof lengthM === 'number' && Number.isFinite(lengthM) && lengthM > 0)) {
+    throw new Error(`scaleGeometryRecord: lengthM must be a finite number > 0, got ${lengthM}`);
+  }
+  const alongFlight = raw.extents[AXIS_INDEX[flightAxis]];
+  if (!(alongFlight > 0)) throw new Error('scaleGeometryRecord: zero extent along flight axis');
+  const frontalRaw = raw.frontalRaw[flightAxis];
+  if (!Number.isFinite(frontalRaw) || !Number.isFinite(raw.wettedRaw)) {
+    throw new Error('scaleGeometryRecord: raw record needs finite frontal/wetted');
+  }
+  const scale = lengthM / alongFlight;
+  const s2 = scale * scale;
+  return {
+    flightAxis,
+    scale,
+    lengthM,
+    units: 'm',
+    extents: raw.extents.map((e) => e * scale),
+    frontalArea: frontalRaw * s2,
+    wettedArea: raw.wettedRaw * s2,
+    hullArea: raw.hullRaw * s2,
+    meshArea: raw.meshRaw * s2,
+    wettedOverFrontal: frontalRaw > 0 ? raw.wettedRaw / frontalRaw : NaN,
+    wettedSource: raw.wettedSource,
+    warnings: [...(raw.warnings || [])],
+  };
+}
+
 export function measureDynamicsGeometry(verts, faces, { flightAxis = 'Z', lengthM = null } = {}) {
   if (!FLIGHT_AXES.includes(flightAxis)) {
     throw new Error(`measureDynamicsGeometry: flightAxis must be X, Y or Z, got ${flightAxis}`);

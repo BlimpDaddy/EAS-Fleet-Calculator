@@ -244,3 +244,51 @@ export function estimateCd(proxyRecord, geometry, airspeedKmh) {
     provenance,
   };
 }
+
+/**
+ * GENERIC TAIL FRACTION — 2026-08-16 (M6 stage 2; spec §5.4, ruled
+ * 2026-08-12 and corrected by external review r2 #2)
+ * WHAT:  a generic Smart Tail removes 20% of the estimator's PRESSURE
+ *        term. Friction is never touched.
+ * WHY:   the scenario-graded fractions (up to ~87% of the avoidable
+ *        pool) are SUNSHIP-AUTHORED data — applying them to a cube's
+ *        ~1.0 pressure term would collapse it toward ~0.17, the largest
+ *        absolute gift to the worst shapes, physically ungrounded.
+ *        Generic shapes get one fixed, modest, CONSERVATIVE-grade
+ *        fraction: "some effect, not heaps" — enforced, not hoped for.
+ *        A tail cannot streamline a sharp-edged box.
+ * PROVENANCE: REFERENCE ASSUMPTION (spec §5.4).
+ * LIMITATION: shape-graded fractions (keyed to the estimator's own
+ *        aft-closure descriptors) are a future refinement, not this.
+ * REPLACE WHEN: configuration-specific tail analysis exists for
+ *        non-Sunship shapes — by dated ruling.
+ */
+export const GENERIC_TAIL_PRESSURE_FRACTION = 0.20;
+
+/**
+ * The generic Smart-Tail estimate for a NON-Sunship shape (M6 stage 2):
+ * a DERIVED frozen-API object — pressure trimmed by the §5.4 generic
+ * fraction, friction untouched, band re-drawn at ±BAND_FRACTION around
+ * the new total, provenance extended (the input identity is carried
+ * unchanged: same geometry, same speed). 'unavailable' passes through
+ * untouched — no tail can rescue an estimate that does not exist
+ * (§5.5). The Sunship's authored with-tail 0.043 NEVER routes through
+ * here (it is a claim, not an estimate — spec §5.4 / M6 amendment #6).
+ */
+export function applyGenericTail(estimate) {
+  if (!estimate || estimate.status !== 'ok') return estimate;
+  const pressureCd = estimate.pressureCd * (1 - GENERIC_TAIL_PRESSURE_FRACTION);
+  const cdEstimate = estimate.frictionCd + pressureCd;
+  return {
+    cdEstimate,
+    frictionCd: estimate.frictionCd,
+    pressureCd,
+    band: [cdEstimate * (1 - BAND_FRACTION), cdEstimate * (1 + BAND_FRACTION)],
+    status: 'ok',
+    provenance: {
+      ...estimate.provenance,
+      label: 'ESTIMATED',
+      genericTail: `generic Smart Tail — ${GENERIC_TAIL_PRESSURE_FRACTION * 100}% of pressure term removed (REFERENCE ASSUMPTION, spec §5.4)`,
+    },
+  };
+}
