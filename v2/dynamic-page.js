@@ -45,10 +45,12 @@ import {
 // are the BAKED records). All measurement is engine code — this file
 // only selects records and passes them through.
 // §4.1: DECLARED, never detected — presets carry AUTHORED default axes
-// (Toby's orientation ruling 2026-08-16, pinned in the generated
-// records: bottle +Y base-first, cigar -Z taper-trailing, car +Z,
-// lenticular +Z edge-first, washing machine +Y); uploads default '+Z'
-// until the visualiser's rotate control lands.
+// (Toby's RATIFIED natural-attitude ruling 2026-08-16, pinned in the
+// generated records: cigar +Z round-nose-first taper-trailing, bottle
+// −Y cap-first, car +Z, lenticular +Z edge-first, washing machine +Y;
+// r13 hygiene fix 2026-08-17 — this comment previously described the
+// superseded pre-ratification signs); uploads default '+Z' until the
+// visualiser's rotate control lands.
 const UPLOAD_DEFAULT_AXIS = '+Z';
 
 let activeShape = SUNSHIP_SHAPE;
