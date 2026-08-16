@@ -263,9 +263,26 @@ function persistPresetCache() {
 // Which preset's computed figures should currently be on screen (null = upload mode).
 let currentPreset = null;
 
+// ---------------------------------------------------------------- shape channel
+// M6 stage 2: publish the ACTIVE shape identity for the DYNAMIC page.
+// Presets carry identity only (their dynamics records are precomputed —
+// /calcv2/src/presetDynamics.js — resolved by the consumer); uploads
+// carry the worker's live-measured dynamics payload. Revisions make
+// stale async completions detectable downstream (the ruled
+// stale-completion-discard), on top of this file's own runId guard.
+// IDENTITY RULE (Toby ruling 2026-08-16): kind 'preset' + id is the
+// ONLY Sunship credential — an upload named Sunship.obj is kind
+// 'upload', full stop (preset identity, never filename).
+let shapeRevision = 0;
+function publishShape(shape) {
+  window.__v2ActiveShape = { revision: ++shapeRevision, ...shape };
+  window.dispatchEvent(new CustomEvent('v2-shape-change'));
+}
+
 async function computePreset(shapeId) {
   showOverlay(false); // presets render in V1's own viewer
   currentPreset = shapeId;
+  publishShape({ kind: 'preset', id: shapeId, name: shapeId.toUpperCase(), dynamics: null });
   const cached = presetCache.get(shapeId);
   if (cached) {
     const id = ++runId; // cancel any in-flight run so it can't overwrite these numbers
@@ -321,9 +338,15 @@ vsCellGuard.observe($('[data-shape="volume-scalar"]'), { childList: true, charac
 
 function loadObjText(name, text) {
   currentPreset = null; // upload mode — release the preset repaint guard
-  compute({ text }, null, (m) => {
+  compute({ text, dynamics: true }, null, (m) => {
     $('[data-shape="shape"]').textContent = name.replace(/\.obj$/i, '').toUpperCase();
     applyNumbers(m.metrics);
+    publishShape({
+      kind: 'upload',
+      id: null,
+      name: $('[data-shape="shape"]').textContent,
+      dynamics: m.dynamics ?? null, // worker-measured (hull fallback labelled)
+    });
     replica.setShape(m.meshSegments, m.meshPoints, m.hullPoints, facesToEdges(m.hullFaces), m.hullFaces, m.metrics.centre, m.metrics.radius);
     showOverlay(true);
     // V1 renders the Ship/Fleet "Previous Properties" panes (icon, shape name, VS)
