@@ -365,8 +365,12 @@ export function renderModel(contract) {
     else if (w.startsWith('below-screening-floor')) warnings.push({ level: 'red', text: 'Below screening floor' });
     else warnings.push({ level: 'orange', text: w }); // unmapped engine warning: surface raw (draft)
   }
+  // Marker guard hardened per review r12 #1a (this line was the crash
+  // site for a malformed six-key estimate): the band's SHAPE is checked
+  // here too, defence-in-depth behind the engine's semantic validation.
   const est = contract.estimate;
   const marker = est && est.status === 'ok' && Number.isFinite(est.cdEstimate)
+    && Array.isArray(est.band) && Number.isFinite(est.band[0]) && Number.isFinite(est.band[1])
     ? { value: est.cdEstimate, lo: est.band[0], hi: est.band[1] }
     : null;
   return {
