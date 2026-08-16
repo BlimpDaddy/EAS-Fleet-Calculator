@@ -29,19 +29,54 @@
  * it may not compute anything, and FLEET never scrapes what it renders.
  */
 import { computeDynamics } from '/calcv2/src/dynamicsCore.js';
-import { estimateCd } from '/calcv2/src/cdEstimator.js';
+import { estimateCd, applyGenericTail } from '/calcv2/src/cdEstimator.js';
+import { scaleGeometryRecord } from '/calcv2/src/dynamicsGeometry.js';
+import { PRESET_DYNAMICS } from '/calcv2/src/presetDynamics.js';
 import {
   EAS_IDEAL, SPEED_MIN, SPEED_MAX, S_MAX,
-  SUNSHIP_SECTIONAL, CD_TRACKS_ESTIMATE,
-  initialState, isParked, setInput, setToggle, applyIdeal,
+  SUNSHIP_SHAPE, CD_TRACKS_ESTIMATE, isSunship,
+  initialState, isParked, setInput, setToggle, setShape, applyIdeal,
   resolveCd, compute, renderModel, cdDialRange,
 } from './dynamic-state.js';
 
-// The M6 estimator seam: the ENGINE's estimateCd behind the state module's
+// ---------------------------------------------------------------- shape inheritance
+// M6 stage 2: the ACTIVE shape comes from the page-1 channel
+// (shape-upload.js publishes identity + upload dynamics; preset dynamics
+// are the BAKED records). All measurement is engine code — this file
+// only selects records and passes them through.
+const FLIGHT_AXIS = 'Z'; // §4.1: declared, never detected — the M1 default;
+                         // per-preset authored defaults await a ruling.
+
+let activeShape = SUNSHIP_SHAPE;
+let activeDynamics = PRESET_DYNAMICS.sunship; // { raw, proxies, ... }
+
+function readShapeChannel() {
+  const pub = window.__v2ActiveShape;
+  if (!pub) return false;
+  const dyn = pub.kind === 'preset' ? PRESET_DYNAMICS[pub.id] : pub.dynamics;
+  if (!dyn) return false; // no measurable geometry — keep the last shape (§5.5: never wedge)
+  activeShape = { kind: pub.kind, id: pub.id, name: pub.name };
+  activeDynamics = dyn;
+  return true;
+}
+
+/** Inherited length: V1's Ship-page output is the displayed truth (the
+ *  slider itself may hold view units — never trusted directly). */
+function readLengthM() {
+  const out = parseFloat(document.querySelector('[data-ship="length-output"]')?.textContent);
+  return Number.isFinite(out) && out > 0 ? out : 300;
+}
+
+const activeGeometry = () => scaleGeometryRecord(activeDynamics.raw, FLIGHT_AXIS, readLengthM());
+const activeProxyRecord = () => {
+  const p = activeDynamics.proxies[`+${FLIGHT_AXIS}`];
+  return { proxy: p.proxy, axis: `+${FLIGHT_AXIS}`, quality: { oddFraction: p.oddFraction ?? 0 } };
+};
+
+// The M6 estimator seam: ENGINE functions behind the state module's
 // injection point (same pattern as computeDynamics — this file computes
-// nothing). The Sunship's expensive sectional half is precomputed/pinned;
-// only the cheap per-speed call runs here.
-const ESTIMATOR = { estimateCd, proxyRecord: SUNSHIP_SECTIONAL };
+// nothing). Rebuilt per paint so it always carries the active shape.
+const estimatorSeam = () => ({ estimateCd, applyGenericTail, proxyRecord: activeProxyRecord() });
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -324,19 +359,33 @@ let lastEstimate = null;
 
 function paint() {
   // State → engine (UI-level parked gate; estimator dormant too) →
-  // ruled display model → DOM.
-  const contract = compute(state, computeDynamics, undefined, ESTIMATOR);
+  // ruled display model → DOM. Geometry + estimator seam carry the
+  // ACTIVE shape at the INHERITED length, rebuilt each paint.
+  const contract = compute(state, computeDynamics, activeGeometry(), estimatorSeam());
   if (contract && contract.estimate) lastEstimate = contract.estimate;
   const rm = renderModel(contract);
 
   // Slider positions always mirror state (the ideal button moves them).
   // Values in force come from the state module's ONE derivation (r7 #6),
-  // fed the freshest estimate (live contract echo, else the cache).
+  // fed the freshest BARE estimate (live contract echo, else the cache)
+  // plus the engine's generic-tail derivation when in force (stage 2).
   // M6 (r10): tail OFF snaps Cd to the bare estimate but the slider
   // STAYS EDITABLE — estimator proposes, slider disposes; only the BLI
   // slider still greys (S = 0 forced, spec §7.1 unchanged).
-  const { cd: cdInForce, cdSource } = resolveCd(state, contract ? contract.estimate : lastEstimate);
+  const bareEst = contract ? contract.estimate : lastEstimate;
+  const tailedEst = state.tailOn && !isSunship(activeShape) && bareEst
+    ? applyGenericTail(bareEst) : null;
+  const { cd: cdInForce, cdSource } = resolveCd(state, bareEst, tailedEst);
   const sInForce = state.bliOn ? state.s : 0;
+
+  // EAS IDEAL: Sunship-only (preset identity, never filename — ruling
+  // 2026-08-16). Greyed, visible, inert elsewhere.
+  const sunship = isSunship(activeShape);
+  idealBtn.disabled = !sunship;
+  idealBtn.style.opacity = sunship ? '' : '0.35';
+  idealBtn.title = sunship
+    ? 'EAS IDEAL — 100 km/h, Cd 0.043, S 27%'
+    : 'EAS IDEAL is the Sunship’s authored configuration';
 
   // Per-shape Cd dial (§5.3 pinned rule): contract floor + estimate top.
   const dial = cdDialRange(contract, lastEstimate);
@@ -400,8 +449,29 @@ cdCtl.slider.addEventListener('input', () => { state = setInput(state, 'cd', Num
 sCtl.slider.addEventListener('input', () => { state = setInput(state, 's', Number(sCtl.slider.value)); paint(); });
 tailToggle.box.addEventListener('change', () => { state = setToggle(state, 'tailOn', tailToggle.box.checked); paint(); });
 bliToggle.box.addEventListener('change', () => { state = setToggle(state, 'bliOn', bliToggle.box.checked); paint(); });
-idealBtn.addEventListener('click', () => { state = applyIdeal(state); paint(); });
+idealBtn.addEventListener('click', () => { if (isSunship(activeShape)) { state = applyIdeal(state); paint(); } });
 
+// M6 stage 2: shape inheritance. On a page-1 shape change: adopt the new
+// records, RESET Cd to the new shape's estimator posture (r8 #4 — the
+// state transition owns the semantics), and drop the cached marker (an
+// old shape's marker must never decorate a new shape — the estimator
+// stays dormant until the next movement, per the ruled dormancy).
+window.addEventListener('v2-shape-change', () => {
+  if (!readShapeChannel()) return;
+  state = setShape(state, activeShape);
+  lastEstimate = null;
+  paint();
+});
+// Length inheritance: V1's Ship length slider re-scales the geometry
+// live (records are raw mesh units; scaling is engine algebra). A
+// user/estimated Cd survives length changes — length is not a shape
+// change (r8 #4 covers shape/orientation only).
+document.addEventListener('input', (e) => {
+  if (e.target && e.target.matches && e.target.matches('[data-ship="length"]')) paint();
+}, true);
+
+readShapeChannel(); // adopt whatever page 1 already published (boot order safe)
+state = initialState(activeShape);
 paint(); // loads PARKED: dashes, engine not consulted (fixture-proven)
 
 // ---------------------------------------------------------------- page switching

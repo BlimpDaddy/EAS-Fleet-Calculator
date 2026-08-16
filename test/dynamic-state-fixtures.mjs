@@ -13,10 +13,13 @@
  * Plain node, zero deps: `node test/dynamic-state-fixtures.mjs`.
  */
 import { computeDynamics } from '../calcv2/src/dynamicsCore.js';
-import { estimateCd } from '../calcv2/src/cdEstimator.js';
+import { estimateCd, applyGenericTail, GENERIC_TAIL_PRESSURE_FRACTION } from '../calcv2/src/cdEstimator.js';
+import { scaleGeometryRecord } from '../calcv2/src/dynamicsGeometry.js';
+import { PRESET_DYNAMICS } from '../calcv2/src/presetDynamics.js';
 import {
   SUNSHIP_GEOMETRY, SUNSHIP_SECTIONAL, EAS_IDEAL, CD_TRACKS_ESTIMATE,
-  initialState, isParked, setInput, setToggle, applyIdeal,
+  SUNSHIP_SHAPE, isSunship,
+  initialState, isParked, setInput, setToggle, setShape, applyIdeal,
   resolveCd, effectiveControls, compute, renderModel, cdDialRange,
 } from '../v2/dynamic-state.js';
 
@@ -38,12 +41,13 @@ function countingEstimator() {
   let calls = 0;
   const est = {
     estimateCd: (proxy, geometry, v) => { calls++; return estimateCd(proxy, geometry, v); },
+    applyGenericTail,
     proxyRecord: SUNSHIP_SECTIONAL,
   };
   return { est, calls: () => calls };
 }
-/** The real estimator seam, as the page wires it. */
-const ESTIMATOR = { estimateCd, proxyRecord: SUNSHIP_SECTIONAL };
+/** The real estimator seam, as the page wires it (sunship). */
+const ESTIMATOR = { estimateCd, applyGenericTail, proxyRecord: SUNSHIP_SECTIONAL };
 /** The live bare-hull estimate at a speed — the value tail-off snaps to. */
 const bareEstimateAt = (v) => estimateCd(SUNSHIP_SECTIONAL, SUNSHIP_GEOMETRY, v).cdEstimate;
 
@@ -328,6 +332,7 @@ console.log('\n== M6: the estimator on the page — marker, band, dial, firming 
   // back to the stashed selection under the stash's own truthful label.
   const brokenEstimator = {
     estimateCd: () => ({ cdEstimate: null, frictionCd: 0.0084, pressureCd: null, band: null, status: 'unavailable', provenance: { label: 'ESTIMATED' } }),
+    applyGenericTail,
     proxyRecord: SUNSHIP_SECTIONAL,
   };
   const fallback = compute(setToggle(moving, 'tailOn', false), engine, undefined, brokenEstimator);
@@ -342,6 +347,79 @@ console.log('\n== M6: the estimator on the page — marker, band, dial, firming 
   check('compute without an estimator: contract.estimate null, numbers intact',
     noEst.estimate === null && near(noEst.powerMW, 15.158, 0.001));
   check('renderModel without an estimate: marker null', renderModel(noEst).marker === null);
+}
+
+console.log('\n== M6 STAGE 2: per-shape inheritance (r8 #4 reset, generic tail, Ideal gating) ==');
+{
+  const { engine } = countingEngine();
+  // The washing machine, exactly as the page builds it: baked record →
+  // engine scaling → engine estimator seam.
+  const WM = { kind: 'preset', id: 'washingmachine', name: 'WASHINGMACHINE' };
+  const wmDyn = PRESET_DYNAMICS.washingmachine;
+  const wmGeometry = scaleGeometryRecord(wmDyn.raw, 'Z', 100);
+  const wmSeam = {
+    estimateCd, applyGenericTail,
+    proxyRecord: { proxy: wmDyn.proxies['+Z'].proxy, axis: '+Z', quality: { oddFraction: wmDyn.proxies['+Z'].oddFraction ?? 0 } },
+  };
+  const wmBare = estimateCd(wmSeam.proxyRecord, wmGeometry, 100);
+  const wmTailed = applyGenericTail(wmBare);
+
+  // Shape change RESETS Cd (r8 #4) — even over a hand-set user value.
+  let st = setInput(setInput(initialState(), 'airspeedKmh', 100), 'cd', 0.10); // user claim on the Sunship
+  st = setShape(st, WM);
+  check('shape change resets Cd to the estimator posture (user claim never travels)',
+    st.cd === CD_TRACKS_ESTIMATE && st.cdSource === 'estimated');
+  check('shape change clears the stash and drops the authored scenario',
+    st.tailStash === null && st.scenario === 'CUSTOM');
+
+  const c = compute(st, engine, wmGeometry, wmSeam);
+  check('generic shape, tail ON: selectedCd is the engine generic-tail estimate',
+    c.selectedCd === wmTailed.cdEstimate && c.cdSource === 'estimated');
+  check('generic-tail label names the s5.4 REFERENCE ASSUMPTION',
+    /generic Smart Tail/.test(c.provenance.cdLabel) && /REFERENCE ASSUMPTION/.test(c.provenance.cdLabel));
+  check('contract.estimate stays the BARE hull (the marker never wears the tail)',
+    c.estimate.cdEstimate === wmBare.cdEstimate && c.estimate.cdEstimate > c.selectedCd);
+  check('generic tail is exactly the 20% pressure trim',
+    wmTailed.pressureCd === wmBare.pressureCd * (1 - GENERIC_TAIL_PRESSURE_FRACTION));
+  check('identity intact: no estimate- warnings on the generic path',
+    !c.warnings.some((w) => w.startsWith('estimate-')));
+  check('configurationId carries the shape key', c.configurationId === 'washingmachine/smartTailBLI');
+
+  // Tail OFF on a generic shape: bare estimate, still editable-firms.
+  const off = setToggle(st, 'tailOn', false);
+  const cOff = compute(off, engine, wmGeometry, wmSeam);
+  check('generic tail OFF: selectedCd is the bare estimate', cOff.selectedCd === wmBare.cdEstimate);
+  const firmed = compute(setInput(off, 'cd', 0.9), engine, wmGeometry, wmSeam);
+  check('drag while tracking still FIRMS to user on a generic shape',
+    firmed.selectedCd === 0.9 && firmed.cdSource === 'user');
+  // Tail back ON with no user claim: returns to the generic-tail estimate.
+  const backOn = compute(setToggle(off, 'tailOn', true), engine, wmGeometry, wmSeam);
+  check('tail ON restores the generic-tail estimate (tracking sentinel re-targets)',
+    backOn.selectedCd === wmTailed.cdEstimate);
+
+  // Ideal is Sunship-only — by PRESET IDENTITY, never filename.
+  check('applyIdeal throws on a generic shape', (() => {
+    try { applyIdeal(st); return false; } catch { return true; }
+  })());
+  check('an upload NAMED Sunship is not the Sunship (identity, never filename)',
+    !isSunship({ kind: 'upload', id: null, name: 'SUNSHIP' })
+    && (() => { try { applyIdeal(setShape(initialState(), { kind: 'upload', id: null, name: 'SUNSHIP' })); return false; } catch { return true; } })());
+
+  // Switching BACK to the Sunship restores the authored claim.
+  const home = setShape(st, SUNSHIP_SHAPE);
+  check('return to Sunship: tail ON carries the authored 0.043 again',
+    home.cd === EAS_IDEAL.cd && home.cdSource === 'authored' && home.scenario === 'VISION');
+  const cHome = compute(setInput(home, 'airspeedKmh', 100), engine, undefined, ESTIMATOR);
+  check('Sunship ideal numbers intact after the round trip (379 t)',
+    cHome.refTripFuelSystemT.toFixed(0) === '379');
+
+  // Length inheritance: same shape at another length — record scaling
+  // is engine algebra; a user Cd survives (length is not a shape change).
+  const wm60 = scaleGeometryRecord(wmDyn.raw, 'Z', 60);
+  const cShort = compute(setInput(st, 'cd', 0.5), engine, wm60, wmSeam);
+  check('length change re-scales geometry without resetting the user Cd',
+    cShort.selectedCd === 0.5 && cShort.shipLengthM === 60
+    && cShort.frontalAreaM2 < c.frontalAreaM2);
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);
