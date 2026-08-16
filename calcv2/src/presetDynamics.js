@@ -60,124 +60,124 @@ export const PRESET_DYNAMICS = {
   },
   "cigar": {
     "id": "cigar",
-    "source": "convex-hull(glb)",
+    "source": "convex-hull(corpus cigar.obj)",
     "glbSha256": "55f41a9bc09c575b59ea3a3e0e6c59fe9516699e7751ab5ca7fd32a681d7063d",
-    "objSha256": null,
+    "objSha256": "36b34666d9b650c5574b36fe6904fd6dfc0b98db11f733d15757b432bd5567f8",
     "defaultAxis": "+Z",
     "raw": {
       "extents": [
-        0.3718079924583435,
-        0.37730999290943146,
-        1.969539999961853
+        0.27163,
+        0.27163,
+        1.985066
       ],
       "frontalRaw": {
-        "X": 0.61734160424247,
-        "Y": 0.5936499108678036,
-        "Z": 0.07992457828547775
+        "X": 0.44793646503350004,
+        "Y": 0.4371198930565,
+        "Z": 0.04203625950650001
       },
-      "wettedRaw": 1.9128328170490418,
-      "hullRaw": 1.9128328170490418,
-      "meshRaw": 1.9128328170490418,
+      "wettedRaw": 1.3788501972940128,
+      "hullRaw": 1.3788501972940128,
+      "meshRaw": 1.3788501972940128,
       "wettedSource": "mesh",
       "warnings": []
     },
     "proxies": {
       "+X": {
-        "proxy": 0.9777923205199412,
+        "proxy": 0.9813074929299013,
         "oddFraction": 0
       },
       "-X": {
-        "proxy": 0.9777923205199412,
+        "proxy": 0.9813074929299009,
         "oddFraction": 0
       },
       "+Y": {
-        "proxy": 0.9834999708236506,
+        "proxy": 0.9901724708689986,
         "oddFraction": 0
       },
       "-Y": {
-        "proxy": 0.9742603171163803,
+        "proxy": 0.9888302611430345,
         "oddFraction": 0
       },
       "+Z": {
-        "proxy": 0.9248121934768765,
+        "proxy": 0.4988402750475998,
         "oddFraction": 0
       },
       "-Z": {
-        "proxy": 0.6055571341610442,
+        "proxy": 0.9244034132504214,
         "oddFraction": 0
       }
     }
   },
   "bottle": {
     "id": "bottle",
-    "source": "convex-hull(glb)",
+    "source": "convex-hull(corpus Bottle.obj)",
     "glbSha256": "f26de3ede2304b06b7841a5c4d8320f17640ad2a83c6057ed2ca4ad2a169a1b8",
-    "objSha256": null,
+    "objSha256": "05bc2f2e391b9af2e451a8bda769a9c3c6b515b996c26a2d40c2e96265147e48",
     "defaultAxis": "-Y",
     "raw": {
       "extents": [
-        0.5592049360275269,
-        1.956254482269287,
-        0.5592049360275269
+        0.559204,
+        1.956255,
+        0.559204
       ],
       "frontalRaw": {
-        "X": 0.9344571356475656,
-        "Y": 0.22986834415923157,
-        "Z": 0.9344571546662188
+        "X": 0.9344567562340002,
+        "Y": 0.22986816899999998,
+        "Z": 0.934456756234
       },
-      "wettedRaw": 3.1385206474369975,
-      "hullRaw": 3.1385206474369975,
-      "meshRaw": 3.1385206474369975,
+      "wettedRaw": 3.138520597035093,
+      "hullRaw": 3.138520597035093,
+      "meshRaw": 3.138520597035093,
       "wettedSource": "mesh",
       "warnings": []
     },
     "proxies": {
       "+X": {
-        "proxy": 0.9771010113558833,
+        "proxy": 0.9771012765532581,
         "oddFraction": 0
       },
       "-X": {
-        "proxy": 0.9771010113558833,
+        "proxy": 0.9771012765532581,
         "oddFraction": 0
       },
       "+Y": {
-        "proxy": 0.5311073279081884,
+        "proxy": 0.5311070302844244,
         "oddFraction": 0
       },
       "-Y": {
-        "proxy": 0.9046549035890165,
+        "proxy": 0.9046548268574667,
         "oddFraction": 0
       },
       "+Z": {
-        "proxy": 0.9771010113558833,
+        "proxy": 0.9771012765532581,
         "oddFraction": 0
       },
       "-Z": {
-        "proxy": 0.9771010113558833,
+        "proxy": 0.9771012765532581,
         "oddFraction": 0
       }
     }
   },
   "car": {
     "id": "car",
-    "source": "convex-hull(glb)",
+    "source": "convex-hull(corpus car.obj)",
     "glbSha256": "bba8628ed72796e29886f1e4569ecbf6387efb435274df842e959d75275efa10",
-    "objSha256": null,
+    "objSha256": "8003e51077fee54477d161150351a29c9a6cf8ee6f4d448b88e7b1fa23f50028",
     "defaultAxis": "+Z",
     "raw": {
       "extents": [
-        0.5468944311141968,
-        0.6487739384174347,
-        1.894997000694275
+        0.546894,
+        0.648774,
+        1.894998
       ],
       "frontalRaw": {
-        "X": 1.0105526983543323,
-        "Y": 1.0363633066578046,
-        "Z": 0.3531272191874786
+        "X": 1.0105534009019999,
+        "Y": 1.036363036212,
+        "Z": 0.35312704980599996
       },
-      "wettedRaw": 4.417703291528878,
-      "hullRaw": 4.417703291528878,
-      "meshRaw": 4.417703291528878,
+      "wettedRaw": 4.417705601795988,
+      "hullRaw": 4.417705601795988,
+      "meshRaw": 4.417705601795988,
       "wettedSource": "mesh",
       "warnings": []
     },
@@ -191,7 +191,7 @@ export const PRESET_DYNAMICS = {
         "oddFraction": 0
       },
       "+Y": {
-        "proxy": 1,
+        "proxy": 1.0000000000000002,
         "oddFraction": 0
       },
       "-Y": {
@@ -199,11 +199,11 @@ export const PRESET_DYNAMICS = {
         "oddFraction": 0
       },
       "+Z": {
-        "proxy": 0.4340132899110881,
+        "proxy": 0.4340132553054296,
         "oddFraction": 0
       },
       "-Z": {
-        "proxy": 0.4340132899110881,
+        "proxy": 0.4340132553054296,
         "oddFraction": 0
       }
     }
@@ -260,24 +260,24 @@ export const PRESET_DYNAMICS = {
   },
   "aerosmena": {
     "id": "aerosmena",
-    "source": "convex-hull(glb)",
+    "source": "convex-hull(corpus Aerosmena.obj)",
     "glbSha256": "9e42adc8b4a90196415e459f2bc5ab2e3caf1299e01eca6b1673a8d6ff6f8dbf",
-    "objSha256": null,
+    "objSha256": "d5140eff3e51cfe3d7fd155866025f66261f3504b25e3896922f414b80d0f035",
     "defaultAxis": "+Z",
     "raw": {
       "extents": [
-        1.9896987676620483,
-        0.8598020076751709,
-        1.9896987676620483
+        1.989698,
+        0.859802,
+        1.989698
       ],
       "frontalRaw": {
-        "X": 1.2857055713756496,
-        "Y": 3.0300124042151673,
-        "Z": 1.2857055334156815
+        "X": 1.285705168295,
+        "Y": 3.030011358692,
+        "Z": 1.2857051004079998
       },
-      "wettedRaw": 7.644928807599154,
-      "hullRaw": 7.644928807599154,
-      "meshRaw": 7.644928807599154,
+      "wettedRaw": 7.644929497093231,
+      "hullRaw": 7.644929497093231,
+      "meshRaw": 7.644929497093231,
       "wettedSource": "mesh",
       "warnings": []
     },
@@ -291,7 +291,7 @@ export const PRESET_DYNAMICS = {
         "oddFraction": 0
       },
       "+Y": {
-        "proxy": 0.9953983911292407,
+        "proxy": 0.9953983891532359,
         "oddFraction": 0
       },
       "-Y": {
