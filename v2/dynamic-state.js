@@ -344,7 +344,7 @@ export function renderModel(contract) {
       parked: true,
       rows: [
         ['Frontal area', DASH], ['Wetted area', DASH], ['Drag', DASH],
-        ['Propulsion power', DASH], ['LH2 / 1,000 km', DASH],
+        ['Propulsion power', DASH],
         ['LH2 weight (10,000 km)', DASH], ['LH2 + Storage (10,000 km)', DASH],
       ],
       powerTag: '', warnings: [], marker: null,
@@ -371,16 +371,17 @@ export function renderModel(contract) {
     : null;
   return {
     parked: false,
-    // Fuel trio (Toby ruling 2026-08-15): the proportional RATE, then the
-    // reference-trip LH2 and the LH2 + Storage total (the 5× tankage
-    // system, spec §3.6) — energy row CUT (it is power in other units).
-    // Both weights are contract fields; storage is never subtracted here.
+    // Fuel pair (Toby rulings 2026-08-15 + 2026-08-16): the reference-trip
+    // LH2 and the LH2 + Storage total (the 5× tankage system, spec §3.6).
+    // Energy row CUT (power in other units); the /1,000 km RATE row CUT
+    // 2026-08-16 (a repeat of the 10,000 km figure ÷ 10 — the rate stays
+    // a contract field, FLEET consumes it at M8). Both weights are
+    // contract fields; storage is never subtracted here.
     rows: [
       ['Frontal area', fmt.m2(contract.frontalAreaM2)],
       ['Wetted area', fmt.m2(contract.wettedAreaM2)],
       ['Drag', fmt.mn(contract.dragN)],
       ['Propulsion power', fmt.mw(contract.powerMW)],
-      ['LH2 / 1,000 km', fmt.t1(contract.fuelPer1000kmT)],
       ['LH2 weight (10,000 km)', fmt.t1(contract.refTripFuelT)],
       ['LH2 + Storage (10,000 km)', fmt.t0(contract.refTripFuelSystemT)],
     ],

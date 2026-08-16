@@ -86,9 +86,12 @@ console.log('\n== r6: 0→100 yields exact engine contract values ==');
   check('one power figure, labelled Propulsion power', 'Propulsion power' in row && !rm.rows.some(([k]) => /no credit/i.test(k)));
   check('power row formats contract.powerMW', row['Propulsion power'] === `${contract.powerMW.toFixed(1)} MW`);
   check('bare tag is the S SETTING (−27%)', rm.powerTag === '(−27%)', rm.powerTag);
-  check('LH2 rate row formats contract.fuelPer1000kmT', row['LH2 / 1,000 km'] === `${contract.fuelPer1000kmT.toFixed(1)} t`);
-  // Fuel trio (Toby 2026-08-15): rate · LH2 weight · LH2 + Storage, the
-  // reference distance labelled in the headers; energy row CUT.
+  // Fuel pair (Toby 2026-08-15 + 2026-08-16): LH2 weight · LH2 + Storage,
+  // the reference distance labelled in the headers; energy row CUT; the
+  // /1,000 km rate row CUT (repeat of the 10,000 km figure — the rate
+  // stays a §3.6 contract field for FLEET).
+  check('rate row is CUT from the display (contract field survives)',
+    !rm.rows.some(([k]) => /1,000 km/.test(k)) && Number.isFinite(contract.fuelPer1000kmT));
   check('LH2 weight row is the reference-trip LH2 (75.8 t)',
     row['LH2 weight (10,000 km)'] === `${contract.refTripFuelT.toFixed(1)} t`);
   check('LH2 + Storage row is the tankage-system total (379 t)',
