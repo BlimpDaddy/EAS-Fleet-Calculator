@@ -29,6 +29,8 @@ export const PRESET_DYNAMICS = {
       "hullRaw": 2.1957449389128123,
       "meshRaw": 2.1988511464721703,
       "wettedSource": "mesh",
+      "volumeRaw": 0.2771179826666712,
+      "volumeSource": "mesh",
       "warnings": []
     },
     "proxies": {
@@ -79,6 +81,8 @@ export const PRESET_DYNAMICS = {
       "hullRaw": 1.3788501972940128,
       "meshRaw": 1.3788501972940128,
       "wettedSource": "mesh",
+      "volumeRaw": 0.06878516080719284,
+      "volumeSource": "mesh",
       "warnings": []
     },
     "proxies": {
@@ -129,6 +133,8 @@ export const PRESET_DYNAMICS = {
       "hullRaw": 3.138520597035093,
       "meshRaw": 3.138520597035093,
       "wettedSource": "mesh",
+      "volumeRaw": 0.34231232914059756,
+      "volumeSource": "mesh",
       "warnings": []
     },
     "proxies": {
@@ -179,6 +185,8 @@ export const PRESET_DYNAMICS = {
       "hullRaw": 4.417705601795988,
       "meshRaw": 4.417705601795988,
       "wettedSource": "mesh",
+      "volumeRaw": 0.5503490526567777,
+      "volumeSource": "mesh",
       "warnings": []
     },
     "proxies": {
@@ -229,6 +237,8 @@ export const PRESET_DYNAMICS = {
       "hullRaw": 1.8160578716579894,
       "meshRaw": 1.812466192202,
       "wettedSource": "mesh",
+      "volumeRaw": 0.1603920480505,
+      "volumeSource": "mesh",
       "warnings": []
     },
     "proxies": {
@@ -279,6 +289,8 @@ export const PRESET_DYNAMICS = {
       "hullRaw": 7.644929497093231,
       "meshRaw": 7.644929497093231,
       "wettedSource": "mesh",
+      "volumeRaw": 1.58088821763835,
+      "volumeSource": "mesh",
       "warnings": []
     },
     "proxies": {

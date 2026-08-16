@@ -130,6 +130,8 @@ self.onmessage = async (e) => {
           hullRaw: per.Z.hullArea,
           meshRaw: per.Z.meshArea,
           wettedSource: per.Z.wettedSource,
+          volumeRaw: per.Z.volume,       // contract amendment 2026-08-16
+          volumeSource: per.Z.volumeSource,
           warnings: per.Z.warnings,
         },
         proxies,

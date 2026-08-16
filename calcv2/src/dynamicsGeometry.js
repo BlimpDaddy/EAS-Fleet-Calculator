@@ -123,6 +123,42 @@ export function hullSurfaceArea(verts) {
 }
 
 /**
+ * ENCLOSED VOLUME — signed tetrahedron sum (divergence theorem), ngons
+ * fan-triangulated. Exact for watertight meshes; meaningless for open
+ * ones — which is why the TRUST DECISION below never returns a mesh
+ * volume once the mesh was judged untrustworthy for wetted area.
+ * Degenerate faces contribute exactly 0.
+ *
+ * WHY (contract amendment 2026-08-16, owner request): drag area
+ * CdA = Cd × A and the volumetric coefficient Cd_v = CdA / V^(2/3)
+ * (the classic airship basis — TR-397's 0.02x-class numbers) need an
+ * enclosed volume measured from the SAME geometry record as the areas.
+ * PROVENANCE: CALCULATED from geometry.
+ */
+export function meshVolume(verts, faces) {
+  let six = 0;
+  for (const f of faces) {
+    if (f.length < 3) continue;
+    const a = verts[f[0]];
+    if (!a) continue;
+    for (let i = 1; i + 1 < f.length; i++) {
+      const b = verts[f[i]], c = verts[f[i + 1]];
+      if (!b || !c) continue;
+      six += a[0] * (b[1] * c[2] - b[2] * c[1])
+        - a[1] * (b[0] * c[2] - b[2] * c[0])
+        + a[2] * (b[0] * c[1] - b[1] * c[0]);
+    }
+  }
+  return Math.abs(six) / 6;
+}
+
+/** Hull volume — the volume fallback twin of hullSurfaceArea. */
+export function hullVolume(verts) {
+  const hull = convexHull(verts);
+  return meshVolume(verts, hull.faces);
+}
+
+/**
  * WETTED AREA — how much skin there is.
  *
  * WHAT:  sum of the mesh's own triangle areas; the convex hull's surface area
@@ -219,6 +255,10 @@ export function scaleGeometryRecord(raw, flightAxis, lengthM) {
   }
   const scale = lengthM / alongFlight;
   const s2 = scale * scale;
+  // Volume (contract amendment 2026-08-16): scales as s³; the trust
+  // decision travels in the raw record like wetted's. Raw records
+  // predating the amendment lack it — scaled record says so honestly.
+  const hasVolume = typeof raw.volumeRaw === 'number' && Number.isFinite(raw.volumeRaw) && raw.volumeRaw > 0;
   return {
     flightAxis,
     scale,
@@ -231,6 +271,8 @@ export function scaleGeometryRecord(raw, flightAxis, lengthM) {
     meshArea: raw.meshRaw * s2,
     wettedOverFrontal: frontalRaw > 0 ? raw.wettedRaw / frontalRaw : NaN,
     wettedSource: raw.wettedSource,
+    volume: hasVolume ? raw.volumeRaw * s2 * scale : null,
+    volumeSource: hasVolume ? (raw.volumeSource ?? 'mesh') : 'unavailable',
     warnings: [...(raw.warnings || [])],
   };
 }
@@ -271,6 +313,26 @@ export function measureDynamicsGeometry(verts, faces, { flightAxis = 'Z', length
     warnings.push('wetted-junk-suspect: mesh area far exceeds hull area (internal/duplicated faces likely) — using hull surface area instead');
   }
 
+  // VOLUME trust decision (contract amendment 2026-08-16): the signed
+  // tet sum is only meaningful for a watertight mesh, so it inherits
+  // wetted's verdict — a mesh judged untrustworthy there is never
+  // trusted here (one decision, never re-decided). Plus one physical
+  // impossibility check of its own: an enclosed mesh cannot exceed its
+  // hull's volume; if the sum does, it's junk → hull fallback.
+  const hullVolRaw = hullVolume(verts);
+  let volumeRaw, volumeSource;
+  const meshVolRaw = faces.length ? meshVolume(verts, faces) : 0;
+  if (wettedSource === 'hull-fallback' || meshVolRaw <= 0 || meshVolRaw > hullVolRaw * 1.001) {
+    volumeRaw = hullVolRaw;
+    volumeSource = 'hull-fallback';
+    if (wettedSource !== 'hull-fallback') {
+      warnings.push('volume-untrusted: mesh volume impossible vs hull — using hull volume instead');
+    }
+  } else {
+    volumeRaw = meshVolRaw;
+    volumeSource = 'mesh';
+  }
+
   return {
     flightAxis,
     scale,
@@ -283,6 +345,8 @@ export function measureDynamicsGeometry(verts, faces, { flightAxis = 'Z', length
     meshArea: meshRaw * s2, // raw mesh sum, diagnostics only — may be untrusted
     wettedOverFrontal: frontalRaw > 0 ? wettedRaw / frontalRaw : NaN,
     wettedSource,
+    volume: volumeRaw * s2 * scale, // s³ — a volume
+    volumeSource,
     warnings,
   };
 }

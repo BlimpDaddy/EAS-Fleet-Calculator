@@ -268,6 +268,18 @@ export function computeDynamics(geometry, cfg) {
   if (wettedSource !== 'mesh' && wettedSource !== 'hull-fallback') {
     throw new Error(`computeDynamics: wettedSource must be 'mesh' or 'hull-fallback', got '${wettedSource}'`);
   }
+  // Volume (contract amendment 2026-08-16, owner request — CdA + Cd_v):
+  // OPTIONAL, because raw records predating the amendment lack it.
+  // When present it must be physical; when absent the volumetric
+  // coefficient is null, never invented.
+  const volume = geometry.volume ?? null;
+  if (volume !== null && (!fin(volume) || !(volume > 0))) {
+    throw new Error(`computeDynamics: geometry.volume must be a finite number > 0 or null, got ${volume}`);
+  }
+  const volumeSource = volume === null ? 'unavailable' : (geometry.volumeSource ?? 'mesh');
+  if (volume !== null && volumeSource !== 'mesh' && volumeSource !== 'hull-fallback') {
+    throw new Error(`computeDynamics: volumeSource must be 'mesh' or 'hull-fallback', got '${volumeSource}'`);
+  }
   // M6 amendment: estimator echo — SEMANTIC validation (hardened per
   // review r12 #1a: key-and-status checking alone accepted a six-key
   // object with band:null under status 'ok', which then crashed the
@@ -399,6 +411,17 @@ export function computeDynamics(geometry, cfg) {
     frontalAreaSource, // passthrough (M2 send-back #2): M1 records are 'computed'; Phase B's preset catalogue augments records with 'authored'
     wettedAreaM2: wetted,   // M6 amendment 2026-08-16 (r7 #5): via the contract, never the raw record
     wettedSource,           // 'mesh' | 'hull-fallback' — the trust decision travels with the number
+    // Contract amendment 2026-08-16 (owner request): comparison metrics.
+    // dragAreaM2 = Cd × A — the ungameable absolute-drag footprint
+    // (proportional to fuel at fixed speed, immune to reference-area
+    // choice). cdVolumetric = CdA / V^(2/3) — the classic airship basis
+    // (TR-397's 0.02x-class figures), drag priced against carried
+    // volume: the aerodynamic sibling of VE. Null when the geometry
+    // record carries no trusted volume — never invented.
+    volumeM3: volume,
+    volumeSource,
+    dragAreaM2: cd * A,
+    cdVolumetric: volume !== null ? (cd * A) / Math.pow(volume, 2 / 3) : null,
     shipLengthM: L,
     airspeedKmh,
     // the chain
