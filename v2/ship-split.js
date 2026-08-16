@@ -58,37 +58,74 @@ style.textContent = `
   .ship-chooser .title { font-size: 19px; letter-spacing: .06em; color: #ff9900; }
   .ship-chooser .sub { font-size: 13px; color: #888; margin-top: 4px; }
   .ship-chooser .order-hint { font-size: 12px; color: #666; letter-spacing: .04em; }
-  .ship-switch {
-    display: inline-flex; gap: 0; margin: 0 0 10px 0; border: 1px solid #474747;
-    border-radius: 6px; overflow: hidden; font-size: 12px; letter-spacing: .06em;
+  /* THE RIBBON (Toby refinement 2026-08-17): the OTHER section,
+     squished into a thin edge strip — bottom of STATICS holds
+     DYNAMICS, top of DYNAMICS holds STATICS (the same vertical order
+     the chooser taught). Press → it swipes open. */
+  .ship-ribbon {
+    position: sticky; z-index: 30; display: flex; align-items: center;
+    justify-content: center; gap: 10px; width: 100%; height: 26px;
+    background: repeating-linear-gradient(180deg, #1d1d1d 0 2px, #161616 2px 4px);
+    border: 1px solid #474747; border-left: none; border-right: none;
+    color: #888; font-size: 11px; letter-spacing: .14em; cursor: pointer;
+    user-select: none; transition: height .18s ease, color .18s ease;
+    overflow: hidden;
   }
-  .ship-switch button {
-    background: #191919; color: #888; border: none; padding: 6px 14px;
-    font: inherit; font-size: 12px; cursor: pointer;
-  }
-  .ship-switch button.active { background: #2a2115; color: #ff9900; }
+  .ship-ribbon:hover { height: 38px; color: #ff9900; }
+  .ship-ribbon .chev { font-size: 14px; }
+  .ship-ribbon.rib-bottom { bottom: 0; margin-top: 14px; }
+  .ship-ribbon.rib-top { top: 0; margin-bottom: 14px; }
+  .ship-ribbon.opening { height: 120px; color: #ff9900; }
+  @keyframes ship-slide-up { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+  @keyframes ship-slide-down { from { transform: translateY(-40px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .ship-enter-up { animation: ship-slide-up .35s ease; }
+  .ship-enter-down { animation: ship-slide-down .35s ease; }
 `;
 document.head.appendChild(style);
 
-/* ---- the switcher chip (one per section, same behaviour) ---- */
-function makeSwitcher(active) {
-  const wrap = document.createElement('div');
-  wrap.className = 'ship-switch';
-  for (const [key, label, nav] of [['statics', 'STATICS', navShip], ['dynamics', 'DYNAMICS', navDynamic]]) {
-    const b = document.createElement('button');
-    b.textContent = label;
-    if (key === active) b.classList.add('active');
-    else b.addEventListener('click', () => { setMode(key); nav()?.click(); });
-    wrap.appendChild(b);
-  }
-  return wrap;
+/* ---- the ribbons: the other section squished into an edge strip ----
+ * STATICS carries DYNAMICS along its BOTTOM (press: it swipes UP into
+ * view); DYNAMICS carries STATICS along its TOP (press: it swipes
+ * DOWN). Chevron points the travel direction; the striped background
+ * is the "squished page" hint. */
+function makeRibbon(side, targetKey, targetLabel, nav, enterClass) {
+  const rib = document.createElement('div');
+  rib.className = `ship-ribbon rib-${side}`;
+  rib.setAttribute('role', 'button');
+  rib.title = `Open ${targetLabel}`;
+  const chev = document.createElement('span');
+  chev.className = 'chev';
+  chev.textContent = side === 'bottom' ? '︿' : '﹀';
+  const label = document.createElement('span');
+  label.textContent = targetLabel;
+  rib.append(chev, label, chev.cloneNode(true));
+  rib.addEventListener('click', () => {
+    setMode(targetKey);
+    rib.classList.add('opening'); // the squished page starts expanding…
+    setTimeout(() => {
+      nav()?.click(); // …then V1 routes; the target slides in
+      rib.classList.remove('opening');
+      const target = targetKey === 'dynamics'
+        ? [...document.querySelectorAll('section')].find((s) => s.querySelector('.dyn-eas-chip'))
+        : $('[data-section="ship"]');
+      if (target) {
+        target.classList.add(enterClass);
+        setTimeout(() => target.classList.remove(enterClass), 450);
+      }
+    }, 200);
+  });
+  return rib;
 }
 
 function ensureSwitchers() {
   const ship = $('[data-section="ship"]');
-  if (ship && !ship.querySelector('.ship-switch')) ship.prepend(makeSwitcher('statics'));
+  if (ship && !ship.querySelector('.ship-ribbon')) {
+    ship.appendChild(makeRibbon('bottom', 'dynamics', 'DYNAMICS', navDynamic, 'ship-enter-up'));
+  }
   const dyn = [...document.querySelectorAll('section')].find((s) => s.querySelector('.dyn-eas-chip'));
-  if (dyn && !dyn.querySelector('.ship-switch')) dyn.prepend(makeSwitcher('dynamics'));
+  if (dyn && !dyn.querySelector('.ship-ribbon')) {
+    dyn.prepend(makeRibbon('top', 'statics', 'STATICS', navShip, 'ship-enter-down'));
+  }
 }
 
 /* ---- the chooser overlay (first SHIP entry per session) ---- */
