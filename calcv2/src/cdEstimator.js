@@ -220,6 +220,12 @@ export function estimateCd(proxyRecord, geometry, airspeedKmh) {
     calibration: CALIBRATION_PROVENANCE,
     axis: proxyRecord ? proxyRecord.axis : null,
     oddFraction: quality ? quality.oddFraction : null,
+    // INPUT IDENTITY (r12 send-back #1b, 2026-08-16): the exact inputs
+    // this estimate was computed FROM, echoed so computeDynamics can
+    // verify an echoed estimate belongs to the geometry+speed of the
+    // call consuming it — a genuine identity check, not the friction
+    // proxy (which a same-ratio, same-length geometry can fool).
+    inputs: { frontalAreaM2: A, wettedAreaM2: wetted, lengthM: L, airspeedKmh },
   };
 
   if (!Number.isFinite(pressureCd)) {

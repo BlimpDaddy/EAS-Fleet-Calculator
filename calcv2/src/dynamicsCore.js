@@ -230,8 +230,12 @@ export function fuelMassStatus(fuelSystemT, lengthM) {
  *        recomputes it here (the estimator is its own engine module) and
  *        the adapter never derives it (trust boundary). null = estimator
  *        dormant (parked) or not run; the page then behaves exactly as
- *        pre-M6. A mismatched frictionCd (different geometry/speed than
- *        this call) is flagged with a warning, never silently accepted.
+ *        pre-M6. Contents are SEMANTICALLY validated per status (r12
+ *        #1a). Identity guard (r12 #1b, honestly scoped): an estimate
+ *        carrying provenance.inputs is checked against THIS call's
+ *        exact geometry+speed; a foreign estimate without identity
+ *        gets a friction-consistency screen only — that is all that
+ *        is guaranteed for it.
  * @returns the spec s9 contract object (see shape-frozen snapshot fixture)
  */
 export function computeDynamics(geometry, cfg) {
@@ -264,16 +268,41 @@ export function computeDynamics(geometry, cfg) {
   if (wettedSource !== 'mesh' && wettedSource !== 'hull-fallback') {
     throw new Error(`computeDynamics: wettedSource must be 'mesh' or 'hull-fallback', got '${wettedSource}'`);
   }
-  // M6 amendment: estimator echo. Shape-validated passthrough of the
-  // cdEstimator.js frozen API — null when dormant/not run.
+  // M6 amendment: estimator echo — SEMANTIC validation (hardened per
+  // review r12 #1a: key-and-status checking alone accepted a six-key
+  // object with band:null under status 'ok', which then crashed the
+  // renderer — the trust boundary must reject malformed CONTENTS, not
+  // just malformed envelopes). For 'ok': finite Cd terms, a two-number
+  // finite band bracketing the estimate, sum consistency, provenance
+  // object. For 'unavailable': the ruled null pattern with a real
+  // friction floor (§5.5 — the dial bottom survives).
   const ESTIMATE_KEYS = '["band","cdEstimate","frictionCd","pressureCd","provenance","status"]';
   const estimate = cfg.estimate ?? null;
   if (estimate !== null) {
+    const bad = (why) => { throw new Error(`computeDynamics: cfg.estimate invalid — ${why}`); };
     if (typeof estimate !== 'object' || JSON.stringify(Object.keys(estimate).sort()) !== ESTIMATE_KEYS) {
-      throw new Error('computeDynamics: cfg.estimate must be a cdEstimator frozen-API object (or null)');
+      bad('must be a cdEstimator frozen-API object (or null)');
     }
-    if (estimate.status !== 'ok' && estimate.status !== 'unavailable') {
-      throw new Error(`computeDynamics: cfg.estimate.status must be 'ok' or 'unavailable', got '${estimate.status}'`);
+    if (typeof estimate.provenance !== 'object' || estimate.provenance === null) {
+      bad('provenance must be an object');
+    }
+    if (estimate.status === 'ok') {
+      const { cdEstimate: e, frictionCd: f, pressureCd: p, band } = estimate;
+      if (!fin(e) || !fin(f) || !fin(p)) bad("status 'ok' requires finite cdEstimate/frictionCd/pressureCd");
+      if (!Array.isArray(band) || band.length !== 2 || !fin(band[0]) || !fin(band[1])) {
+        bad("status 'ok' requires band = [lo, hi], both finite");
+      }
+      if (!(band[0] <= e && e <= band[1])) bad('band must bracket cdEstimate');
+      if (Math.abs(e - (f + p)) > 1e-9 * Math.max(1, Math.abs(e))) bad('cdEstimate must equal frictionCd + pressureCd');
+    } else if (estimate.status === 'unavailable') {
+      if (estimate.cdEstimate !== null || estimate.pressureCd !== null || estimate.band !== null) {
+        bad("status 'unavailable' requires cdEstimate/pressureCd/band all null");
+      }
+      if (!fin(estimate.frictionCd) || !(estimate.frictionCd > 0)) {
+        bad("status 'unavailable' still requires a finite positive frictionCd (the dial bottom survives)");
+      }
+    } else {
+      bad(`status must be 'ok' or 'unavailable', got '${estimate.status}'`);
     }
   }
 
@@ -320,12 +349,26 @@ export function computeDynamics(geometry, cfg) {
   if (cdFloorBreach) {
     warnings.push('cd-below-friction-estimate: claimed Cd is under this shape\'s skin-friction screening estimate');
   }
-  // Estimate consistency guard (M6): an echoed estimate whose friction term
-  // does not match THIS call's geometry+speed was computed for something
-  // else — provenance laundering, flagged loudly, never silently accepted.
-  if (estimate !== null && Number.isFinite(estimate.frictionCd)
-    && Math.abs(estimate.frictionCd - frictionCd) > 1e-6 * frictionCd) {
-    warnings.push('estimate-friction-mismatch: echoed estimate was computed for a different geometry or speed');
+  // Estimate consistency guard (M6; hardened per review r12 #1b — the
+  // friction comparison alone is NOT an identity check: a different
+  // geometry with the same length and wetted/frontal ratio produces
+  // identical friction and slipped through). Two tiers, honestly
+  // scoped: (1) when the estimate carries its input identity
+  // (provenance.inputs — the engine's own estimateCd always emits it),
+  // the ACTUAL inputs are compared, exactly; (2) without identity, the
+  // friction-consistency check is the best available screen and is all
+  // that is guaranteed for foreign estimate objects.
+  if (estimate !== null) {
+    const inputs = estimate.provenance.inputs;
+    if (inputs && typeof inputs === 'object') {
+      if (inputs.frontalAreaM2 !== A || inputs.wettedAreaM2 !== wetted
+        || inputs.lengthM !== L || inputs.airspeedKmh !== airspeedKmh) {
+        warnings.push('estimate-identity-mismatch: echoed estimate was computed for different geometry or speed');
+      }
+    } else if (Number.isFinite(estimate.frictionCd)
+      && Math.abs(estimate.frictionCd - frictionCd) > 1e-6 * frictionCd) {
+      warnings.push('estimate-friction-mismatch: echoed estimate friction does not match this geometry+speed (no input identity attached — consistency screen only)');
+    }
   }
 
   // --- statuses (spec s8) ---
