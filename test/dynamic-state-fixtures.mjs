@@ -364,8 +364,8 @@ console.log('\n== M6 STAGE 2: per-shape inheritance (r8 #4 reset, gated systems,
   };
   const wmBare = estimateCd(wmSeam.proxyRecord, wmGeometry, 100);
   const wmTailed = applyGenericTail(wmBare);
-  check('records carry the authored default axes (bottle +Y, cigar -Z, wm +Y)',
-    PRESET_DYNAMICS.bottle.defaultAxis === '+Y' && PRESET_DYNAMICS.cigar.defaultAxis === '-Z'
+  check('records carry the authored NATURAL attitudes (cigar +Z pointed-first, bottle -Y cap-first, wm +Y)',
+    PRESET_DYNAMICS.bottle.defaultAxis === '-Y' && PRESET_DYNAMICS.cigar.defaultAxis === '+Z'
     && wmAxis === '+Y' && PRESET_DYNAMICS.sunship.defaultAxis === '+Z');
 
   // Shape change RESETS Cd (r8 #4) — even over a hand-set user value —
