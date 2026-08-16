@@ -272,7 +272,7 @@ export function scaleGeometryRecord(raw, flightAxis, lengthM) {
     wettedOverFrontal: frontalRaw > 0 ? raw.wettedRaw / frontalRaw : NaN,
     wettedSource: raw.wettedSource,
     volume: hasVolume ? raw.volumeRaw * s2 * scale : null,
-    volumeSource: hasVolume ? (raw.volumeSource ?? 'mesh') : 'unavailable',
+    volumeSource: hasVolume ? (raw.volumeSource ?? 'convex-envelope') : 'unavailable',
     warnings: [...(raw.warnings || [])],
   };
 }
@@ -313,25 +313,19 @@ export function measureDynamicsGeometry(verts, faces, { flightAxis = 'Z', length
     warnings.push('wetted-junk-suspect: mesh area far exceeds hull area (internal/duplicated faces likely) — using hull surface area instead');
   }
 
-  // VOLUME trust decision (contract amendment 2026-08-16): the signed
-  // tet sum is only meaningful for a watertight mesh, so it inherits
-  // wetted's verdict — a mesh judged untrustworthy there is never
-  // trusted here (one decision, never re-decided). Plus one physical
-  // impossibility check of its own: an enclosed mesh cannot exceed its
-  // hull's volume; if the sum does, it's junk → hull fallback.
-  const hullVolRaw = hullVolume(verts);
-  let volumeRaw, volumeSource;
-  const meshVolRaw = faces.length ? meshVolume(verts, faces) : 0;
-  if (wettedSource === 'hull-fallback' || meshVolRaw <= 0 || meshVolRaw > hullVolRaw * 1.001) {
-    volumeRaw = hullVolRaw;
-    volumeSource = 'hull-fallback';
-    if (wettedSource !== 'hull-fallback') {
-      warnings.push('volume-untrusted: mesh volume impossible vs hull — using hull volume instead');
-    }
-  } else {
-    volumeRaw = meshVolRaw;
-    volumeSource = 'mesh';
-  }
+  // VOLUME — CONVEX-ENVELOPE SEMANTICS (owner ruling 2026-08-16,
+  // r17 Part B (h): "an airship envelope is a compact convex hull in
+  // the framework — so hull volume"). The volume is ALWAYS the convex
+  // hull's, for every input — watertight, holed, wrong-winding, or a
+  // bare point cloud — one meaning, one label, never silently mixed
+  // (the reviewer's rule). This retires the r17 winding attack by
+  // construction (a flipped-winding cube's SIGNED mesh sum lied at
+  // 0.667 while passing every area screen; the hull cannot lie).
+  // Consistent with the calculator's whole philosophy: VS/VE and the
+  // frontal silhouette already measure the convex envelope; concavity
+  // is deliberately discarded upstream, not "recovered" here.
+  const volumeRaw = hullVolume(verts);
+  const volumeSource = 'convex-envelope';
 
   return {
     flightAxis,

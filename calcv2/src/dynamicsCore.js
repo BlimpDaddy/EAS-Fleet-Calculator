@@ -276,9 +276,13 @@ export function computeDynamics(geometry, cfg) {
   if (volume !== null && (!fin(volume) || !(volume > 0))) {
     throw new Error(`computeDynamics: geometry.volume must be a finite number > 0 or null, got ${volume}`);
   }
-  const volumeSource = volume === null ? 'unavailable' : (geometry.volumeSource ?? 'mesh');
-  if (volume !== null && volumeSource !== 'mesh' && volumeSource !== 'hull-fallback') {
-    throw new Error(`computeDynamics: volumeSource must be 'mesh' or 'hull-fallback', got '${volumeSource}'`);
+  // Owner ruling 2026-08-16 (r17 Part B (h)): volume is ALWAYS the
+  // convex envelope's — one meaning, one ruled label. 'mesh' and
+  // 'hull-fallback' are rejected so the two meanings can never be
+  // silently mixed under one Cd_v number (the reviewer's rule).
+  const volumeSource = volume === null ? 'unavailable' : (geometry.volumeSource ?? 'convex-envelope');
+  if (volume !== null && volumeSource !== 'convex-envelope') {
+    throw new Error(`computeDynamics: volumeSource must be 'convex-envelope' (owner ruling 2026-08-16), got '${volumeSource}'`);
   }
   // M6 amendment: estimator echo — SEMANTIC validation (hardened per
   // review r12 #1a: key-and-status checking alone accepted a six-key
