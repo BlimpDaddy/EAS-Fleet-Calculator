@@ -47,6 +47,11 @@ export const SUNSHIP_GEOMETRY = Object.freeze({
   extents: Object.freeze([249, 237, 300]),
   frontalArea: 40522, wettedArea: 206795, hullArea: 206503, meshArea: 206795,
   wettedOverFrontal: 206795 / 40522, wettedSource: 'mesh',
+  // Comparison-metrics amendment 2026-08-16: measured mesh volume at
+  // 300 m (presetDynamics raw × s³ = 7,992,480.2 — pinned to the same
+  // integer grade as the areas). Near-sphere note: V^⅔ ≈ frontal, so
+  // the Sunship's Cd_v ≈ its frontal Cd.
+  volume: 7992480, volumeSource: 'mesh',
   warnings: Object.freeze([]),
 });
 
@@ -340,6 +345,11 @@ const fmt = {
   mwh: (x) => `${Math.round(x).toLocaleString('en-US')} MWh`,
   t1: (x) => `${x.toFixed(1)} t`,
   t0: (x) => `${Math.round(x).toLocaleString('en-US')} t`,
+  // Comparison metrics (owner request 2026-08-16): Cd_v shown at 3 dp
+  // (the airship literature quotes 0.02x-class); null → dash, never
+  // invented (contract sends null when the record carries no trusted
+  // volume).
+  cd3: (x) => (x === null ? DASH : x.toFixed(3)),
 };
 
 /**
@@ -374,6 +384,7 @@ export function renderModel(contract) {
       parked: true,
       rows: [
         ['Frontal area', DASH], ['Wetted area', DASH], ['Drag', DASH],
+        ['Drag area (Cd·A)', DASH], ['Cd (V^⅔ basis)', DASH],
         ['Propulsion power', DASH],
         ['LH2 weight (10,000 km)', DASH], ['LH2 + Storage (10,000 km)', DASH],
       ],
@@ -407,6 +418,13 @@ export function renderModel(contract) {
       ['Frontal area', fmt.m2(contract.frontalAreaM2)],
       ['Wetted area', fmt.m2(contract.wettedAreaM2)],
       ['Drag', fmt.mn(contract.dragN)],
+      // Comparison metrics (contract amendment 2026-08-16, owner
+      // request): CdA = the absolute drag footprint, immune to
+      // reference-area choice; Cd_v = drag priced against carried
+      // volume (classic airship basis). Values read from the
+      // contract — the page computes nothing (r6 rule).
+      ['Drag area (Cd·A)', fmt.m2(contract.dragAreaM2)],
+      ['Cd (V^⅔ basis)', fmt.cd3(contract.cdVolumetric)],
       ['Propulsion power', fmt.mw(contract.powerMW)],
       ['LH2 weight (10,000 km)', fmt.t1(contract.refTripFuelT)],
       ['LH2 + Storage (10,000 km)', fmt.t0(contract.refTripFuelSystemT)],

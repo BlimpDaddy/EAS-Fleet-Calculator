@@ -439,5 +439,31 @@ console.log('\n== M6 STAGE 2: per-shape inheritance (r8 #4 reset, gated systems,
     && cShort.frontalAreaM2 < cPublic.frontalAreaM2);
 }
 
+console.log('\n== comparison metrics rows (contract amendment 2026-08-16) ==');
+{
+  const { engine } = countingEngine();
+  const c = compute(setInput(initialState(), 'airspeedKmh', 100), engine, undefined, ESTIMATOR);
+  const rm = renderModel(c);
+  const row = (label) => rm.rows.find(([l]) => l === label)?.[1];
+  check('Drag area row displays the CONTRACT dragAreaM2 (page computes nothing)',
+    row('Drag area (Cd·A)') === `${Math.round(c.dragAreaM2).toLocaleString('en-US')} m²`,
+    `row ${row('Drag area (Cd·A)')} vs contract ${c.dragAreaM2}`);
+  check('Cd_v row displays the CONTRACT cdVolumetric at 3 dp',
+    row('Cd (V^⅔ basis)') === c.cdVolumetric.toFixed(3),
+    `row ${row('Cd (V^⅔ basis)')} vs contract ${c.cdVolumetric}`);
+  check('Sunship ideal Cd_v ≈ frontal Cd (near-sphere: V^⅔ ≈ A)',
+    Math.abs(c.cdVolumetric - 0.0436) < 0.001, `got ${c.cdVolumetric}`);
+  const parked = renderModel(null);
+  check('parked: both comparison rows dash like everything else',
+    parked.rows.find(([l]) => l === 'Drag area (Cd·A)')[1] === '—'
+    && parked.rows.find(([l]) => l === 'Cd (V^⅔ basis)')[1] === '—');
+  const noVol = compute(setInput(initialState(), 'airspeedKmh', 100), engine,
+    (() => { const g = { ...SUNSHIP_GEOMETRY, warnings: [] }; delete g.volume; delete g.volumeSource; return g; })(),
+    ESTIMATOR);
+  check('geometry without volume: Cd_v row dashes, never invented',
+    renderModel(noVol).rows.find(([l]) => l === 'Cd (V^⅔ basis)')[1] === '—'
+    && noVol.cdVolumetric === null);
+}
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

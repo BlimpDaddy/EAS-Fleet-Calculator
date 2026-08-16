@@ -383,7 +383,9 @@ function statBlock(label) {
   outCells.set(label, d);
 }
 for (const label of [
-  'Frontal area', 'Wetted area', 'Drag', 'Propulsion power',
+  'Frontal area', 'Wetted area', 'Drag',
+  'Drag area (Cd·A)', 'Cd (V^⅔ basis)', // comparison metrics, 2026-08-16
+  'Propulsion power',
   'LH2 weight (10,000 km)', 'LH2 + Storage (10,000 km)',
 ]) statBlock(label);
 
