@@ -13,6 +13,7 @@ export const PRESET_DYNAMICS = {
     "source": "corpus-obj(Sunship.obj)",
     "glbSha256": "5bb5e708aebae75e466759bfb6dcf2425ad1d7940d7bdb055bbf723f0b16b414",
     "objSha256": "dee482af0af99bd01cb5002cae61c969dba114a9b2ca67e336e8a00fd18d3e64",
+    "defaultAxis": "+Z",
     "raw": {
       "extents": [
         0.810716,
@@ -62,6 +63,7 @@ export const PRESET_DYNAMICS = {
     "source": "convex-hull(glb)",
     "glbSha256": "55f41a9bc09c575b59ea3a3e0e6c59fe9516699e7751ab5ca7fd32a681d7063d",
     "objSha256": null,
+    "defaultAxis": "-Z",
     "raw": {
       "extents": [
         0.3718079924583435,
@@ -111,6 +113,7 @@ export const PRESET_DYNAMICS = {
     "source": "convex-hull(glb)",
     "glbSha256": "f26de3ede2304b06b7841a5c4d8320f17640ad2a83c6057ed2ca4ad2a169a1b8",
     "objSha256": null,
+    "defaultAxis": "+Y",
     "raw": {
       "extents": [
         0.5592049360275269,
@@ -160,6 +163,7 @@ export const PRESET_DYNAMICS = {
     "source": "convex-hull(glb)",
     "glbSha256": "bba8628ed72796e29886f1e4569ecbf6387efb435274df842e959d75275efa10",
     "objSha256": null,
+    "defaultAxis": "+Z",
     "raw": {
       "extents": [
         0.5468944311141968,
@@ -209,6 +213,7 @@ export const PRESET_DYNAMICS = {
     "source": "corpus-obj(washingmachine.obj)",
     "glbSha256": "da4c6c7d356067fc28588857bd1839b83c2a135d0df18f56f588b89b77be7824",
     "objSha256": "7ebc8c97e8e54e6090756fef6f3697cdab6c5c50e60be487adaccd1d1da07020",
+    "defaultAxis": "+Y",
     "raw": {
       "extents": [
         0.5,
@@ -258,6 +263,7 @@ export const PRESET_DYNAMICS = {
     "source": "convex-hull(glb)",
     "glbSha256": "9e42adc8b4a90196415e459f2bc5ab2e3caf1299e01eca6b1673a8d6ff6f8dbf",
     "objSha256": null,
+    "defaultAxis": "+Z",
     "raw": {
       "extents": [
         1.9896987676620483,
