@@ -29,11 +29,19 @@
  * it may not compute anything, and FLEET never scrapes what it renders.
  */
 import { computeDynamics } from '/calcv2/src/dynamicsCore.js';
+import { estimateCd } from '/calcv2/src/cdEstimator.js';
 import {
   EAS_IDEAL, SPEED_MIN, SPEED_MAX, S_MAX,
+  SUNSHIP_SECTIONAL, CD_TRACKS_ESTIMATE,
   initialState, isParked, setInput, setToggle, applyIdeal,
-  effectiveControls, compute, renderModel,
+  resolveCd, compute, renderModel, cdDialRange,
 } from './dynamic-state.js';
+
+// The M6 estimator seam: the ENGINE's estimateCd behind the state module's
+// injection point (same pattern as computeDynamics — this file computes
+// nothing). The Sunship's expensive sectional half is precomputed/pinned;
+// only the cheap per-speed call runs here.
+const ESTIMATOR = { estimateCd, proxyRecord: SUNSHIP_SECTIONAL };
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -110,6 +118,25 @@ style.textContent = `
   .dyn-s-zones div:nth-child(1) { width: 20%;   background: var(--color-accent-2, #ff9900); }
   .dyn-s-zones div:nth-child(2) { width: 26.7%; background: var(--color-accent-1, #c628a4); }
   .dyn-s-zones div:nth-child(3) { width: 53.3%; background: var(--color-secondary, #888); }
+  /* M6: the estimator marker + SILENT ±band on the Cd slider. The band is
+     drawn, never worded (ruling 2026-08-16 — rationale in cdEstimator.js);
+     the marker carries the one permitted word: ESTIMATED. */
+  .dyn-cd-band {
+    position: relative; height: 12px; margin-top: 2px;
+  }
+  .dyn-cd-band .band {
+    position: absolute; top: 0; height: 3px;
+    background: var(--color-accent-1, #c628a4); opacity: 0.3;
+  }
+  .dyn-cd-band .tick {
+    position: absolute; top: -2px; width: 2px; height: 7px;
+    background: var(--color-accent-1, #c628a4);
+  }
+  .dyn-cd-band .est-label {
+    position: absolute; top: 5px; transform: translateX(-50%);
+    color: var(--color-accent-1, #c628a4);
+    font-size: 0.55em; letter-spacing: 0.08em; white-space: nowrap;
+  }
   /* Inert toggles (M3 shell): visible state, no interaction until M4/M5. */
   .dyn-toggle-row {
     display: flex; align-items: center; gap: 0.5em;
@@ -191,10 +218,29 @@ function control(labelText, unitText, { min, max, step, value }) {
 }
 
 // Slider ranges: spec §2 (speed extended to 0 by the parked amendment;
-// Sunship Cd dial 0.009–0.40; S 0–75% with evidence zones on the control).
+// S 0–75% with evidence zones on the control). The Cd dial is PER-SHAPE
+// (§5.3 pinned rule, M6): bottom = the contract's friction floor, top =
+// max(0.40, 1.5 × estimate) — cdDialRange() in the state module; the
+// values here are only the parked-load defaults.
 const speedCtl = control('Airspeed', 'km/hr', { min: SPEED_MIN, max: SPEED_MAX, step: 1, value: 0 });
 const cdCtl = control('Drag Coefficient (Cd)', '', { min: 0.009, max: 0.40, step: 0.001, value: EAS_IDEAL.cd });
 const sCtl = control('Power Saving (S)', '', { min: 0, max: S_MAX, step: 0.01, value: EAS_IDEAL.s });
+// M6: the estimator marker + silent ±band under the Cd slider. Hidden
+// until the first movement produces an estimate (dormant while parked);
+// afterwards it persists — parking again keeps the last marker as cached
+// presentation, zero new calculation (M6 amendment #5).
+const cdBand = document.createElement('div');
+cdBand.className = 'dyn-cd-band';
+cdBand.style.display = 'none';
+const bandSeg = document.createElement('div');
+bandSeg.className = 'band';
+const bandTick = document.createElement('div');
+bandTick.className = 'tick';
+const bandLabel = document.createElement('div');
+bandLabel.className = 'est-label';
+bandLabel.textContent = 'ESTIMATED';
+cdBand.append(bandSeg, bandTick, bandLabel);
+cdCtl.slider.after(cdBand);
 // Evidence zones under the S slider (published 0–15 / bound 15–35 / beyond).
 const zoneBar = document.createElement('div');
 zoneBar.className = 'dyn-s-zones';
@@ -271,29 +317,64 @@ $('[data-section="fleet"]').after(section);
 
 // ---------------------------------------------------------------- render
 
+// The last estimate seen — cached PRESENTATION only (M6 amendment #5):
+// parking again keeps the marker without any new calculation; it never
+// feeds a computation (compute() always uses its own live call).
+let lastEstimate = null;
+
 function paint() {
+  // State → engine (UI-level parked gate; estimator dormant too) →
+  // ruled display model → DOM.
+  const contract = compute(state, computeDynamics, undefined, ESTIMATOR);
+  if (contract && contract.estimate) lastEstimate = contract.estimate;
+  const rm = renderModel(contract);
+
   // Slider positions always mirror state (the ideal button moves them).
-  // A toggled-off system SNAPS its slider to the forced value and greys
-  // it; the underlying selection survives and restores on re-enable
-  // (bench ruling cea306a — the value in force is never ambiguous).
-  // The forcing itself lives in dynamic-state.js (r7 #6: one derivation,
-  // shared with compute(), so DOM display can never drift from it).
-  const { cd: cdInForce, s: sInForce } = effectiveControls(state);
+  // Values in force come from the state module's ONE derivation (r7 #6),
+  // fed the freshest estimate (live contract echo, else the cache).
+  // M6 (r10): tail OFF snaps Cd to the bare estimate but the slider
+  // STAYS EDITABLE — estimator proposes, slider disposes; only the BLI
+  // slider still greys (S = 0 forced, spec §7.1 unchanged).
+  const { cd: cdInForce, cdSource } = resolveCd(state, contract ? contract.estimate : lastEstimate);
+  const sInForce = state.bliOn ? state.s : 0;
+
+  // Per-shape Cd dial (§5.3 pinned rule): contract floor + estimate top.
+  const dial = cdDialRange(contract, lastEstimate);
+  cdCtl.slider.min = dial.min;
+  cdCtl.slider.max = dial.max;
+
   speedCtl.slider.value = state.airspeedKmh;
-  cdCtl.slider.value = cdInForce;
+  if (cdInForce != null) cdCtl.slider.value = cdInForce;
   sCtl.slider.value = sInForce;
-  cdCtl.slider.disabled = !state.tailOn;
   sCtl.slider.disabled = !state.bliOn;
-  cdCtl.wrap.style.opacity = state.tailOn ? '' : '0.5';
   sCtl.wrap.style.opacity = state.bliOn ? '' : '0.5';
   tailToggle.box.checked = state.tailOn;
   bliToggle.box.checked = state.bliOn;
   speedCtl.valueSpan.textContent = String(state.airspeedKmh);
-  cdCtl.valueSpan.textContent = cdInForce.toFixed(3);
+  // Estimate-tracking Cd leads with the word ESTIMATED and firms only
+  // when the user drags (M6 amendment #2). Pending = tail off while
+  // parked before any estimate exists: the snap resolves on first
+  // movement (r6: parked selections carry, never reset).
+  cdCtl.valueSpan.textContent = cdInForce == null ? '—'
+    : (state.cd === CD_TRACKS_ESTIMATE && cdSource === 'estimated'
+      ? `ESTIMATED ${cdInForce.toFixed(3)}` : cdInForce.toFixed(3));
   sCtl.valueSpan.textContent = `${Math.round(sInForce * 100)}%`;
 
-  // State → engine (UI-level parked gate) → ruled display model → DOM.
-  const rm = renderModel(compute(state, computeDynamics));
+  // The marker + silent band (live when running; cached while parked).
+  const marker = rm.marker
+    ?? (lastEstimate && lastEstimate.status === 'ok' && Number.isFinite(lastEstimate.cdEstimate)
+      ? { value: lastEstimate.cdEstimate, lo: lastEstimate.band[0], hi: lastEstimate.band[1] }
+      : null);
+  if (marker) {
+    const pct = (x) => `${Math.max(0, Math.min(100, ((x - dial.min) / (dial.max - dial.min)) * 100))}%`;
+    cdBand.style.display = '';
+    bandSeg.style.left = pct(marker.lo);
+    bandSeg.style.width = `calc(${pct(marker.hi)} - ${pct(marker.lo)})`;
+    bandTick.style.left = pct(marker.value);
+    bandLabel.style.left = pct(marker.value);
+  } else {
+    cdBand.style.display = 'none';
+  }
   for (const [label, value] of rm.rows) {
     const cell = outCells.get(label);
     if (label === 'Propulsion power' && !rm.parked) {
