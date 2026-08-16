@@ -75,11 +75,14 @@ style.textContent = `
   .ship-ribbon .chev { font-size: 14px; }
   .ship-ribbon.rib-bottom { bottom: 0; margin-top: 14px; }
   .ship-ribbon.rib-top { top: 0; margin-bottom: 14px; }
-  .ship-ribbon.opening { height: 120px; color: #ff9900; }
-  @keyframes ship-slide-up { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
-  @keyframes ship-slide-down { from { transform: translateY(-40px); opacity: 0; } to { transform: none; opacity: 1; } }
-  .ship-enter-up { animation: ship-slide-up .35s ease; }
-  .ship-enter-down { animation: ship-slide-down .35s ease; }
+  .ship-ribbon.opening { height: 34vh; color: #ff9900; transition: height .35s ease-in, color .2s ease; }
+  /* ACCORDION UNFOLD (Toby refinement #2, 2026-08-17): the incoming
+     page visibly STRETCHES open from the edge it was squished into —
+     scaleY from ribbon-thin to full, contents un-squashing with it. */
+  @keyframes ship-unfold-up { from { transform: scaleY(0.04); opacity: .35; } 60% { opacity: 1; } to { transform: scaleY(1); } }
+  @keyframes ship-unfold-down { from { transform: scaleY(0.04); opacity: .35; } 60% { opacity: 1; } to { transform: scaleY(1); } }
+  .ship-enter-up { animation: ship-unfold-up .8s cubic-bezier(.2,.7,.3,1); transform-origin: bottom center; }
+  .ship-enter-down { animation: ship-unfold-down .8s cubic-bezier(.2,.7,.3,1); transform-origin: top center; }
 `;
 document.head.appendChild(style);
 
@@ -103,16 +106,16 @@ function makeRibbon(side, targetKey, targetLabel, nav, enterClass) {
     setMode(targetKey);
     rib.classList.add('opening'); // the squished page starts expanding…
     setTimeout(() => {
-      nav()?.click(); // …then V1 routes; the target slides in
+      nav()?.click(); // …then V1 routes; the target UNFOLDS from its edge
       rib.classList.remove('opening');
       const target = targetKey === 'dynamics'
         ? [...document.querySelectorAll('section')].find((s) => s.querySelector('.dyn-eas-chip'))
         : $('[data-section="ship"]');
       if (target) {
         target.classList.add(enterClass);
-        setTimeout(() => target.classList.remove(enterClass), 450);
+        setTimeout(() => target.classList.remove(enterClass), 900);
       }
-    }, 200);
+    }, 350); // ribbon-grow hands off into the page unfold (~1.15s total)
   });
   return rib;
 }
