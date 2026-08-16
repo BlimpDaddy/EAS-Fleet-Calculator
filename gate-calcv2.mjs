@@ -33,7 +33,7 @@ const here = fileURLToPath(new URL('.', import.meta.url));
 const calcV2 = fileURLToPath(new URL('../CalcV2/', import.meta.url));
 const BAKED_DIRS = ['src', 'vendor', 'web'];
 const BAKE_EXCLUDE = new Set(['dynamic-bench.html']); // keep in sync with bake-calcv2.mjs
-const SUITES = ['test/dynamics-fixtures.mjs', 'test/dynamics-core-fixtures.mjs'];
+const SUITES = ['test/dynamics-fixtures.mjs', 'test/dynamics-core-fixtures.mjs', 'test/estimator-fixtures.mjs'];
 
 let failures = 0;
 const ok = (name, detail = '') => console.log(`  ok  ${name}${detail ? ` — ${detail}` : ''}`);
