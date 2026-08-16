@@ -64,15 +64,19 @@ style.textContent = `
      the chooser taught). Press → it swipes open. */
   .ship-ribbon {
     position: sticky; z-index: 30; display: flex; align-items: center;
-    justify-content: center; gap: 10px; width: 100%; height: 26px;
-    background: repeating-linear-gradient(180deg, #1d1d1d 0 2px, #161616 2px 4px);
-    border: 1px solid #474747; border-left: none; border-right: none;
-    color: #888; font-size: 11px; letter-spacing: .14em; cursor: pointer;
-    user-select: none; transition: height .18s ease, color .18s ease;
+    justify-content: center; gap: 10px; width: 100%; height: 30px;
+    grid-column: 1 / -1; align-self: stretch; box-sizing: border-box; left: 0;
+    /* squished-page stripes in ORANGE + berry words (Toby, 2026-08-17:
+       "no way to miss") */
+    background: repeating-linear-gradient(180deg, rgba(255,153,0,.28) 0 2px, #161616 2px 5px);
+    border: 1px solid #ff9900; border-left: none; border-right: none;
+    color: #c628a4; font-size: 12px; font-weight: 600;
+    letter-spacing: .14em; cursor: pointer;
+    user-select: none; transition: height .18s ease, filter .18s ease;
     overflow: hidden;
   }
-  .ship-ribbon:hover { height: 38px; color: #ff9900; }
-  .ship-ribbon .chev { font-size: 14px; }
+  .ship-ribbon:hover { height: 40px; filter: brightness(1.35); }
+  .ship-ribbon .chev { font-size: 14px; color: #ff9900; }
   .ship-ribbon.rib-bottom { bottom: 0; margin-top: 14px; }
   .ship-ribbon.rib-top { top: 0; margin-bottom: 14px; }
   .ship-ribbon.opening { height: 34vh; color: #ff9900; transition: height .35s ease-in, color .2s ease; }
