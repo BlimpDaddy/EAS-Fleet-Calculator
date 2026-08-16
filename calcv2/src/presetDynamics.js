@@ -63,7 +63,7 @@ export const PRESET_DYNAMICS = {
     "source": "convex-hull(glb)",
     "glbSha256": "55f41a9bc09c575b59ea3a3e0e6c59fe9516699e7751ab5ca7fd32a681d7063d",
     "objSha256": null,
-    "defaultAxis": "-Z",
+    "defaultAxis": "+Z",
     "raw": {
       "extents": [
         0.3718079924583435,
@@ -113,7 +113,7 @@ export const PRESET_DYNAMICS = {
     "source": "convex-hull(glb)",
     "glbSha256": "f26de3ede2304b06b7841a5c4d8320f17640ad2a83c6057ed2ca4ad2a169a1b8",
     "objSha256": null,
-    "defaultAxis": "+Y",
+    "defaultAxis": "-Y",
     "raw": {
       "extents": [
         0.5592049360275269,
