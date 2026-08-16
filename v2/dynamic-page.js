@@ -69,12 +69,22 @@ function readShapeChannel() {
 /** Inherited length: V1's Ship-page output is the displayed truth (the
  *  slider itself may hold view units — never trusted directly). */
 function readLengthM() {
+  // PAGE-2 SPLIT ruling (Toby, 2026-08-17) — DATED REVERSAL of the
+  // stage-2 300 m fallback: no displayed length means NO SHIP EXISTS
+  // yet. Returning null puts the page in the TEACHING STATE (dashes +
+  // "set your ship's size in STATICS first") instead of silently
+  // inventing a 300 m vessel the user never built. All-zero-first-load
+  // doctrine (v1.6) extended to the inheritance chain.
   const out = parseFloat(document.querySelector('[data-ship="length-output"]')?.textContent);
-  return Number.isFinite(out) && out > 0 ? out : 300;
+  return Number.isFinite(out) && out > 0 ? out : null;
 }
 
 const activeAxis = () => activeDynamics.defaultAxis ?? UPLOAD_DEFAULT_AXIS; // signed, e.g. '-Z'
-const activeGeometry = () => scaleGeometryRecord(activeDynamics.raw, activeAxis()[1], readLengthM());
+const activeGeometry = () => {
+  const lengthM = readLengthM();
+  if (lengthM === null) return null; // teaching state — no ship exists yet
+  return scaleGeometryRecord(activeDynamics.raw, activeAxis()[1], lengthM);
+};
 const activeProxyRecord = () => {
   const ax = activeAxis();
   const p = activeDynamics.proxies[ax];
@@ -415,9 +425,15 @@ function paint() {
   // State → engine (UI-level parked gate; estimator dormant too) →
   // ruled display model → DOM. Geometry + estimator seam carry the
   // ACTIVE shape at the INHERITED length, rebuilt each paint.
-  const contract = compute(state, computeDynamics, activeGeometry(), estimatorSeam());
+  // TEACHING STATE (split ruling 2026-08-17): no ship yet → engine and
+  // estimator stay DORMANT exactly like parked; renderModel produces
+  // the dashes + the one amber teaching line. Selections made while
+  // blocked persist into the first real computation — never reset.
+  const geometry = activeGeometry();
+  const contract = geometry === null ? null
+    : compute(state, computeDynamics, geometry, estimatorSeam());
   if (contract && contract.estimate) lastEstimate = contract.estimate;
-  const rm = renderModel(contract);
+  const rm = renderModel(contract, { noShip: geometry === null && state.airspeedKmh > 0 });
 
   // Slider positions always mirror state (the ideal button moves them).
   // Values in force come from the state module's ONE derivation (r7 #6),
@@ -509,6 +525,15 @@ function paint() {
     const div = document.createElement('div');
     div.className = `dyn-warning ${w.level}`;
     div.textContent = w.text;
+    if (w.teachingLink === 'statics') {
+      // The teaching line IS the way back: click → STATICS (split
+      // ruling 2026-08-17). Styled as actionable by the class.
+      div.classList.add('dyn-teaching');
+      div.style.cursor = 'pointer';
+      div.addEventListener('click', () => {
+        document.querySelector('nav a[href="/ship"]')?.click();
+      });
+    }
     return div;
   }));
 }

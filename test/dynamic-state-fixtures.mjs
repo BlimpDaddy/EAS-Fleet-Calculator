@@ -447,6 +447,22 @@ console.log('\n== M6 STAGE 2: per-shape inheritance (r8 #4 reset, gated systems,
     && cShort.frontalAreaM2 < cPublic.frontalAreaM2);
 }
 
+console.log('\n== teaching state (page-2 split ruling 2026-08-17: no-ship gate) ==');
+{
+  // The dated REVERSAL of the 300 m fallback: null contract + noShip
+  // → parked-style dashes + exactly one amber teaching line wired to
+  // STATICS. Parked-at-zero (no attempted use) stays silent.
+  const teach = renderModel(null, { noShip: true });
+  check('teaching state: all rows dash (engine never consulted)',
+    teach.parked === true && teach.rows.every(([, v]) => v === '—'));
+  check('teaching state: exactly one amber line, wired to STATICS',
+    teach.warnings.length === 1 && teach.warnings[0].level === 'orange'
+    && /STATICS/.test(teach.warnings[0].text) && teach.warnings[0].teachingLink === 'statics');
+  check('plain parked stays silent (no teaching nag at speed 0)',
+    renderModel(null).warnings.length === 0 && renderModel(null, {}).warnings.length === 0);
+  check('teaching state keeps the marker null (dormancy)', teach.marker === null);
+}
+
 console.log('\n== comparison metrics rows (contract amendment 2026-08-16) ==');
 {
   const { engine } = countingEngine();
