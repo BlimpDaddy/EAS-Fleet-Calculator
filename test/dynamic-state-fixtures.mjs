@@ -447,20 +447,16 @@ console.log('\n== M6 STAGE 2: per-shape inheritance (r8 #4 reset, gated systems,
     && cShort.frontalAreaM2 < cPublic.frontalAreaM2);
 }
 
-console.log('\n== teaching state (page-2 split ruling 2026-08-17: no-ship gate) ==');
+console.log('\n== no-ship gate (page-2 split ruling 2026-08-17) ==');
 {
-  // The dated REVERSAL of the 300 m fallback: null contract + noShip
-  // → parked-style dashes + exactly one amber teaching line wired to
-  // STATICS. Parked-at-zero (no attempted use) stays silent.
-  const teach = renderModel(null, { noShip: true });
-  check('teaching state: all rows dash (engine never consulted)',
-    teach.parked === true && teach.rows.every(([, v]) => v === '—'));
-  check('teaching state: exactly one amber line, wired to STATICS',
-    teach.warnings.length === 1 && teach.warnings[0].level === 'orange'
-    && /STATICS/.test(teach.warnings[0].text) && teach.warnings[0].teachingLink === 'statics');
-  check('plain parked stays silent (no teaching nag at speed 0)',
-    renderModel(null).warnings.length === 0 && renderModel(null, {}).warnings.length === 0);
-  check('teaching state keeps the marker null (dormancy)', teach.marker === null);
+  // Toby's ruling (superseding the same-day amber-line draft): no
+  // Ship length = N/A everywhere at any speed, NO copy — the null-
+  // contract render serves parked and no-ship identically, silent.
+  // (The dated reversal of the stage-2 300 m fallback.)
+  const na = renderModel(null);
+  check('no-ship/parked: all rows dash, zero warnings, marker null (silent N/A)',
+    na.parked === true && na.rows.every(([, v]) => v === '—')
+    && na.warnings.length === 0 && na.marker === null);
 }
 
 console.log('\n== comparison metrics rows (contract amendment 2026-08-16) ==');

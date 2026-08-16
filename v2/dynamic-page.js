@@ -425,15 +425,15 @@ function paint() {
   // State → engine (UI-level parked gate; estimator dormant too) →
   // ruled display model → DOM. Geometry + estimator seam carry the
   // ACTIVE shape at the INHERITED length, rebuilt each paint.
-  // TEACHING STATE (split ruling 2026-08-17): no ship yet → engine and
-  // estimator stay DORMANT exactly like parked; renderModel produces
-  // the dashes + the one amber teaching line. Selections made while
-  // blocked persist into the first real computation — never reset.
+  // NO-SHIP GATE (Toby ruling 2026-08-17): no displayed Ship length =
+  // no ship = N/A everywhere at any speed, no copy — engine and
+  // estimator stay DORMANT exactly like parked. Selections made while
+  // dashed persist into the first real computation — never reset.
   const geometry = activeGeometry();
   const contract = geometry === null ? null
     : compute(state, computeDynamics, geometry, estimatorSeam());
   if (contract && contract.estimate) lastEstimate = contract.estimate;
-  const rm = renderModel(contract, { noShip: geometry === null && state.airspeedKmh > 0 });
+  const rm = renderModel(contract);
 
   // Slider positions always mirror state (the ideal button moves them).
   // Values in force come from the state module's ONE derivation (r7 #6),
@@ -525,15 +525,6 @@ function paint() {
     const div = document.createElement('div');
     div.className = `dyn-warning ${w.level}`;
     div.textContent = w.text;
-    if (w.teachingLink === 'statics') {
-      // The teaching line IS the way back: click → STATICS (split
-      // ruling 2026-08-17). Styled as actionable by the class.
-      div.classList.add('dyn-teaching');
-      div.style.cursor = 'pointer';
-      div.addEventListener('click', () => {
-        document.querySelector('nav a[href="/ship"]')?.click();
-      });
-    }
     return div;
   }));
 }

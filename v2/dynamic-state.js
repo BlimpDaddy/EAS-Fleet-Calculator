@@ -390,8 +390,15 @@ export function cdDialRange(contract = null, estimate = null) {
  * null. The band is DRAWN, never worded (M6 #2). Marker guard checks
  * band SHAPE (r12 #1a defence-in-depth at the old crash site).
  */
-export function renderModel(contract, { noShip = false } = {}) {
+export function renderModel(contract) {
   if (contract === null) {
+    // Serves BOTH null-contract states identically (Toby ruling
+    // 2026-08-17, superseding the same-day amber-line draft: "no
+    // copy — simply N/A, user will learn easily"): PARKED (speed 0)
+    // and NO-SHIP (Ship length never set — the dated reversal of the
+    // stage-2 300 m fallback). Dashes everywhere, silence, engine and
+    // estimator dormant; something with no size cannot have results
+    // at any speed. Selections made while dashed persist.
     return {
       parked: true,
       rows: [
@@ -400,16 +407,7 @@ export function renderModel(contract, { noShip = false } = {}) {
         ['Propulsion power', DASH],
         ['LH2 weight (10,000 km)', DASH], ['LH2 + Storage (10,000 km)', DASH],
       ],
-      powerTag: '',
-      // TEACHING STATE (page-2 split ruling, Toby 2026-08-17): the user
-      // asked for movement but no ship exists yet (Ship length never
-      // set — the dated reversal of the stage-2 300 m fallback). One
-      // amber line, shown only on attempted use; parked-at-zero stays
-      // silent. The page wires the STATICS word to the section switch.
-      warnings: noShip
-        ? [{ level: 'orange', text: 'No ship yet — set your ship’s size in STATICS first', teachingLink: 'statics' }]
-        : [],
-      marker: null,
+      powerTag: '', warnings: [], marker: null,
     };
   }
   const savingPct = Math.round(contract.selectedS * 100);
