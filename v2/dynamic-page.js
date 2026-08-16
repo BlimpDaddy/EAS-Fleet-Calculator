@@ -76,7 +76,13 @@ const activeGeometry = () => scaleGeometryRecord(activeDynamics.raw, activeAxis(
 const activeProxyRecord = () => {
   const ax = activeAxis();
   const p = activeDynamics.proxies[ax];
-  return { proxy: p.proxy, axis: ax, quality: { oddFraction: p.oddFraction ?? 0 } };
+  // Graduation 2026-08-16: cls + triggers travel with the proxy — the
+  // mechanism class picks the calibration line (records without cls
+  // price on the conservative pinned line by engine default).
+  return {
+    proxy: p.proxy, cls: p.cls ?? null, triggers: p.triggers ?? null,
+    axis: ax, quality: { oddFraction: p.oddFraction ?? 0 },
+  };
 };
 
 // ---------------------------------------------------------------- EAS mode
