@@ -106,21 +106,35 @@ function freshCd(shape, tailOn) {
   };
 }
 
-/** The page's load state: zero of its own variable, both systems ON in
- *  ideal posture — the reveal is REMOVAL (rulings 2026-08-13). */
+/** A shape's PUBLIC arrival posture (the one derivation, used by
+ *  initialState and setShape). TOGGLE GATING (Toby ruling 2026-08-16,
+ *  completing the greyed-Ideal ruling): the EAS systems are Sunship
+ *  tech — on any other shape both toggles arrive OFF and the page
+ *  LOCKS them (pure state stays operable; the lock is interaction
+ *  gating, released by the page's E+A+S engineer chord). The Sunship
+ *  arrives both-ON in ideal posture — the reveal is REMOVAL. */
+function arrivalPosture(shape) {
+  const sun = isSunship(shape);
+  const tailOn = sun, bliOn = sun;
+  const cd = freshCd(shape, tailOn);
+  return { tailOn, bliOn, cd, scenario: sun ? EAS_IDEAL.scenario : 'CUSTOM' };
+}
+
+/** The page's load state: zero of its own variable, the shape's public
+ *  arrival posture (rulings 2026-08-13 / 2026-08-16). */
 export function initialState(shape = SUNSHIP_SHAPE) {
-  const cd = freshCd(shape, true);
+  const p = arrivalPosture(shape);
   return {
     airspeedKmh: 0,              // PARKED
     shape,
-    cd: cd.cd,
+    cd: p.cd.cd,
     s: EAS_IDEAL.s,
-    tailOn: true,
-    bliOn: true,
+    tailOn: p.tailOn,
+    bliOn: p.bliOn,
     tailStash: null,             // remembered tail-ON Cd selection while OFF
-    scenario: isSunship(shape) ? EAS_IDEAL.scenario : 'CUSTOM',
-    cdSource: cd.cdSource, sSource: EAS_IDEAL.sSource,
-    cdLabel: cd.cdLabel, sLabel: EAS_IDEAL.sLabel,
+    scenario: p.scenario,
+    cdSource: p.cd.cdSource, sSource: EAS_IDEAL.sSource,
+    cdLabel: p.cd.cdLabel, sLabel: EAS_IDEAL.sLabel,
   };
 }
 
@@ -131,16 +145,19 @@ export function isParked(state) {
 /** SHAPE CHANGE (M6 stage 2, r8 #4 binding): Cd RESETS to the new
  *  shape's estimator posture — overriding any preset or hand-set value
  *  (a Cd is a claim about one body; carrying it across shapes launders
- *  provenance). The stash dies with the old shape. Speed, S and both
- *  toggles persist (system settings, not shape claims). */
+ *  provenance). The stash dies with the old shape. Speed and the S
+ *  SELECTION persist (flight/system settings); the TOGGLES take the
+ *  new shape's public arrival posture (Sunship ON/ON, generic OFF/OFF
+ *  locked — see arrivalPosture). */
 export function setShape(state, shape) {
-  const cd = freshCd(shape, state.tailOn);
+  const p = arrivalPosture(shape);
   return {
     ...state,
     shape,
-    cd: cd.cd, cdSource: cd.cdSource, cdLabel: cd.cdLabel,
+    tailOn: p.tailOn, bliOn: p.bliOn,
+    cd: p.cd.cd, cdSource: p.cd.cdSource, cdLabel: p.cd.cdLabel,
     tailStash: null,
-    scenario: isSunship(shape) && state.tailOn ? EAS_IDEAL.scenario : 'CUSTOM',
+    scenario: p.scenario,
   };
 }
 

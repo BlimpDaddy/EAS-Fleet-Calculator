@@ -44,11 +44,15 @@ import {
 // (shape-upload.js publishes identity + upload dynamics; preset dynamics
 // are the BAKED records). All measurement is engine code — this file
 // only selects records and passes them through.
-const FLIGHT_AXIS = 'Z'; // §4.1: declared, never detected — the M1 default;
-                         // per-preset authored defaults await a ruling.
+// §4.1: DECLARED, never detected — presets carry AUTHORED default axes
+// (Toby's orientation ruling 2026-08-16, pinned in the generated
+// records: bottle +Y base-first, cigar -Z taper-trailing, car +Z,
+// lenticular +Z edge-first, washing machine +Y); uploads default '+Z'
+// until the visualiser's rotate control lands.
+const UPLOAD_DEFAULT_AXIS = '+Z';
 
 let activeShape = SUNSHIP_SHAPE;
-let activeDynamics = PRESET_DYNAMICS.sunship; // { raw, proxies, ... }
+let activeDynamics = PRESET_DYNAMICS.sunship; // { raw, proxies, defaultAxis, ... }
 
 function readShapeChannel() {
   const pub = window.__v2ActiveShape;
@@ -67,11 +71,36 @@ function readLengthM() {
   return Number.isFinite(out) && out > 0 ? out : 300;
 }
 
-const activeGeometry = () => scaleGeometryRecord(activeDynamics.raw, FLIGHT_AXIS, readLengthM());
+const activeAxis = () => activeDynamics.defaultAxis ?? UPLOAD_DEFAULT_AXIS; // signed, e.g. '-Z'
+const activeGeometry = () => scaleGeometryRecord(activeDynamics.raw, activeAxis()[1], readLengthM());
 const activeProxyRecord = () => {
-  const p = activeDynamics.proxies[`+${FLIGHT_AXIS}`];
-  return { proxy: p.proxy, axis: `+${FLIGHT_AXIS}`, quality: { oddFraction: p.oddFraction ?? 0 } };
+  const ax = activeAxis();
+  const p = activeDynamics.proxies[ax];
+  return { proxy: p.proxy, axis: ax, quality: { oddFraction: p.oddFraction ?? 0 } };
 };
+
+// ---------------------------------------------------------------- EAS mode
+// The engineer chord (Toby ruling 2026-08-16): holding E+A+S together
+// unlocks the system toggles on non-Sunship shapes (their §5.4 generic
+// behaviour — truthfully labelled by the state module) and is the
+// namespace for future engineer functions. Session-transient, nothing
+// persisted, nothing advertised; the chip below self-identifies any
+// unlocked state so a screenshot can never pass as the public page.
+const easKeys = new Set();
+function easHeld() { return easKeys.has('e') && easKeys.has('a') && easKeys.has('s'); }
+window.addEventListener('keydown', (e) => {
+  const k = (e.key || '').toLowerCase();
+  if (k === 'e' || k === 'a' || k === 's') {
+    const was = easHeld();
+    easKeys.add(k);
+    if (easHeld() !== was) paint();
+  }
+});
+window.addEventListener('keyup', (e) => {
+  const k = (e.key || '').toLowerCase();
+  if (easKeys.delete(k)) paint();
+});
+window.addEventListener('blur', () => { if (easKeys.size) { easKeys.clear(); paint(); } });
 
 // The M6 estimator seam: ENGINE functions behind the state module's
 // injection point (same pattern as computeDynamics — this file computes
@@ -180,6 +209,14 @@ style.textContent = `
   }
   .dyn-toggle-row input { accent-color: var(--color-accent-1); }
   .dyn-toggle-row .dyn-toggle-note { color: var(--color-secondary); font-size: 0.85em; }
+  /* EAS-mode chip: subtle berry tag, self-identifies unlocked states. */
+  .dyn-eas-chip {
+    align-self: flex-start;
+    font-size: 0.6em; font-weight: 700; letter-spacing: 0.12em;
+    color: var(--color-accent-1, #c628a4);
+    border: 1px solid var(--color-accent-1, #c628a4);
+    border-radius: 3px; padding: 1px 5px; opacity: 0.8;
+  }
   @media (max-width: 900px) {
     .dyn-controls-row { flex-wrap: wrap; }
     .dyn-visual-panel { min-height: 22vh; }
@@ -298,9 +335,16 @@ function toggleRow(labelText) {
 }
 const tailToggle = toggleRow('Smart Tail');
 const bliToggle = toggleRow('BLI');
+// EAS-mode chip: self-identifies engineer-unlocked states (visible while
+// the chord is held, and while any generic shape has systems ON) — a
+// screenshot of an unlocked configuration can never pass as public.
+const easChip = document.createElement('div');
+easChip.className = 'dyn-eas-chip';
+easChip.textContent = 'EAS MODE';
+easChip.style.display = 'none';
 const toggleCol = document.createElement('div');
 toggleCol.className = 'dyn-toggle-col';
-toggleCol.append(tailToggle.row, bliToggle.row);
+toggleCol.append(tailToggle.row, bliToggle.row, easChip);
 
 const controlsRow = document.createElement('div');
 controlsRow.className = 'dyn-controls-row';
@@ -386,6 +430,21 @@ function paint() {
   idealBtn.title = sunship
     ? 'EAS IDEAL — 100 km/h, Cd 0.043, S 27%'
     : 'EAS IDEAL is the Sunship’s authored configuration';
+
+  // System toggles: Sunship-only in public (Toby ruling 2026-08-16 —
+  // the greyed hard limit IS the lesson: these are the Sunship's
+  // designs). The E+A+S chord unlocks them for engineer use; the chip
+  // self-identifies both the held chord and any unlocked configuration.
+  const unlocked = easHeld();
+  const toggleLocked = !sunship && !unlocked;
+  tailToggle.box.disabled = toggleLocked;
+  bliToggle.box.disabled = toggleLocked;
+  tailToggle.row.style.opacity = toggleLocked ? '0.4' : '';
+  bliToggle.row.style.opacity = toggleLocked ? '0.4' : '';
+  const rowTitle = toggleLocked ? 'Smart Tail and BLI are the Sunship’s configuration' : '';
+  tailToggle.row.title = rowTitle;
+  bliToggle.row.title = rowTitle;
+  easChip.style.display = unlocked || (!sunship && (state.tailOn || state.bliOn)) ? '' : 'none';
 
   // Per-shape Cd dial (§5.3 pinned rule): contract floor + estimate top.
   const dial = cdDialRange(contract, lastEstimate);

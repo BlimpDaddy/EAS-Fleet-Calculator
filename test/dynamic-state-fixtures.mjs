@@ -349,31 +349,49 @@ console.log('\n== M6: the estimator on the page — marker, band, dial, firming 
   check('renderModel without an estimate: marker null', renderModel(noEst).marker === null);
 }
 
-console.log('\n== M6 STAGE 2: per-shape inheritance (r8 #4 reset, generic tail, Ideal gating) ==');
+console.log('\n== M6 STAGE 2: per-shape inheritance (r8 #4 reset, gated systems, generic tail, Ideal gating) ==');
 {
   const { engine } = countingEngine();
   // The washing machine, exactly as the page builds it: baked record →
-  // engine scaling → engine estimator seam.
+  // AUTHORED default axis → engine scaling → engine estimator seam.
   const WM = { kind: 'preset', id: 'washingmachine', name: 'WASHINGMACHINE' };
   const wmDyn = PRESET_DYNAMICS.washingmachine;
-  const wmGeometry = scaleGeometryRecord(wmDyn.raw, 'Z', 100);
+  const wmAxis = wmDyn.defaultAxis; // '+Y' (Toby's orientation ruling)
+  const wmGeometry = scaleGeometryRecord(wmDyn.raw, wmAxis[1], 100);
   const wmSeam = {
     estimateCd, applyGenericTail,
-    proxyRecord: { proxy: wmDyn.proxies['+Z'].proxy, axis: '+Z', quality: { oddFraction: wmDyn.proxies['+Z'].oddFraction ?? 0 } },
+    proxyRecord: { proxy: wmDyn.proxies[wmAxis].proxy, axis: wmAxis, quality: { oddFraction: wmDyn.proxies[wmAxis].oddFraction ?? 0 } },
   };
   const wmBare = estimateCd(wmSeam.proxyRecord, wmGeometry, 100);
   const wmTailed = applyGenericTail(wmBare);
+  check('records carry the authored default axes (bottle +Y, cigar -Z, wm +Y)',
+    PRESET_DYNAMICS.bottle.defaultAxis === '+Y' && PRESET_DYNAMICS.cigar.defaultAxis === '-Z'
+    && wmAxis === '+Y' && PRESET_DYNAMICS.sunship.defaultAxis === '+Z');
 
-  // Shape change RESETS Cd (r8 #4) — even over a hand-set user value.
+  // Shape change RESETS Cd (r8 #4) — even over a hand-set user value —
+  // and the systems arrive OFF: they are the Sunship's designs (Toby
+  // ruling 2026-08-16; the greyed hard limit IS the lesson).
   let st = setInput(setInput(initialState(), 'airspeedKmh', 100), 'cd', 0.10); // user claim on the Sunship
   st = setShape(st, WM);
   check('shape change resets Cd to the estimator posture (user claim never travels)',
     st.cd === CD_TRACKS_ESTIMATE && st.cdSource === 'estimated');
+  check('generic arrival: BOTH systems OFF (Sunship tech stays home)',
+    st.tailOn === false && st.bliOn === false);
   check('shape change clears the stash and drops the authored scenario',
     st.tailStash === null && st.scenario === 'CUSTOM');
 
-  const c = compute(st, engine, wmGeometry, wmSeam);
-  check('generic shape, tail ON: selectedCd is the engine generic-tail estimate',
+  // PUBLIC generic view: bare estimator, no credit, no tail.
+  const cPublic = compute(st, engine, wmGeometry, wmSeam);
+  check('public generic: selectedCd is the BARE estimate, S forced 0, pure cubic',
+    cPublic.selectedCd === wmBare.cdEstimate && cPublic.selectedS === 0
+    && cPublic.powerMW === cPublic.powerNoCreditMW);
+  check('public generic configurationId says bodyOnly', cPublic.configurationId === 'washingmachine/bodyOnly');
+
+  // EAS-MODE actions (the chord gates the CLICK, page-side; the state
+  // transitions stay pure): switch both systems on → §5.4 generic tail.
+  const stOn = setToggle(setToggle(st, 'tailOn', true), 'bliOn', true);
+  const c = compute(stOn, engine, wmGeometry, wmSeam);
+  check('unlocked generic, tail ON: selectedCd is the engine generic-tail estimate',
     c.selectedCd === wmTailed.cdEstimate && c.cdSource === 'estimated');
   check('generic-tail label names the s5.4 REFERENCE ASSUMPTION',
     /generic Smart Tail/.test(c.provenance.cdLabel) && /REFERENCE ASSUMPTION/.test(c.provenance.cdLabel));
@@ -383,19 +401,17 @@ console.log('\n== M6 STAGE 2: per-shape inheritance (r8 #4 reset, generic tail, 
     wmTailed.pressureCd === wmBare.pressureCd * (1 - GENERIC_TAIL_PRESSURE_FRACTION));
   check('identity intact: no estimate- warnings on the generic path',
     !c.warnings.some((w) => w.startsWith('estimate-')));
-  check('configurationId carries the shape key', c.configurationId === 'washingmachine/smartTailBLI');
+  check('unlocked configurationId carries the systems', c.configurationId === 'washingmachine/smartTailBLI');
 
-  // Tail OFF on a generic shape: bare estimate, still editable-firms.
-  const off = setToggle(st, 'tailOn', false);
-  const cOff = compute(off, engine, wmGeometry, wmSeam);
-  check('generic tail OFF: selectedCd is the bare estimate', cOff.selectedCd === wmBare.cdEstimate);
+  // Tail OFF again: bare estimate; drag firms; ON restores generic-tail.
+  const off = setToggle(stOn, 'tailOn', false);
+  check('generic tail OFF: selectedCd back to bare',
+    compute(off, engine, wmGeometry, wmSeam).selectedCd === wmBare.cdEstimate);
   const firmed = compute(setInput(off, 'cd', 0.9), engine, wmGeometry, wmSeam);
   check('drag while tracking still FIRMS to user on a generic shape',
     firmed.selectedCd === 0.9 && firmed.cdSource === 'user');
-  // Tail back ON with no user claim: returns to the generic-tail estimate.
-  const backOn = compute(setToggle(off, 'tailOn', true), engine, wmGeometry, wmSeam);
   check('tail ON restores the generic-tail estimate (tracking sentinel re-targets)',
-    backOn.selectedCd === wmTailed.cdEstimate);
+    compute(setToggle(off, 'tailOn', true), engine, wmGeometry, wmSeam).selectedCd === wmTailed.cdEstimate);
 
   // Ideal is Sunship-only — by PRESET IDENTITY, never filename.
   check('applyIdeal throws on a generic shape', (() => {
@@ -405,21 +421,22 @@ console.log('\n== M6 STAGE 2: per-shape inheritance (r8 #4 reset, generic tail, 
     !isSunship({ kind: 'upload', id: null, name: 'SUNSHIP' })
     && (() => { try { applyIdeal(setShape(initialState(), { kind: 'upload', id: null, name: 'SUNSHIP' })); return false; } catch { return true; } })());
 
-  // Switching BACK to the Sunship restores the authored claim.
+  // Switching BACK to the Sunship restores the full public posture.
   const home = setShape(st, SUNSHIP_SHAPE);
-  check('return to Sunship: tail ON carries the authored 0.043 again',
-    home.cd === EAS_IDEAL.cd && home.cdSource === 'authored' && home.scenario === 'VISION');
+  check('return to Sunship: both systems ON, authored 0.043, VISION',
+    home.tailOn && home.bliOn && home.cd === EAS_IDEAL.cd
+    && home.cdSource === 'authored' && home.scenario === 'VISION');
   const cHome = compute(setInput(home, 'airspeedKmh', 100), engine, undefined, ESTIMATOR);
   check('Sunship ideal numbers intact after the round trip (379 t)',
     cHome.refTripFuelSystemT.toFixed(0) === '379');
 
   // Length inheritance: same shape at another length — record scaling
   // is engine algebra; a user Cd survives (length is not a shape change).
-  const wm60 = scaleGeometryRecord(wmDyn.raw, 'Z', 60);
+  const wm60 = scaleGeometryRecord(wmDyn.raw, wmAxis[1], 60);
   const cShort = compute(setInput(st, 'cd', 0.5), engine, wm60, wmSeam);
   check('length change re-scales geometry without resetting the user Cd',
     cShort.selectedCd === 0.5 && cShort.shipLengthM === 60
-    && cShort.frontalAreaM2 < c.frontalAreaM2);
+    && cShort.frontalAreaM2 < cPublic.frontalAreaM2);
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);
