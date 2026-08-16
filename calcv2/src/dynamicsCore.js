@@ -283,12 +283,20 @@ export function computeDynamics(geometry, cfg) {
     if (typeof estimate !== 'object' || JSON.stringify(Object.keys(estimate).sort()) !== ESTIMATE_KEYS) {
       bad('must be a cdEstimator frozen-API object (or null)');
     }
-    if (typeof estimate.provenance !== 'object' || estimate.provenance === null) {
-      bad('provenance must be an object');
+    if (typeof estimate.provenance !== 'object' || estimate.provenance === null || Array.isArray(estimate.provenance)) {
+      bad('provenance must be a plain object (arrays rejected — r12 re-review)');
     }
     if (estimate.status === 'ok') {
       const { cdEstimate: e, frictionCd: f, pressureCd: p, band } = estimate;
       if (!fin(e) || !fin(f) || !fin(p)) bad("status 'ok' requires finite cdEstimate/frictionCd/pressureCd");
+      // Physical domain (r12 re-review residual: finiteness is not
+      // physicality — a negative-Cd estimate must die HERE with a clear
+      // message, not later as a confusing cd rejection): friction is
+      // strictly positive by construction (ITTC × positive areas),
+      // pressure is ≥ 0 by the clamped calibration, so their sum is > 0.
+      if (!(e > 0) || !(f > 0) || !(p >= 0)) {
+        bad("status 'ok' requires cdEstimate > 0, frictionCd > 0, pressureCd >= 0");
+      }
       if (!Array.isArray(band) || band.length !== 2 || !fin(band[0]) || !fin(band[1])) {
         bad("status 'ok' requires band = [lo, hi], both finite");
       }
