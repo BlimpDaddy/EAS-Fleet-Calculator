@@ -47,11 +47,14 @@ export const SUNSHIP_GEOMETRY = Object.freeze({
   extents: Object.freeze([249, 237, 300]),
   frontalArea: 40522, wettedArea: 206795, hullArea: 206503, meshArea: 206795,
   wettedOverFrontal: 206795 / 40522, wettedSource: 'mesh',
-  // Comparison-metrics amendment 2026-08-16: measured mesh volume at
-  // 300 m (presetDynamics raw × s³ = 7,992,480.2 — pinned to the same
-  // integer grade as the areas). Near-sphere note: V^⅔ ≈ frontal, so
-  // the Sunship's Cd_v ≈ its frontal Cd.
-  volume: 7992480, volumeSource: 'mesh',
+  // Comparison-metrics amendment 2026-08-16 + owner ruling same day
+  // (r17 Part B (h): "an airship envelope is a compact convex hull in
+  // the framework"): CONVEX-ENVELOPE volume at 300 m (presetDynamics
+  // raw × s³ = 8,085,778.5 — pinned at the areas' integer grade;
+  // ~1.2% above the mesh volume, as a slightly concave body must be).
+  // Near-sphere note: V^⅔ ≈ frontal, so the Sunship's Cd_v ≈ its
+  // frontal Cd.
+  volume: 8085778, volumeSource: 'convex-envelope',
   warnings: Object.freeze([]),
 });
 
