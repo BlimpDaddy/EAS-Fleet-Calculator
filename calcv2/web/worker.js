@@ -112,14 +112,31 @@ self.onmessage = async (e) => {
     // caller's runId guard exactly like every other worker reply.
     let dynamics = null;
     if (e.data.dynamics) {
-      const solidFaces = meshFaces.length ? meshFaces : m.hull.faces;
-      const geometrySource = meshFaces.length ? 'mesh' : 'convex-hull(points)';
+      // CANONICAL UPLOAD-HULL RULE (graduation 2026-08-16, r18
+      // requirement + owner ruling: uploads use the hull, always):
+      // ONE convex hull, computed once, is the geometry identity for
+      // EVERY downstream measurement — sectional estimator, dynamics
+      // areas, volume. No two subsystems ever see different geometry.
+      // Rationale: the framework's aero object IS the compact convex
+      // envelope (VS/VE, frontal silhouette, volume all measure it);
+      // hulling also retires whole classes of mesh-defect ambiguity
+      // (open surfaces, inverted caps, inconsistent winding) at the
+      // door. The raw mesh remains the DISPLAY object upstream.
+      // Presets are different by design: authored aeroHullMesh records
+      // precomputed at bake time (presetDynamics.js), never this path.
+      const solidFaces = m.hull.faces;
+      const geometrySource = 'convex-hull(canonical, graduation 2026-08-16)';
       const per = {};
       for (const ax of ['X', 'Y', 'Z']) per[ax] = measureDynamicsGeometry(vertices, solidFaces, { flightAxis: ax });
       const proxies = {};
       for (const ax of ['+X', '-X', '+Y', '-Y', '+Z', '-Z']) {
         const p = measureSectionalProxy(vertices, solidFaces, { axis: ax });
-        proxies[ax] = { proxy: p.proxy, oddFraction: p.quality ? p.quality.oddFraction : null };
+        proxies[ax] = {
+          proxy: p.proxy,
+          cls: p.cls,           // mechanism class (graduation 2026-08-16)
+          triggers: p.triggers,
+          oddFraction: p.quality ? p.quality.oddFraction : null,
+        };
       }
       dynamics = {
         geometrySource,

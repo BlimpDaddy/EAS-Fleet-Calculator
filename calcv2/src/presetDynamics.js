@@ -36,26 +36,74 @@ export const PRESET_DYNAMICS = {
     "proxies": {
       "+X": {
         "proxy": 0.802158781195433,
+        "cls": "pinned",
+        "triggers": {
+          "softFore": 0.00006760347084237472,
+          "softAft": 0.802158781195433,
+          "terminalBaseFrac": 0.0012360939431396785,
+          "rawRatio": 1,
+          "shoulder": 0.16639781430349784
+        },
         "oddFraction": 0
       },
       "-X": {
         "proxy": 0.802158781195433,
+        "cls": "pinned",
+        "triggers": {
+          "softFore": 0.00006760347084237472,
+          "softAft": 0.802158781195433,
+          "terminalBaseFrac": 0.0012360939431396785,
+          "rawRatio": 1,
+          "shoulder": 0.16639781430349784
+        },
         "oddFraction": 0
       },
       "+Y": {
         "proxy": 0.6546142525677576,
+        "cls": "rounded",
+        "triggers": {
+          "softFore": 0.31453266643883765,
+          "softAft": 0.6546142525677576,
+          "terminalBaseFrac": 0.0012153621779290229,
+          "rawRatio": 1,
+          "shoulder": 0.050344763754109643
+        },
         "oddFraction": 0
       },
       "-Y": {
         "proxy": 0.9924440648653761,
+        "cls": "pinned",
+        "triggers": {
+          "softFore": 0.00008894495549685351,
+          "softAft": 0.9924440648653761,
+          "terminalBaseFrac": 0.3437044239183277,
+          "rawRatio": 1,
+          "shoulder": 0.21238000053217163
+        },
         "oddFraction": 0
       },
       "+Z": {
         "proxy": 0.7697920595614333,
+        "cls": "rounded",
+        "triggers": {
+          "softFore": 0.004553551463451261,
+          "softAft": 0.7697920595614333,
+          "terminalBaseFrac": 0.004453538757823785,
+          "rawRatio": 1,
+          "shoulder": 0.10151579449816793
+        },
         "oddFraction": 0
       },
       "-Z": {
         "proxy": 0.7697920595614333,
+        "cls": "rounded",
+        "triggers": {
+          "softFore": 0.004553551463451261,
+          "softAft": 0.7697920595614333,
+          "terminalBaseFrac": 0.004453538757823785,
+          "rawRatio": 1,
+          "shoulder": 0.10151579449816793
+        },
         "oddFraction": 0
       }
     }
@@ -88,26 +136,74 @@ export const PRESET_DYNAMICS = {
     "proxies": {
       "+X": {
         "proxy": 0.9813074929299013,
+        "cls": "pinned",
+        "triggers": {
+          "softFore": 0.03704867783188853,
+          "softAft": 0.9813074929299013,
+          "terminalBaseFrac": 0.01169993117687543,
+          "rawRatio": 1,
+          "shoulder": 0.3535815585138546
+        },
         "oddFraction": 0
       },
       "-X": {
         "proxy": 0.9813074929299009,
+        "cls": "pinned",
+        "triggers": {
+          "softFore": 0.03704867783188853,
+          "softAft": 0.9813074929299009,
+          "terminalBaseFrac": 0.012044046799724708,
+          "rawRatio": 1,
+          "shoulder": 0.3483622486177446
+        },
         "oddFraction": 0
       },
       "+Y": {
         "proxy": 0.9901724708689986,
+        "cls": "pinned",
+        "triggers": {
+          "softFore": 0.026583921575204093,
+          "softAft": 0.9901724708689986,
+          "terminalBaseFrac": 0.013732394366197184,
+          "rawRatio": 1,
+          "shoulder": 0.7321792036676285
+        },
         "oddFraction": 0
       },
       "-Y": {
         "proxy": 0.9888302611430345,
+        "cls": "pinned",
+        "triggers": {
+          "softFore": 0.06562008914423614,
+          "softAft": 0.9888302611430345,
+          "terminalBaseFrac": 0.009507042253521126,
+          "rawRatio": 1,
+          "shoulder": 0.5580215010984866
+        },
         "oddFraction": 0
       },
       "+Z": {
         "proxy": 0.4988402750475998,
+        "cls": "pinned",
+        "triggers": {
+          "softFore": 0.4988402750475998,
+          "softAft": 0.25263858918862236,
+          "terminalBaseFrac": 0.015549215406562055,
+          "rawRatio": 1.000000000170923,
+          "shoulder": 0.09157981740145307
+        },
         "oddFraction": 0
       },
       "-Z": {
         "proxy": 0.9244034132504214,
+        "cls": "pinned",
+        "triggers": {
+          "softFore": 0,
+          "softAft": 0.9244034132504214,
+          "terminalBaseFrac": 0.9243937232524965,
+          "rawRatio": 1.0000001567453973,
+          "shoulder": 0.01933153558905885
+        },
         "oddFraction": 0
       }
     }
@@ -140,26 +236,74 @@ export const PRESET_DYNAMICS = {
     "proxies": {
       "+X": {
         "proxy": 0.9771012765532581,
+        "cls": "pinned",
+        "triggers": {
+          "softFore": 0.06720992047355,
+          "softAft": 0.9771012765532581,
+          "terminalBaseFrac": 0.001831196936906942,
+          "rawRatio": 1.0000000010735532,
+          "shoulder": 0.28009665837625586
+        },
         "oddFraction": 0
       },
       "-X": {
         "proxy": 0.9771012765532581,
+        "cls": "pinned",
+        "triggers": {
+          "softFore": 0.06720992047355,
+          "softAft": 0.9771012765532581,
+          "terminalBaseFrac": 0.001831196936906942,
+          "rawRatio": 1.0000000010735532,
+          "shoulder": 0.28009665837625586
+        },
         "oddFraction": 0
       },
       "+Y": {
         "proxy": 0.5311070302844244,
+        "cls": "pinned",
+        "triggers": {
+          "softFore": 0.5311070302844244,
+          "softAft": 0.1666817957296597,
+          "terminalBaseFrac": 0.11903246339910885,
+          "rawRatio": 1,
+          "shoulder": 0.13456784640460187
+        },
         "oddFraction": 0
       },
       "-Y": {
         "proxy": 0.9046548268574667,
+        "cls": "pinned",
+        "triggers": {
+          "softFore": 0.05744376660624181,
+          "softAft": 0.9046548268574667,
+          "terminalBaseFrac": 0.6957352005092298,
+          "rawRatio": 1,
+          "shoulder": 0
+        },
         "oddFraction": 0
       },
       "+Z": {
         "proxy": 0.9771012765532581,
+        "cls": "pinned",
+        "triggers": {
+          "softFore": 0.06720992047355,
+          "softAft": 0.9771012765532581,
+          "terminalBaseFrac": 0.001831196936906942,
+          "rawRatio": 1.0000000010735532,
+          "shoulder": 0.28009665837625586
+        },
         "oddFraction": 0
       },
       "-Z": {
         "proxy": 0.9771012765532581,
+        "cls": "pinned",
+        "triggers": {
+          "softFore": 0.06720992047355,
+          "softAft": 0.9771012765532581,
+          "terminalBaseFrac": 0.001831196936906942,
+          "rawRatio": 1.0000000010735532,
+          "shoulder": 0.28009665837625586
+        },
         "oddFraction": 0
       }
     }
@@ -192,26 +336,74 @@ export const PRESET_DYNAMICS = {
     "proxies": {
       "+X": {
         "proxy": 1,
+        "cls": "pinned",
+        "triggers": {
+          "softFore": 0.8420945812398086,
+          "softAft": 1,
+          "terminalBaseFrac": 0.8437849944008958,
+          "rawRatio": 1,
+          "shoulder": 1.1064692761133843
+        },
         "oddFraction": 0
       },
       "-X": {
         "proxy": 1,
+        "cls": "pinned",
+        "triggers": {
+          "softFore": 0.8420945812398086,
+          "softAft": 1,
+          "terminalBaseFrac": 0.8437849944008958,
+          "rawRatio": 1,
+          "shoulder": 1.1064692761133843
+        },
         "oddFraction": 0
       },
       "+Y": {
         "proxy": 1.0000000000000002,
+        "cls": "pinned",
+        "triggers": {
+          "softFore": 0.5491874758583432,
+          "softAft": 1.0000000000000002,
+          "terminalBaseFrac": 0.325,
+          "rawRatio": 1,
+          "shoulder": 0.48535929506062603
+        },
         "oddFraction": 0
       },
       "-Y": {
         "proxy": 1,
+        "cls": "pinned",
+        "triggers": {
+          "softFore": 0.3064608558325951,
+          "softAft": 1,
+          "terminalBaseFrac": 0.5739130434782609,
+          "rawRatio": 1,
+          "shoulder": 0.6382849015729584
+        },
         "oddFraction": 0
       },
       "+Z": {
         "proxy": 0.4340132553054296,
+        "cls": "pinned",
+        "triggers": {
+          "softFore": 0.3145088638931401,
+          "softAft": 0.4340132553054296,
+          "terminalBaseFrac": 0.4140061791967044,
+          "rawRatio": 1,
+          "shoulder": 0.07901705305042046
+        },
         "oddFraction": 0
       },
       "-Z": {
         "proxy": 0.4340132553054296,
+        "cls": "pinned",
+        "triggers": {
+          "softFore": 0.3145088638931401,
+          "softAft": 0.4340132553054296,
+          "terminalBaseFrac": 0.4140061791967044,
+          "rawRatio": 1,
+          "shoulder": 0.07901705305042046
+        },
         "oddFraction": 0
       }
     }
@@ -244,26 +436,74 @@ export const PRESET_DYNAMICS = {
     "proxies": {
       "+X": {
         "proxy": 1,
+        "cls": "pinned",
+        "triggers": {
+          "softFore": 0.9550429783213737,
+          "softAft": 1,
+          "terminalBaseFrac": 1,
+          "rawRatio": 1,
+          "shoulder": 0
+        },
         "oddFraction": 0
       },
       "-X": {
         "proxy": 1,
+        "cls": "pinned",
+        "triggers": {
+          "softFore": 0.9550429783213737,
+          "softAft": 1,
+          "terminalBaseFrac": 1,
+          "rawRatio": 1,
+          "shoulder": 0
+        },
         "oddFraction": 0
       },
       "+Y": {
         "proxy": 1,
+        "cls": "pinned",
+        "triggers": {
+          "softFore": 0.8764329760276652,
+          "softAft": 1,
+          "terminalBaseFrac": 1,
+          "rawRatio": 1,
+          "shoulder": 0.202506474752244
+        },
         "oddFraction": 0
       },
       "-Y": {
         "proxy": 1,
+        "cls": "pinned",
+        "triggers": {
+          "softFore": 0.936896527842396,
+          "softAft": 1,
+          "terminalBaseFrac": 0.9375,
+          "rawRatio": 1,
+          "shoulder": 0.552074034090815
+        },
         "oddFraction": 0
       },
       "+Z": {
         "proxy": 1.0000000000000002,
+        "cls": "pinned",
+        "triggers": {
+          "softFore": 0.9521207763154153,
+          "softAft": 1.0000000000000002,
+          "terminalBaseFrac": 0.0625,
+          "rawRatio": 1,
+          "shoulder": 1.5188967656467036
+        },
         "oddFraction": 0
       },
       "-Z": {
         "proxy": 1,
+        "cls": "pinned",
+        "triggers": {
+          "softFore": 0.345785132650348,
+          "softAft": 1,
+          "terminalBaseFrac": 1,
+          "rawRatio": 1,
+          "shoulder": 1.4162011771232745
+        },
         "oddFraction": 0
       }
     }
@@ -296,26 +536,74 @@ export const PRESET_DYNAMICS = {
     "proxies": {
       "+X": {
         "proxy": 0.6852949245412392,
+        "cls": "rounded",
+        "triggers": {
+          "softFore": 0.0000014092993172383559,
+          "softAft": 0.6852949245412392,
+          "terminalBaseFrac": 0.002161383285302594,
+          "rawRatio": 1,
+          "shoulder": 0.07941541599764392
+        },
         "oddFraction": 0
       },
       "-X": {
         "proxy": 0.6852949245412392,
+        "cls": "rounded",
+        "triggers": {
+          "softFore": 0.0000014092993172383559,
+          "softAft": 0.6852949245412392,
+          "terminalBaseFrac": 0.002161383285302594,
+          "rawRatio": 1,
+          "shoulder": 0.07941541599764392
+        },
         "oddFraction": 0
       },
       "+Y": {
         "proxy": 0.9953983891532359,
+        "cls": "pinned",
+        "triggers": {
+          "softFore": 0.15157765360917405,
+          "softAft": 0.9953983891532359,
+          "terminalBaseFrac": 0.004485219164118246,
+          "rawRatio": 1,
+          "shoulder": 0.6668952705424304
+        },
         "oddFraction": 0
       },
       "-Y": {
         "proxy": 1,
+        "cls": "pinned",
+        "triggers": {
+          "softFore": 0.04504271807036304,
+          "softAft": 1,
+          "terminalBaseFrac": 0.1616717635066259,
+          "rawRatio": 1,
+          "shoulder": 0.23512942901395698
+        },
         "oddFraction": 0
       },
       "+Z": {
         "proxy": 0.6852949245412392,
+        "cls": "rounded",
+        "triggers": {
+          "softFore": 0.0000014092993172383559,
+          "softAft": 0.6852949245412392,
+          "terminalBaseFrac": 0.002161383285302594,
+          "rawRatio": 1,
+          "shoulder": 0.07941541599764392
+        },
         "oddFraction": 0
       },
       "-Z": {
         "proxy": 0.6852949245412392,
+        "cls": "rounded",
+        "triggers": {
+          "softFore": 0.0000014092993172383559,
+          "softAft": 0.6852949245412392,
+          "terminalBaseFrac": 0.002161383285302594,
+          "rawRatio": 1,
+          "shoulder": 0.07941541599764392
+        },
         "oddFraction": 0
       }
     }

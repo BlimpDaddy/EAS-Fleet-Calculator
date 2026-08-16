@@ -184,16 +184,21 @@ console.log('\n== M4/M5 toggles under M6 semantics (0.26 RETIRED, r10 snap-edita
   const moving = setInput(initialState(), 'airspeedKmh', 100);
   const bare100 = bareEstimateAt(100);
   const tailOff = compute(setToggle(moving, 'tailOn', false), engine, undefined, ESTIMATOR);
-  check('tail OFF snaps Cd to the live bare-hull ESTIMATE (~0.438)',
-    tailOff.selectedCd === bare100 && near(tailOff.selectedCd, 0.4383, 0.001), String(tailOff.selectedCd));
+  // GRADUATION 2026-08-16 (r15–r19 sealed): the bare Sunship classifies
+  // ROUNDED (aft-dominated) and prices on the high-Re crisis line —
+  // ~0.178, replacing the retired subcritical-anchor ~0.438. The
+  // reveal becomes ~4× (the owner's preferred story; the authored
+  // 0.043 claim itself is unchanged).
+  check('tail OFF snaps Cd to the live bare-hull ESTIMATE (~0.178, graduated)',
+    tailOff.selectedCd === bare100 && near(tailOff.selectedCd, 0.1785, 0.002), String(tailOff.selectedCd));
   check('tail OFF does not touch S', tailOff.selectedS === moving.s);
   check('tail OFF Cd is ESTIMATED, not authored, not user', tailOff.cdSource === 'estimated');
-  check('the reveal is ~10x (bare estimate / 0.043 in [9, 11])',
-    tailOff.selectedCd / EAS_IDEAL.cd > 9 && tailOff.selectedCd / EAS_IDEAL.cd < 11);
-  check('tail OFF numbers: ~154.5 MW / ~3,863 t, both RED (the new honest reveal)',
-    near(tailOff.powerMW, 154.5, 0.002) && near(tailOff.refTripFuelSystemT, 3863, 0.002)
-    && tailOff.aerodynamicStatus === 'RED' && tailOff.fuelMassStatus === 'RED',
-    `${tailOff.powerMW.toFixed(1)} MW / ${tailOff.refTripFuelSystemT.toFixed(0)} t`);
+  check('the reveal is ~4x (bare estimate / 0.043 in [3.5, 5.5], r19-sealed)',
+    tailOff.selectedCd / EAS_IDEAL.cd > 3.5 && tailOff.selectedCd / EAS_IDEAL.cd < 5.5);
+  check('tail OFF numbers: ~62.9 MW / ~1,573 t, aero ORANGE + fuel RED (the graduated reveal — the honest bare hull is bad, not catastrophic)',
+    near(tailOff.powerMW, 62.9, 0.005) && near(tailOff.refTripFuelSystemT, 1573, 0.005)
+    && tailOff.aerodynamicStatus === 'ORANGE' && tailOff.fuelMassStatus === 'RED',
+    `${tailOff.powerMW.toFixed(1)} MW / ${tailOff.refTripFuelSystemT.toFixed(0)} t / ${tailOff.aerodynamicStatus}`);
   const bliOff = compute(setToggle(moving, 'bliOn', false), engine, undefined, ESTIMATOR);
   check('BLI OFF forces S = 0 without touching Cd',
     bliOff.selectedS === 0 && bliOff.selectedCd === moving.cd);
@@ -207,9 +212,9 @@ console.log('\n== M4/M5 toggles under M6 semantics (0.26 RETIRED, r10 snap-edita
     restored.selectedCd === moving.cd && restored.cdSource === 'authored');
   // Both OFF at speed: the naked-body worst case computes, flagged not hidden.
   const naked = compute(setToggle(setToggle(moving, 'tailOn', false), 'bliOn', false), engine, undefined, ESTIMATOR);
-  check('both OFF = bare estimate, no credit (~211.6 MW / ~5,292 t)',
+  check('both OFF = bare estimate, no credit (~86.2 MW / ~2,155 t, graduated)',
     naked.selectedCd === bare100 && naked.selectedS === 0
-    && near(naked.powerMW, 211.6, 0.002) && near(naked.refTripFuelSystemT, 5292, 0.002),
+    && near(naked.powerMW, 86.2, 0.005) && near(naked.refTripFuelSystemT, 2155, 0.005),
     `${naked.powerMW.toFixed(1)} MW / ${naked.refTripFuelSystemT.toFixed(0)} t`);
   // Toggles are selections too: changed while parked, they persist (r6).
   const { engine: e2, calls: c2 } = countingEngine();
@@ -290,8 +295,8 @@ console.log('\n== M6: the estimator on the page — marker, band, dial, firming 
   const contract = compute(moving, engine, undefined, ESTIMATOR);
   // The contract echo IS the frozen API object for this geometry+speed.
   check('contract.estimate present with status ok', contract.estimate && contract.estimate.status === 'ok');
-  check('contract.estimate is the bare-hull ~0.438 with ±20% band exactly',
-    near(contract.estimate.cdEstimate, 0.4383, 0.001)
+  check('contract.estimate is the graduated bare-hull ~0.178 with ±20% band exactly',
+    near(contract.estimate.cdEstimate, 0.1785, 0.002)
     && contract.estimate.band[0] === contract.estimate.cdEstimate * 0.8
     && contract.estimate.band[1] === contract.estimate.cdEstimate * 1.2);
   // renderModel surfaces it as the marker (value + band edges, no words).
@@ -306,8 +311,11 @@ console.log('\n== M6: the estimator on the page — marker, band, dial, firming 
   const dial = cdDialRange(contract, contract.estimate);
   check('dial bottom is the friction floor ceiled to the 0.001 grid (Sunship: 0.009)',
     dial.min === 0.009 && dial.min >= contract.frictionCd);
-  check('dial top = 1.5 × estimate on the grid (~0.658) — the band always fits',
-    near(dial.max, 1.5 * contract.estimate.cdEstimate, 0.005) && dial.max > contract.estimate.band[1]);
+  // Graduation: 1.5 × 0.178 ≈ 0.268 < the dial's 0.40 FLOOR — the
+  // floor governs, so the Sunship dial keeps exploratory headroom up
+  // to 0.40 (formula max(0.40, 1.5×est) working as designed).
+  check('dial top = the 0.40 floor (1.5×graduated estimate ≈ 0.268 sits under it) — the band always fits',
+    dial.max === 0.40 && dial.max > contract.estimate.band[1]);
   check('dial parked defaults hold before any values flow',
     cdDialRange(null, null).min === 0.009 && cdDialRange(null, null).max === 0.40);
   const smallEst = { ...contract.estimate, cdEstimate: 0.05, band: [0.04, 0.06] };

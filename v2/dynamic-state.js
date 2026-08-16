@@ -63,6 +63,15 @@ export const SUNSHIP_GEOMETRY = Object.freeze({
  * carries the identical proxy, bit-exact, fixture-guarded). */
 export const SUNSHIP_SECTIONAL = Object.freeze({
   proxy: 0.7697920595614333,
+  // Graduation 2026-08-16 (r19 sealed): the mechanism class + trigger
+  // values, measured from the corpus mesh and pinned like the proxy.
+  // The Sunship is AFT-dominated by an order of magnitude and smooth
+  // at every trigger — the rounded (drag-crisis) line applies.
+  cls: 'rounded',
+  triggers: Object.freeze({
+    softFore: 0.004553551463451261, softAft: 0.7697920595614333,
+    terminalBaseFrac: 0.004453538757823785, rawRatio: 1, shoulder: 0.10151579449816793,
+  }),
   axis: '+Z',
   quality: Object.freeze({ oddColumns: 0, hitColumns: 16616, solidColumns: 16616, oddFraction: 0 }),
 });

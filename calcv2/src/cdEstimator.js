@@ -125,14 +125,123 @@ export const CALIBRATION_PROVENANCE = [
 ];
 
 /**
+ * TWO-LINE MECHANISM-AWARE CALIBRATION — GRADUATED 2026-08-16 from
+ * spike/sectional/calibration-hr2..hr4.mjs after reviews r15–r19
+ * (r19: PASS-CONDITIONAL, conditions applied same day; reviewer's
+ * closing words: "The estimator chapter can close"). Full science
+ * record: spike/sectional/RESULTS.md.
+ *
+ * WHAT:  bodies are CLASSIFIED by separation mechanism, then priced on
+ *        one of two monotone lines sharing the streamlined pair:
+ *        - ROUNDED (drag-crisis class — smooth aft closure): TN-614
+ *          pair + sphere-HR knot (Achenbach 1972 smooth-sphere
+ *          transcritical 0.19, literature grade, smooth-equivalent
+ *          reference at the declared Re ≈ 1.85e8) + CLAMP above.
+ *        - PINNED (fixed separation — faces, flat bases, re-expansion,
+ *          sharp aft shoulders): the vNEXT map above, VERBATIM. No
+ *          crisis rescue; conservative screening; can never flatter.
+ *        Invariant (fixtured): rounded ≤ pinned everywhere — the
+ *        branch only ever WITHHOLDS the discount.
+ * WHY:   r15/r16 established the old single line mixed subcritical
+ *        bluff anchors into a high-Re map (sphere 0.47 is the
+ *        marble-scale value; at vehicle Re a smooth sphere is ~0.19)
+ *        and that one scalar cannot identify the mechanism (r16's
+ *        flat-front 0.778 vs Sunship 0.770 — same proxy, opposite
+ *        physics).
+ * PROVENANCE: knots pinned from the frozen candidate generators
+ *        (regeneration fixture asserts equality, as vNEXT's does).
+ * LIMITATION: the middle of the rounded line is interpolation between
+ *        validated-ish endpoints (declared screening); the pinned
+ *        line's middle is conservative screening (unchanged since
+ *        vNEXT). See the classifier's declared detection limit below.
+ * REPLACE WHEN: regime-consistent high-Re rounded-body data arrives —
+ *        by dated ruling (parked at r19).
+ */
+export const ROUNDED_KNOTS = [
+  [0.017428445146842095, 0.008064854637311485], // TN614-111 (real, shared)
+  [0.1807885483529704, 0.012339438608540539],   // TN614-332 (real, shared)
+  [0.8156212975892966, 0.18236007570000232],    // sphere-HR (Achenbach 1972 transcritical 0.19 − ITTC friction @ REF; literature grade)
+];
+export const ROUNDED_PROVENANCE = [
+  'TN614-111 (real, 2026-08-16)',
+  'TN614-332 (real, 2026-08-16)',
+  'sphere-HR (Achenbach 1972 transcritical 0.19, literature grade)',
+  'clamped above the sphere knot (declared; E2 oblate markers within ~10–20%)',
+];
+
+/**
+ * MECHANISM CLASSIFIER — four scorer-native triggers, any → 'pinned'
+ * (r16 finding #3 through r19; each threshold sits in a measured gap):
+ *  (a) fore-dominance (softFore > softAft): face-like front.
+ *  (b) terminal base > TAU at the last OCCUPIED station: chopped/flat
+ *      aft (TAU 0.05 — smooth closers ≤0.008, mildest chopped 0.181;
+ *      first draft 0.20 sat inside the population, caught by fixtures,
+ *      moved on record).
+ *  (c) re-expansion (softAftRaw/softAft > REEXPANSION 1.15): a wake
+ *      trapped mid-body (the r9 neck adversary; smooth bodies = 1.000
+ *      exactly).
+ *  (d) aft shoulder (shoulderAngleScore > SHOULDER_ANGLE_MAX 0.13):
+ *      tangent-angle jump × affected-area fraction on the aft
+ *      envelope, at the PINNED metrology configuration below.
+ * DECLARED DETECTION LIMIT (r19 ACCEPTED): validated catch region =
+ *      ~26° or sharper abrupt aft breaks at ≥~70% of max radius at
+ *      these settings; detection improves with severity/radius but
+ *      deeper corners are NOT guaranteed (the smooth-body floor is
+ *      dominated by real mesh faceting — a coarse mesh genuinely
+ *      contains corners; raster resolution contributes a smaller
+ *      residual). Residual risk declared, not quantified
+ *      aerodynamically. The limit belongs to THIS configuration —
+ *      metrology-pin fixture in the battery.
+ */
+export const CLASSIFIER_TAU = 0.05;
+export const CLASSIFIER_REEXPANSION = 1.15;
+export const SHOULDER_ANGLE_MAX = 0.13;
+export const SHOULDER_OPTS = Object.freeze({ kFrac: 48, smoothW: 3 });
+
+/** Angle-based shoulder score (vHR4, r18-prescribed, r19-accepted). */
+export function shoulderAngleScore(m, { kFrac, smoothW } = SHOULDER_OPTS) {
+  const { A, L, cell } = m;
+  const N = A.length, dx = L / N;
+  const r = Array.from(A, (a) => Math.sqrt(Math.max(a, 0) * cell * cell / Math.PI));
+  const rMax = Math.max(...r);
+  if (!(rMax > 0)) return 0;
+  const iMax = r.indexOf(rMax);
+  const env = r.slice();
+  for (let i = N - 2; i >= iMax; i--) env[i] = Math.max(env[i], env[i + 1]);
+  const sm = env.slice();
+  if (smoothW >= 3) {
+    const h = Math.floor(smoothW / 2);
+    for (let i = Math.max(iMax, h); i < N - h; i++) {
+      let s = 0;
+      for (let d = -h; d <= h; d++) s += env[i + d];
+      sm[i] = s / (2 * h + 1);
+    }
+  }
+  const k = Math.max(2, Math.round(N / kFrac));
+  let score = 0;
+  for (let j = iMax; j + 2 * k < N; j++) {
+    const th1 = Math.atan((sm[j] - sm[j + k]) / (k * dx));
+    const th2 = Math.atan((sm[j + k] - sm[j + 2 * k]) / (k * dx));
+    const jump = th2 - th1;
+    if (jump <= 0) continue;
+    const w = (sm[j + k] / rMax) ** 2;
+    if (jump * w > score) score = jump * w;
+  }
+  return score;
+}
+
+/**
  * Proxy → pressure Cd. Monotone piecewise-linear over the knots; linear
  * from the origin below the first knot (a proxy of 0 is a perfectly
  * recovered closure — no pressure drag); CLAMPED flat above the top knot
  * (r9 #1: no extrapolation). Non-finite input → NaN: estimate-
  * unavailable, never a plausible bluff Cd (r10 #4).
  */
-export function calibratePressure(x) {
-  const knots = CALIBRATION_KNOTS;
+export function calibratePressure(x, cls = 'pinned') {
+  // Graduation 2026-08-16: two lines. Default 'pinned' = the vNEXT map
+  // VERBATIM — every pre-graduation caller gets identical behaviour;
+  // the rounded (drag-crisis) line is opt-in via the classifier.
+  const knots = cls === 'rounded' ? ROUNDED_KNOTS : CALIBRATION_KNOTS;
   if (!Number.isFinite(x)) return NaN;
   if (x <= knots[0][0]) return Math.max(0, knots[0][1] * (x / knots[0][0] || 0));
   for (let i = 0; i + 1 < knots.length; i++) {
@@ -141,7 +250,7 @@ export function calibratePressure(x) {
       return knots[i][1] + t * (knots[i + 1][1] - knots[i][1]);
     }
   }
-  return knots[knots.length - 1][1];
+  return knots[knots.length - 1][1]; // pinned: bluff top · rounded: the declared CLAMP
 }
 
 /**
@@ -171,9 +280,28 @@ export function measureSectionalProxy(verts, faces, { axis = '+Z' } = {}) {
     const m = measureSections(verts, faces, { axis });
     const scores = scoreSections(m);
     const proxy = m.quality.oddFraction > ODD_FRACTION_MAX ? NaN : scores.compositeV1;
-    return { proxy, scores, quality: m.quality, axis, ms: performance.now() - t0 };
+    // MECHANISM CLASSIFICATION (graduation 2026-08-16) — computed in
+    // the expensive cacheable step alongside the proxy; travels with
+    // the record so the per-speed step never re-measures.
+    let cls = null, triggers = null;
+    if (Number.isFinite(proxy)) {
+      const aMax = Math.max(...m.A);
+      let last = m.A.length - 1;
+      while (last > 0 && m.A[last] <= 1e-4 * aMax) last--;
+      const terminalBaseFrac = aMax > 0 ? m.A[last] / aMax : 1;
+      const rawRatio = scores.softAft > 1e-9 ? scores.softAftRaw / scores.softAft : 1;
+      const shoulder = shoulderAngleScore(m);
+      triggers = {
+        softFore: scores.softFore, softAft: scores.softAft,
+        terminalBaseFrac, rawRatio, shoulder,
+      };
+      cls = (scores.softFore > scores.softAft || terminalBaseFrac > CLASSIFIER_TAU
+        || rawRatio > CLASSIFIER_REEXPANSION || shoulder > SHOULDER_ANGLE_MAX)
+        ? 'pinned' : 'rounded';
+    }
+    return { proxy, cls, triggers, scores, quality: m.quality, axis, ms: performance.now() - t0 };
   } catch {
-    return { proxy: NaN, scores: null, quality: null, axis, ms: performance.now() - t0 };
+    return { proxy: NaN, cls: null, triggers: null, scores: null, quality: null, axis, ms: performance.now() - t0 };
   }
 }
 
@@ -212,12 +340,20 @@ export function estimateCd(proxyRecord, geometry, airspeedKmh) {
   const re = (v * L) / NU_M2_S;
   const frictionCd = ittcCf(re) * (wetted / A);
 
-  const pressureCd = calibratePressure(proxyRecord ? proxyRecord.proxy : NaN);
+  // Graduation 2026-08-16: class travels in the proxy record (computed
+  // once with the proxy). Records predating the graduation carry no
+  // cls — they price on the PINNED (vNEXT-verbatim) line: conservative,
+  // never flattering, exactly the pre-graduation behaviour.
+  const cls = (proxyRecord && proxyRecord.cls) || 'pinned';
+  const pressureCd = calibratePressure(proxyRecord ? proxyRecord.proxy : NaN, cls);
   const quality = proxyRecord && proxyRecord.quality ? proxyRecord.quality : null;
   const provenance = {
     label: 'ESTIMATED',
-    method: 'low-order sectional geometric screening estimator (M6, 2026-08-16)',
-    calibration: CALIBRATION_PROVENANCE,
+    method: 'low-order sectional geometric screening estimator (M6, 2026-08-16; mechanism-aware two-line calibration, graduated 2026-08-16 after r15–r19)',
+    calibration: cls === 'rounded' ? ROUNDED_PROVENANCE : CALIBRATION_PROVENANCE,
+    class: cls,
+    triggers: (proxyRecord && proxyRecord.triggers) || null,
+    metrology: { stations: 128, kFrac: SHOULDER_OPTS.kFrac, smoothW: SHOULDER_OPTS.smoothW, shoulderMax: SHOULDER_ANGLE_MAX },
     axis: proxyRecord ? proxyRecord.axis : null,
     oddFraction: quality ? quality.oddFraction : null,
     // INPUT IDENTITY (r12 send-back #1b, 2026-08-16): the exact inputs
