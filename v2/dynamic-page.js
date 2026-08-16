@@ -534,7 +534,14 @@ window.addEventListener('v2-shape-change', () => {
 // user/estimated Cd survives length changes — length is not a shape
 // change (r8 #4 covers shape/orientation only).
 document.addEventListener('input', (e) => {
-  if (e.target && e.target.matches && e.target.matches('[data-ship="length"]')) paint();
+  if (e.target && e.target.matches && e.target.matches('[data-ship="length"]')) {
+    // r13 fix (2026-08-17): capture-phase fires BEFORE V1's own target
+    // handler updates the length-output element, so painting inline
+    // read the PREVIOUS displayed length. Deferring one macrotask lets
+    // V1 finish writing the output first; capture is kept so delivery
+    // survives any stopPropagation in the bundle.
+    setTimeout(paint, 0);
+  }
 }, true);
 
 readShapeChannel(); // adopt whatever page 1 already published (boot order safe)
