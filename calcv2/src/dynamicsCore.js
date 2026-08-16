@@ -224,6 +224,14 @@ export function fuelMassStatus(fuelSystemT, lengthM) {
  * @param {string} [cfg.sSource='user']     ditto
  * @param {string} [cfg.cdLabel='REFERENCE ASSUMPTION']  provenance label for Cd
  * @param {string} [cfg.sLabel='REFERENCE ASSUMPTION']   provenance label for S
+ * @param {object|null} [cfg.estimate=null]  the cdEstimator.js frozen-API
+ *        object for THIS geometry at THIS speed (M6 contract amendment,
+ *        2026-08-16). Passthrough with shape validation — the engine never
+ *        recomputes it here (the estimator is its own engine module) and
+ *        the adapter never derives it (trust boundary). null = estimator
+ *        dormant (parked) or not run; the page then behaves exactly as
+ *        pre-M6. A mismatched frictionCd (different geometry/speed than
+ *        this call) is flagged with a warning, never silently accepted.
  * @returns the spec s9 contract object (see shape-frozen snapshot fixture)
  */
 export function computeDynamics(geometry, cfg) {
@@ -248,6 +256,25 @@ export function computeDynamics(geometry, cfg) {
   const frontalAreaSource = geometry.frontalAreaSource ?? 'computed';
   if (frontalAreaSource !== 'computed' && frontalAreaSource !== 'authored') {
     throw new Error(`computeDynamics: frontalAreaSource must be 'computed' or 'authored', got '${frontalAreaSource}'`);
+  }
+  // M6 amendment (2026-08-16, discharges review r7 #5): wetted area enters
+  // the PUBLISHED contract — the page must read it here, never from the
+  // geometry record directly (FLEET consumes only this object).
+  const wettedSource = geometry.wettedSource ?? 'mesh';
+  if (wettedSource !== 'mesh' && wettedSource !== 'hull-fallback') {
+    throw new Error(`computeDynamics: wettedSource must be 'mesh' or 'hull-fallback', got '${wettedSource}'`);
+  }
+  // M6 amendment: estimator echo. Shape-validated passthrough of the
+  // cdEstimator.js frozen API — null when dormant/not run.
+  const ESTIMATE_KEYS = '["band","cdEstimate","frictionCd","pressureCd","provenance","status"]';
+  const estimate = cfg.estimate ?? null;
+  if (estimate !== null) {
+    if (typeof estimate !== 'object' || JSON.stringify(Object.keys(estimate).sort()) !== ESTIMATE_KEYS) {
+      throw new Error('computeDynamics: cfg.estimate must be a cdEstimator frozen-API object (or null)');
+    }
+    if (estimate.status !== 'ok' && estimate.status !== 'unavailable') {
+      throw new Error(`computeDynamics: cfg.estimate.status must be 'ok' or 'unavailable', got '${estimate.status}'`);
+    }
   }
 
   const {
@@ -293,6 +320,13 @@ export function computeDynamics(geometry, cfg) {
   if (cdFloorBreach) {
     warnings.push('cd-below-friction-estimate: claimed Cd is under this shape\'s skin-friction screening estimate');
   }
+  // Estimate consistency guard (M6): an echoed estimate whose friction term
+  // does not match THIS call's geometry+speed was computed for something
+  // else — provenance laundering, flagged loudly, never silently accepted.
+  if (estimate !== null && Number.isFinite(estimate.frictionCd)
+    && Math.abs(estimate.frictionCd - frictionCd) > 1e-6 * frictionCd) {
+    warnings.push('estimate-friction-mismatch: echoed estimate was computed for a different geometry or speed');
+  }
 
   // --- statuses (spec s8) ---
   const fuel = fuelMassStatus(refTripFuelSystemT, L);
@@ -312,6 +346,8 @@ export function computeDynamics(geometry, cfg) {
     orientationAxis: geometry.flightAxis,
     frontalAreaM2: A,
     frontalAreaSource, // passthrough (M2 send-back #2): M1 records are 'computed'; Phase B's preset catalogue augments records with 'authored'
+    wettedAreaM2: wetted,   // M6 amendment 2026-08-16 (r7 #5): via the contract, never the raw record
+    wettedSource,           // 'mesh' | 'hull-fallback' — the trust decision travels with the number
     shipLengthM: L,
     airspeedKmh,
     // the chain
@@ -327,6 +363,11 @@ export function computeDynamics(geometry, cfg) {
     // per-shape floors — the UI's dial bottom and RED state (spec s5.3, s8.2)
     frictionCd,
     productFloor,
+    // the Cd estimator's proposal (M6, 2026-08-16) — frozen API echo or
+    // null (dormant/not run). The marker+band the page draws come from
+    // HERE; the slider's Cd stays selectedCd (estimator proposes,
+    // slider disposes).
+    estimate,
     // statuses
     aerodynamicStatus: aerodynamicStatus(cd),
     floorStatus,
