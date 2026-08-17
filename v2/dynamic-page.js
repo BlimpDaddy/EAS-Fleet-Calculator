@@ -397,6 +397,9 @@ function statBlock(label) {
   d.className = 'fleet-results-data';
   d.textContent = '—';
   block.append(h, d);
+  // THE key result reads EAS berry (Toby ruling 2026-08-17): the fuel
+  // system total is what the page exists to compute.
+  if (label.startsWith('LH2 + Storage')) d.classList.add('dyn-key-result');
   resultsRow.appendChild(block);
   outCells.set(label, d);
 }

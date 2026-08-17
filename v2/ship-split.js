@@ -39,6 +39,14 @@ function setMode(m) {
 const style = document.createElement('style');
 style.textContent = `
   nav a[href="/dynamic"] { display: none; } /* sub-section now — reached via SHIP */
+  nav a[href="/dynamic"] + .header-nav-separator { display: none; } /* its orphaned ">" too */
+  /* Results strip: 8 blocks must fit ONE line (Toby 2026-08-17) —
+     compact type + flexible blocks; the key result reads EAS berry. */
+  .section-dynamic .dyn-results-row { flex-wrap: nowrap; display: flex; gap: 10px; }
+  .section-dynamic .dyn-results-row > div { min-width: 0; flex: 1 1 0; }
+  .section-dynamic .fleet-results-data-header { font-size: 10.5px; letter-spacing: .02em; }
+  .section-dynamic .fleet-results-data { font-size: 15px; white-space: nowrap; }
+  .section-dynamic .dyn-key-result { color: #c628a4; font-weight: 700; }
   .ship-chooser {
     position: absolute; inset: 0; z-index: 40; display: flex;
     flex-direction: column; gap: 18px; align-items: center;
@@ -62,31 +70,32 @@ style.textContent = `
      squished into a thin edge strip — bottom of STATICS holds
      DYNAMICS, top of DYNAMICS holds STATICS (the same vertical order
      the chooser taught). Press → it swipes open. */
+  /* VERTICAL edge ribbons (Toby refinement #3, 2026-08-17: "L and R is
+     what i'd always imagined") — STATICS collapses to the LEFT edge
+     (arrows point right: press and it sweeps in rightward); DYNAMICS
+     collapses to the RIGHT edge (arrows point left). Fixed to the
+     viewport edge so they can't be missed or scrolled away. */
   .ship-ribbon {
-    position: sticky; z-index: 30; display: flex; align-items: center;
-    justify-content: center; gap: 10px; width: 100%; height: 30px;
-    grid-column: 1 / -1; align-self: stretch; box-sizing: border-box; left: 0;
-    /* squished-page stripes in ORANGE + berry words (Toby, 2026-08-17:
-       "no way to miss") */
-    background: repeating-linear-gradient(180deg, rgba(255,153,0,.28) 0 2px, #161616 2px 5px);
-    border: 1px solid #ff9900; border-left: none; border-right: none;
-    color: #c628a4; font-size: 12px; font-weight: 600;
-    letter-spacing: .14em; cursor: pointer;
-    user-select: none; transition: height .18s ease, filter .18s ease;
-    overflow: hidden;
+    position: fixed; z-index: 30; top: 110px; bottom: 24px; width: 30px;
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 12px; box-sizing: border-box;
+    background: repeating-linear-gradient(90deg, rgba(255,153,0,.28) 0 2px, #161616 2px 5px);
+    border: 1px solid #ff9900; border-top: none; border-bottom: none;
+    color: #c628a4; font-size: 12px; font-weight: 700;
+    letter-spacing: .18em; cursor: pointer; user-select: none;
+    writing-mode: vertical-rl; text-orientation: mixed;
+    transition: width .18s ease, filter .18s ease; overflow: hidden;
   }
-  .ship-ribbon:hover { height: 40px; filter: brightness(1.35); }
-  .ship-ribbon .chev { font-size: 14px; color: #ff9900; }
-  .ship-ribbon.rib-bottom { bottom: 0; margin-top: 14px; }
-  .ship-ribbon.rib-top { top: 0; margin-bottom: 14px; }
-  .ship-ribbon.opening { height: 34vh; color: #ff9900; transition: height .35s ease-in, color .2s ease; }
-  /* ACCORDION UNFOLD (Toby refinement #2, 2026-08-17): the incoming
-     page visibly STRETCHES open from the edge it was squished into —
-     scaleY from ribbon-thin to full, contents un-squashing with it. */
-  @keyframes ship-unfold-up { from { transform: scaleY(0.04); opacity: .35; } 60% { opacity: 1; } to { transform: scaleY(1); } }
-  @keyframes ship-unfold-down { from { transform: scaleY(0.04); opacity: .35; } 60% { opacity: 1; } to { transform: scaleY(1); } }
-  .ship-enter-up { animation: ship-unfold-up .8s cubic-bezier(.2,.7,.3,1); transform-origin: bottom center; }
-  .ship-enter-down { animation: ship-unfold-down .8s cubic-bezier(.2,.7,.3,1); transform-origin: top center; }
+  .ship-ribbon:hover { width: 44px; filter: brightness(1.35); }
+  .ship-ribbon .chev { font-size: 14px; color: #ff9900; writing-mode: horizontal-tb; }
+  .ship-ribbon.rib-left { left: 0; border-left: none; }
+  .ship-ribbon.rib-right { right: 0; border-right: none; }
+  .ship-ribbon.opening { width: 34vw; color: #ff9900; transition: width .35s ease-in, color .2s ease; }
+  /* Accordion unfold, now horizontal: the incoming page stretches open
+     from the edge it was squished into. */
+  @keyframes ship-unfold-x { from { transform: scaleX(0.04); opacity: .35; } 60% { opacity: 1; } to { transform: scaleX(1); } }
+  .ship-enter-left { animation: ship-unfold-x .8s cubic-bezier(.2,.7,.3,1); transform-origin: left center; }
+  .ship-enter-right { animation: ship-unfold-x .8s cubic-bezier(.2,.7,.3,1); transform-origin: right center; }
 `;
 document.head.appendChild(style);
 
@@ -102,7 +111,9 @@ function makeRibbon(side, targetKey, targetLabel, nav, enterClass) {
   rib.title = `Open ${targetLabel}`;
   const chev = document.createElement('span');
   chev.className = 'chev';
-  chev.textContent = side === 'bottom' ? '︿' : '﹀';
+  // Arrows point the direction the page will sweep: STATICS (left
+  // edge) sweeps rightward '❯'; DYNAMICS (right edge) sweeps left '❮'.
+  chev.textContent = side === 'left' ? '❯' : '❮';
   const label = document.createElement('span');
   label.textContent = targetLabel;
   rib.append(chev, label, chev.cloneNode(true));
@@ -125,13 +136,15 @@ function makeRibbon(side, targetKey, targetLabel, nav, enterClass) {
 }
 
 function ensureSwitchers() {
+  // STATICS lives squished on the LEFT of DYNAMICS; DYNAMICS lives
+  // squished on the RIGHT of STATICS (Toby's L/R mental model).
   const ship = $('[data-section="ship"]');
   if (ship && !ship.querySelector('.ship-ribbon')) {
-    ship.appendChild(makeRibbon('bottom', 'dynamics', 'DYNAMICS', navDynamic, 'ship-enter-up'));
+    ship.appendChild(makeRibbon('right', 'dynamics', 'DYNAMICS', navDynamic, 'ship-enter-right'));
   }
   const dyn = [...document.querySelectorAll('section')].find((s) => s.querySelector('.dyn-eas-chip'));
   if (dyn && !dyn.querySelector('.ship-ribbon')) {
-    dyn.prepend(makeRibbon('top', 'statics', 'STATICS', navShip, 'ship-enter-down'));
+    dyn.prepend(makeRibbon('left', 'statics', 'STATICS', navShip, 'ship-enter-left'));
   }
 }
 
