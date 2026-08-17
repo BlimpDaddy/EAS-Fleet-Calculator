@@ -44,6 +44,8 @@ import { ROUTE_CITIES, ROUTE_PAIRS } from '/v2/route-data.js';
 const BERRY = 0xC628A5;
 const CYCLE_MS = 1000;          // Toby: "every ~1 second"
 const TOL_FRAC = 0.08, TOL_MIN = 400; // distance-match window (km)
+const SPIN_MS = 450;            // the flick — quick, like spinning a real globe
+let spin = null;                // active flick: {from, to, start, dur}
 
 const v1Canvas = document.querySelector('.fleet-distance-canvas');
 const figure = v1Canvas && v1Canvas.closest('.fleet-graph-container');
@@ -133,8 +135,22 @@ if (v1Canvas && figure) {
     geo.setPositions(pos);
     routeGroup.add(new Line2(geo, lineMat));
     globe.add(routeGroup);
+    // SNAP-TO-TRIP (Toby, 2026-08-17: the ambient rotation could leave
+    // a route on the far side for its whole second): each new pair
+    // FLICKS the globe east or west — shortest way, eased, ~0.45s,
+    // like spinning a real globe — so the route faces the camera for
+    // most of its second; ambient rotation resumes after the flick.
+    // Math: a local vector m faces azimuth α when rotation.y lands at
+    // α − atan2(m.x, m.z); α is the CAMERA's current azimuth so the
+    // flick honours any drag-orbit the user has done (α = 0 at the
+    // default view). Take the route's midpoint for m.
+    const m = a.clone().add(b).normalize();
+    const targetY = Math.atan2(camera.position.x, camera.position.z) - Math.atan2(m.x, m.z);
+    const from = globe.rotation.y;
+    const delta = ((targetY - from + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI;
+    spin = { from, to: from + delta, start: performance.now(), dur: SPIN_MS };
     // Console handle (verification/probing; no UI):
-    window.__fleetRoute = { from: ROUTE_CITIES[ia][0], to: ROUTE_CITIES[ib][0], km: pair[2] };
+    window.__fleetRoute = { from: ROUTE_CITIES[ia][0], to: ROUTE_CITIES[ib][0], km: pair[2], spinTo: +(from + delta).toFixed(3) };
   };
 
   // ---- distance-matched cycling ----
@@ -184,10 +200,19 @@ if (v1Canvas && figure) {
     renderer.setSize(cw, ch, false);
     lineMat.resolution.set(cw, ch);
   };
+  // STILL EARTH (Toby final, 2026-08-17: ambient rotation removed —
+  // "just have still earth and it spins to catch the trip"): the only
+  // globe motion is the eased flick to face each new route; the user
+  // can still drag-orbit. V1's +0.0025/frame ambient spin retired.
   renderer.setAnimationLoop(() => {
     resize();
     controls.update();
-    globe.rotation.y += 0.0025;
+    if (spin) {
+      const t = Math.min(1, (performance.now() - spin.start) / spin.dur);
+      const e = 1 - (1 - t) ** 3; // ease-out cubic — fast start, soft landing
+      globe.rotation.y = spin.from + (spin.to - spin.from) * e;
+      if (t >= 1) spin = null;
+    }
     renderer.render(scene, camera);
   });
 }
