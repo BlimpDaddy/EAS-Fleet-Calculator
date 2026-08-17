@@ -182,23 +182,24 @@ if (v1Canvas && figure) {
     const n = Number(String(distOut?.textContent ?? '').replace(/[^\d.]/g, ''));
     return Number.isFinite(n) && n > 0 ? n : 9000;
   };
-  /* THE AVERAGING TOUR (Toby re-ruling 2026-08-17, supersedes the
-   * ±8% filter — "shows trips of all distance length... averaging out
-   * to your selected"): every pick aims at target ± SPREAD (wide —
-   * shorts, mediums, longs all appear) with a running DEBT correction
-   * pulling the mean back to the slider: show a short trip, owe a
-   * long one. Debt is capped so edge targets (near the pool's min/max)
-   * degrade gracefully instead of pinning. Recent-pair memory kills
-   * repetition. Knobs: SPREAD_KM (tour wildness), DEBT_GAIN/CAP
-   * (how hard the average is enforced). */
-  const SPREAD_KM = 3500, DEBT_GAIN = 0.6, DEBT_CAP = 4000;
+  /* THE AVERAGING TOUR v2 (Toby re-rulings 2026-08-17; supersedes
+   * both the ±8% filter and the target±3,500 spread): every pick
+   * draws from the FULL 1,000–12,000 km range — all trip types,
+   * always — and the running DEBT correction alone steers the mean
+   * onto the slider. The slider changes the FEEL over time: a 3,000
+   * average is mostly short hops with the occasional epic crossing;
+   * a 12,000 average is the long-haul reel with a few mediums.
+   * Tuned by 80-trip simulation (gain 1.0 / cap 12,000: means
+   * 3,056 / 8,898 / 11,889 at targets 3/9/12k, full-range variety
+   * in all three). Recent-pair memory kills repetition. */
+  const WISH_MIN = 1000, WISH_MAX = 12000, DEBT_GAIN = 1.0, DEBT_CAP = 12000;
   let debt = 0, lastTarget = 0;
   const recent = [];
   const nextPair = () => {
     const km = targetKm();
     if (Math.abs(km - lastTarget) > 1) { debt = 0; lastTarget = km; }
     const lo = ROUTE_PAIRS[0][2], hi = ROUTE_PAIRS[ROUTE_PAIRS.length - 1][2];
-    const wish = km + (Math.random() * 2 - 1) * SPREAD_KM - DEBT_GAIN * debt;
+    const wish = WISH_MIN + Math.random() * (WISH_MAX - WISH_MIN) - DEBT_GAIN * debt;
     const need = Math.min(hi, Math.max(lo, wish));
     let tol = Math.max(250, need * 0.06);
     let c = [];
