@@ -65,6 +65,12 @@ style.textContent = `
   .section-dynamic { padding-left: 52px; box-sizing: border-box; }
   [data-section="ship"] { padding-right: 64px; box-sizing: border-box; }
   .section-dynamic .ship-ribbon.rib-left { width: 44px; }
+  /* STATICS reads BOTTOM-TO-TOP (Toby, 2026-08-17) — mirrored against
+     the other ribbon; chevrons keep their true direction. */
+  .section-dynamic .ship-ribbon.rib-left span:not(.chev) { transform: rotate(180deg); }
+  /* Results numbers sit lower — reclaim the dead strip under them for
+     the visualiser (Toby's red ellipse). */
+  .section-dynamic .dyn-results-row { margin-bottom: -12px; }
   .section-dynamic .ship-ribbon.rib-left:hover { width: 58px; }
   [data-section="ship"] .ship-ribbon.rib-right { width: 56px; font-size: 19px; }
   [data-section="ship"] .ship-ribbon.rib-right:hover { width: 72px; }
