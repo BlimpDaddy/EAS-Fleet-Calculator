@@ -21,7 +21,11 @@ export const VS_WARNINGS = {
     highText: 'VSinf too high!',
   },
   ve: { // percent, matching the displayed figure
-    low: 35,
+    // Low threshold 35 → 30 (Toby, 2026-08-17): the washing machine
+    // (34.5%) now PASSES the volume test and is caught instead by the
+    // page-1 directionality filter — the failure lands on the reason
+    // that actually disqualifies it.
+    low: 30,
     high: 80,
     lowText: 'VE too low!',
     highText: 'VE too high!',
