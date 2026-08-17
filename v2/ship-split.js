@@ -156,11 +156,16 @@ function makeRibbon(side, targetKey, targetLabel, nav, enterClass) {
   label.textContent = targetLabel;
   rib.append(chev, label, chev.cloneNode(true));
   rib.addEventListener('click', () => {
-    viaRibbon = true; // ribbons flow straight between sections — no chooser
     setMode(targetKey);
     rib.classList.add('opening'); // the squished page starts expanding…
     setTimeout(() => {
+      // Flag scoped EXACTLY to this nav click (2026-08-17 fix: setting
+      // it early left it stale after DYNAMICS-ribbon presses — navShip
+      // never fired to consume it, and the NEXT Ship press ate it,
+      // skipping the last-used bounce and landing on statics).
+      viaRibbon = true;
       nav()?.click(); // …then V1 routes; the target UNFOLDS from its edge
+      viaRibbon = false;
       rib.classList.remove('opening');
       const target = targetKey === 'dynamics'
         ? [...document.querySelectorAll('section')].find((s) => s.querySelector('.dyn-eas-chip'))
