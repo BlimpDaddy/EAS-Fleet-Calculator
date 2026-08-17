@@ -253,9 +253,14 @@ function syncModeBadge() {
   // whenever either is on screen (chooser included).
   navShip()?.classList.toggle('current-page', !!(shipRouted || dynShown));
   const current = dynShown ? 'dynamics' : (shipShown ? 'statics' : null);
-  badgeEl.style.display = current ? '' : 'none';
-  if (!current) return;
-  badgeEl.querySelector('.word').textContent = current === 'statics' ? 'STATICS' : 'DYNAMICS';
+  // Dots are OFFICIALLY PART OF THE TITLE (Toby ruling 2026-08-17):
+  // visible on every ship state — chooser included, both grey there —
+  // and disappear on other pages. The word names only a chosen
+  // sub-page.
+  const onShipPages = !!(shipRouted || dynShown);
+  badgeEl.style.display = onShipPages ? '' : 'none';
+  const word = badgeEl.querySelector('.word');
+  word.textContent = current ? (current === 'statics' ? 'STATICS' : 'DYNAMICS') : '';
   const [d1, d2] = badgeEl.querySelectorAll('.dots i');
   d1.classList.toggle('on', current === 'statics');
   d2.classList.toggle('on', current === 'dynamics');
