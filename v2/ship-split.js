@@ -152,10 +152,12 @@ style.textContent = `
      chooser; gone off the ship pages. Taste knobs: dot size, gap, the
      50%+19px underline height. */
   nav a[href="/ship"] { text-decoration: none !important; }
-  /* SHIP reads BERRY once a sub-page is SELECTED (Toby ruling
-     2026-08-17) — statics or dynamics, incl. on/after the ribbon
-     swipe; the un-chosen chooser state keeps V1's plain white. */
-  nav a[href="/ship"].ship-live { color: #c628a4 !important; }
+  /* SHIP is only ever GREY or BERRY (Toby final 2026-08-17: white at
+     NO stage) — berry on any ship state incl. the chooser. Covering
+     V1's own current-page class too means even the transient between
+     V1 routing and our sync can never paint white. */
+  nav a[href="/ship"].ship-live,
+  nav a[href="/ship"].current-page { color: #c628a4 !important; }
   .ship-mode-dots {
     position: absolute; top: calc(50% + 19px); left: 50%;
     transform: translateX(-50%);
@@ -261,9 +263,9 @@ function syncModeBadge() {
   // whenever either is on screen (chooser included).
   navShip()?.classList.toggle('current-page', !!(shipRouted || dynShown));
   const current = dynShown ? 'dynamics' : (shipShown ? 'statics' : null);
-  // Berry once a sub-page is SELECTED (Toby ruling 2026-08-17);
-  // the chooser's not-yet-chosen state stays V1 white.
-  navShip()?.classList.toggle('ship-live', !!current);
+  // Grey or berry ONLY (Toby final 2026-08-17 — white at no stage):
+  // berry on any ship state, chooser included.
+  navShip()?.classList.toggle('ship-live', !!(shipRouted || dynShown));
   // The dots are PART OF THE TITLE (Toby ruling 2026-08-17): present
   // on every ship state — both grey on the chooser — and gone on
   // other pages. The word names only a chosen sub-page.
