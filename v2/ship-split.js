@@ -66,9 +66,6 @@ style.textContent = `
   .section-dynamic { padding-left: 52px; box-sizing: border-box; }
   [data-section="ship"] { padding-right: 64px; box-sizing: border-box; }
   .section-dynamic .ship-ribbon.rib-left { width: 44px; }
-  /* STATICS reads BOTTOM-TO-TOP (Toby, 2026-08-17) — mirrored against
-     the other ribbon; chevrons keep their true direction. */
-  .section-dynamic .ship-ribbon.rib-left span:not(.chev) { transform: rotate(180deg); }
   /* Results numbers sit lower — reclaim the dead strip under them for
      the visualiser (Toby's red ellipse). */
   .section-dynamic .dyn-results-row { margin-bottom: -12px; }
@@ -112,30 +109,55 @@ style.textContent = `
   .ship-chooser .title { font-size: 19px; letter-spacing: .06em; color: #ff9900; }
   .ship-chooser .sub { font-size: 13px; color: #888; margin-top: 4px; }
   .ship-chooser .order-hint { font-size: 12px; color: #666; letter-spacing: .04em; }
-  /* THE RIBBON (Toby refinement 2026-08-17): the OTHER section,
-     squished into a thin edge strip — bottom of STATICS holds
-     DYNAMICS, top of DYNAMICS holds STATICS (the same vertical order
-     the chooser taught). Press → it swipes open. */
-  /* VERTICAL edge ribbons (Toby refinement #3, 2026-08-17: "L and R is
-     what i'd always imagined") — STATICS collapses to the LEFT edge
-     (arrows point right: press and it sweeps in rightward); DYNAMICS
-     collapses to the RIGHT edge (arrows point left). Fixed to the
-     viewport edge so they can't be missed or scrolled away. */
+  /* THE RIBBON — CHEVRONS ONLY (Toby re-ruling 2026-08-17 evening,
+     supersedes the worded ribbons: the giant vertical word was the
+     OTHER page's title, which read as if each page were mistitled).
+     Now: a column of chevrons pointing OUT through their own edge —
+     statics' right ribbon points RIGHT (that's the way to DYNAMICS),
+     dynamics' left ribbon points LEFT (back to STATICS). Page names
+     moved to the mode title (word + two dots) at each section's top.
+     Chevron visibility fix, same ruling ("chevrons behind the
+     background"): they were orange on orange stripes — camouflage.
+     Stripes dimmed, chevrons brighter + shadowed so they sit ON TOP. */
   .ship-ribbon {
     position: fixed; z-index: 30; top: 110px; bottom: 24px; width: 30px;
     display: flex; flex-direction: column; align-items: center;
-    justify-content: center; gap: 12px; box-sizing: border-box;
-    background: repeating-linear-gradient(90deg, rgba(255,153,0,.28) 0 2px, #161616 2px 5px);
+    justify-content: space-evenly; box-sizing: border-box;
+    background: repeating-linear-gradient(90deg, rgba(255,153,0,.12) 0 2px, #161616 2px 5px);
     border: 1px solid #ff9900; border-top: none; border-bottom: none;
-    color: #c628a4; font-size: 21px; font-weight: 700;
-    letter-spacing: .22em; cursor: pointer; user-select: none;
-    writing-mode: vertical-rl; text-orientation: mixed;
+    cursor: pointer; user-select: none;
     transition: width .18s ease, filter .18s ease; overflow: hidden;
   }
   .ship-ribbon:hover { width: 44px; filter: brightness(1.35); }
-  .ship-ribbon .chev { font-size: 14px; color: #ff9900; writing-mode: horizontal-tb; }
+  .ship-ribbon .chev {
+    font-size: 20px; font-weight: 700; color: #ffb340; line-height: 1;
+    text-shadow: 0 0 6px rgba(0,0,0,.9);
+  }
   .ship-ribbon.rib-left { left: 0; border-left: none; }
   .ship-ribbon.rib-right { right: 0; border-right: none; }
+  /* MODE BADGE (Toby direction 2026-08-17 evening — his own sketch:
+     dots under the word SHIP in the nav, plus the name written).
+     In-section titles were tried first and collided with V1's own
+     panel headings on BOTH pages (no free band), so the badge hangs
+     under the nav Ship link in the ~16px gap before sections begin:
+     two dots (berry = where you are; statics first, the chooser's
+     order) + the current sub-page's name. Hidden off the ship pages.
+     Taste knobs: font-size, dot size, gap, top offset. */
+  .ship-mode-badge {
+    position: absolute; top: calc(100% + 3px); left: 50%;
+    transform: translateX(-50%);
+    display: flex; align-items: center; gap: 7px;
+    white-space: nowrap; pointer-events: none;
+  }
+  .ship-mode-badge .word {
+    font-size: 11px; letter-spacing: .25em; color: #eee; font-weight: 700;
+  }
+  .ship-mode-badge .dots { display: flex; gap: 6px; }
+  .ship-mode-badge .dots i {
+    width: 9px; height: 9px; border-radius: 50%; display: block;
+    border: 1.5px solid #474747; box-sizing: border-box;
+  }
+  .ship-mode-badge .dots i.on { background: #c628a4; border-color: #c628a4; }
   .ship-ribbon.opening { width: 34vw; color: #ff9900; transition: width .35s ease-in, color .2s ease; }
   /* Accordion unfold, now horizontal: the incoming page stretches open
      from the edge it was squished into. */
@@ -145,24 +167,24 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
-/* ---- the ribbons: the other section squished into an edge strip ----
- * STATICS carries DYNAMICS along its BOTTOM (press: it swipes UP into
- * view); DYNAMICS carries STATICS along its TOP (press: it swipes
- * DOWN). Chevron points the travel direction; the striped background
- * is the "squished page" hint. */
+/* ---- the ribbons: chevron columns through the page edges ----
+ * (Toby re-ruling 2026-08-17 evening: NO words — the giant vertical
+ * word was the OTHER page's title and read as a mistitle. Arrows point
+ * OUT through their own edge: on STATICS the right ribbon points right
+ * — that's the way to DYNAMICS; on DYNAMICS the left ribbon points
+ * left — back to STATICS. The striped background stays as the
+ * "squished page" hint; hover tooltip carries the target's name.) */
 function makeRibbon(side, targetKey, targetLabel, nav, enterClass) {
   const rib = document.createElement('div');
   rib.className = `ship-ribbon rib-${side}`;
   rib.setAttribute('role', 'button');
   rib.title = `Open ${targetLabel}`;
-  const chev = document.createElement('span');
-  chev.className = 'chev';
-  // Arrows point the direction the page will sweep: STATICS (left
-  // edge) sweeps rightward '❯'; DYNAMICS (right edge) sweeps left '❮'.
-  chev.textContent = side === 'left' ? '❯' : '❮';
-  const label = document.createElement('span');
-  label.textContent = targetLabel;
-  rib.append(chev, label, chev.cloneNode(true));
+  for (let i = 0; i < 7; i++) {
+    const chev = document.createElement('span');
+    chev.className = 'chev';
+    chev.textContent = side === 'right' ? '❯' : '❮';
+    rib.appendChild(chev);
+  }
   rib.addEventListener('click', () => {
     setMode(targetKey);
     rib.classList.add('opening'); // the squished page starts expanding…
@@ -187,6 +209,41 @@ function makeRibbon(side, targetKey, targetLabel, nav, enterClass) {
   return rib;
 }
 
+/* The nav badge: dots + the current sub-page's name, hanging under
+ * the SHIP nav link (statics = first dot — the chooser's order).
+ * One element, kept true by syncModeBadge(): it names the page you
+ * are ON, so it shows only while a ship sub-page is displayed. */
+let badgeEl = null;
+function ensureModeBadge() {
+  const anchor = navShip();
+  if (!anchor || badgeEl) return;
+  anchor.style.position = 'relative';
+  badgeEl = document.createElement('span');
+  badgeEl.className = 'ship-mode-badge';
+  const dots = document.createElement('span');
+  dots.className = 'dots';
+  dots.append(document.createElement('i'), document.createElement('i'));
+  const word = document.createElement('span');
+  word.className = 'word';
+  badgeEl.append(dots, word);
+  badgeEl.style.display = 'none';
+  anchor.appendChild(badgeEl);
+}
+function syncModeBadge() {
+  if (!badgeEl) return;
+  const ship = $('[data-section="ship"]');
+  const dyn = [...document.querySelectorAll('section')].find((s) => s.querySelector('.dyn-eas-chip'));
+  const shipShown = ship && getComputedStyle(ship).display !== 'none' && !ship.querySelector('.ship-chooser');
+  const dynShown = dyn && getComputedStyle(dyn).display !== 'none';
+  const current = dynShown ? 'dynamics' : (shipShown ? 'statics' : null);
+  badgeEl.style.display = current ? '' : 'none';
+  if (!current) return;
+  badgeEl.querySelector('.word').textContent = current === 'statics' ? 'STATICS' : 'DYNAMICS';
+  const [d1, d2] = badgeEl.querySelectorAll('.dots i');
+  d1.classList.toggle('on', current === 'statics');
+  d2.classList.toggle('on', current === 'dynamics');
+}
+
 function ensureSwitchers() {
   // STATICS lives squished on the LEFT of DYNAMICS; DYNAMICS lives
   // squished on the RIGHT of STATICS (Toby's L/R mental model).
@@ -198,6 +255,20 @@ function ensureSwitchers() {
   if (dyn && !dyn.querySelector('.ship-ribbon')) {
     dyn.prepend(makeRibbon('left', 'statics', 'STATICS', navShip, 'ship-enter-left'));
   }
+  // Badge truth: V1's router toggles section inline style; the chooser
+  // overlay appears/disappears as ship children — observe both
+  // (MutationObserver: fires regardless of compositing, the same
+  // reasoning as the fleet-globe repair).
+  ensureModeBadge();
+  if (ship) {
+    new MutationObserver(() => setTimeout(syncModeBadge, 0))
+      .observe(ship, { attributes: true, attributeFilter: ['style'], childList: true });
+  }
+  if (dyn) {
+    new MutationObserver(() => setTimeout(syncModeBadge, 0))
+      .observe(dyn, { attributes: true, attributeFilter: ['style'] });
+  }
+  setTimeout(syncModeBadge, 0);
 }
 
 /* ---- the chooser overlay (first SHIP entry per session) ---- */
