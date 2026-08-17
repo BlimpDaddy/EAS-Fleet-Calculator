@@ -170,6 +170,71 @@ export const ROUNDED_PROVENANCE = [
 ];
 
 /**
+ * vRE — Re-AWARE ROUNDED-CLASS PRESSURE (owner order 2026-08-17:
+ * "it's supposed to estimate the shape at the size at the speed").
+ * Completes the reserved pressure(proxy, Re) seam (r16/r19) with the
+ * evidence the reviewers demanded — every knot below is MEASURED:
+ *
+ * The rounded class is the only one whose pressure moves with Re (the
+ * drag crisis). Its Cd(Re) family = subcritical plateau → crisis →
+ * transcritical level, so the model is a BLEND between two measured
+ * maps, not per-shape curves:
+ *  - SUBCRITICAL line (small/slow — Re_d below the crisis):
+ *    streamlined pair (shared; streamlined bodies have no crisis —
+ *    the lines converge below proxy ~0.18, declared) · E2 prolate
+ *    1923 measured subcritical total 0.269 at Re_d 44k (pressure =
+ *    total − ITTC at its measurement Re — the ledger's standard knot
+ *    method; ITTC is turbulent-line at transitional Re, declared) ·
+ *    SPHERE SUBCRITICAL — the ORIGINAL vNEXT knot (0.462 pressure
+ *    from textbook 0.47), which was never wrong, only mis-regimed;
+ *    it returns here as the measured subcritical anchor · E2 oblate
+ *    plateau 0.58 at proxy 0.894. Clamped above.
+ *  - HIGH line: the graduated ROUNDED_KNOTS above (unchanged).
+ *  - BLEND: smoothstep in log10(Re_d) across the DECLARED window
+ *    [2.5e5, 8e5] on the body's EQUIVALENT DIAMETER
+ *    (D_eq = √(4·frontal/π)) — centred on Achenbach's measured
+ *    sphere crisis (3.7e5), width ~half a decade. One declared
+ *    knob pair; per-shape crisis location is the documented
+ *    limitation (bluffer/rougher bodies transition earlier — the
+ *    window is the class reference, the transition zone is the
+ *    lowest-confidence region).
+ * PINNED class: Re-flat (edges fix separation) — untouched.
+ * STREAMLINED: friction already carries their Re — untouched.
+ * PENDING: external review (r20) — built on owner order, honest
+ * fixtures below; the sealed high-Re validation is unchanged (at
+ * vehicle Re the blend is exactly the high line, fixtured).
+ */
+export const SUBCRITICAL_ROUNDED_KNOTS = [
+  [0.017428445146842095, 0.008064854637311485], // TN614-111 (shared)
+  [0.1807885483529704, 0.012339438608540539],   // TN614-332 (shared)
+  [0.597, 0.213],                                // E2 prolate subcritical (1923 measured 0.269 @ Re_d 44k − ITTC)
+  [0.8156212975892966, 0.46236007570000226],    // sphere SUBCRITICAL — the original vNEXT knot, re-regimed home
+  [0.894, 0.559],                                // E2 oblate subcritical plateau (0.58 − ITTC)
+];
+export const CRISIS_WINDOW_RED = [2.5e5, 8e5]; // equivalent-diameter Re, declared (Achenbach centre 3.7e5)
+
+function lineAt(knots, x) {
+  if (!Number.isFinite(x)) return NaN;
+  if (x <= knots[0][0]) return Math.max(0, knots[0][1] * (x / knots[0][0] || 0));
+  for (let i = 0; i + 1 < knots.length; i++) {
+    if (x <= knots[i + 1][0]) {
+      const t = (x - knots[i][0]) / (knots[i + 1][0] - knots[i][0]);
+      return knots[i][1] + t * (knots[i + 1][1] - knots[i][1]);
+    }
+  }
+  return knots[knots.length - 1][1];
+}
+
+/** Crisis blend factor: 0 = fully subcritical, 1 = fully high-Re. */
+export function crisisBlend(reD) {
+  if (!Number.isFinite(reD) || reD <= 0) return 1; // no diameter info → high line (the pre-vRE behaviour)
+  const [lo, hi] = CRISIS_WINDOW_RED;
+  const t = (Math.log10(reD) - Math.log10(lo)) / (Math.log10(hi) - Math.log10(lo));
+  const c = Math.max(0, Math.min(1, t));
+  return c * c * (3 - 2 * c); // smoothstep
+}
+
+/**
  * MECHANISM CLASSIFIER — four scorer-native triggers, any → 'pinned'
  * (r16 finding #3 through r19; each threshold sits in a measured gap):
  *  (a) fore-dominance (softFore > softAft): face-like front.
@@ -237,20 +302,22 @@ export function shoulderAngleScore(m, { kFrac, smoothW } = SHOULDER_OPTS) {
  * (r9 #1: no extrapolation). Non-finite input → NaN: estimate-
  * unavailable, never a plausible bluff Cd (r10 #4).
  */
-export function calibratePressure(x, cls = 'pinned') {
-  // Graduation 2026-08-16: two lines. Default 'pinned' = the vNEXT map
-  // VERBATIM — every pre-graduation caller gets identical behaviour;
-  // the rounded (drag-crisis) line is opt-in via the classifier.
-  const knots = cls === 'rounded' ? ROUNDED_KNOTS : CALIBRATION_KNOTS;
+export function calibratePressure(x, cls = 'pinned', reD = undefined) {
+  // Graduation 2026-08-16: two lines; default 'pinned' = the vNEXT map
+  // VERBATIM — every pre-graduation caller gets identical behaviour.
+  // vRE 2026-08-17: for the ROUNDED (drag-crisis) class, an optional
+  // equivalent-diameter Reynolds number blends the SUBCRITICAL and
+  // HIGH-Re measured maps across the declared crisis window. Omitted
+  // reD (or non-rounded class) → the high line exactly, so every
+  // pre-vRE caller and the whole sealed battery are unchanged.
   if (!Number.isFinite(x)) return NaN;
-  if (x <= knots[0][0]) return Math.max(0, knots[0][1] * (x / knots[0][0] || 0));
-  for (let i = 0; i + 1 < knots.length; i++) {
-    if (x <= knots[i + 1][0]) {
-      const t = (x - knots[i][0]) / (knots[i + 1][0] - knots[i][0]);
-      return knots[i][1] + t * (knots[i + 1][1] - knots[i][1]);
-    }
-  }
-  return knots[knots.length - 1][1]; // pinned: bluff top · rounded: the declared CLAMP
+  if (cls !== 'rounded') return lineAt(CALIBRATION_KNOTS, x);
+  const hi = lineAt(ROUNDED_KNOTS, x);
+  if (reD === undefined) return hi;
+  const t = crisisBlend(reD);
+  if (t >= 1) return hi;
+  const sub = lineAt(SUBCRITICAL_ROUNDED_KNOTS, x);
+  return sub + t * (hi - sub);
 }
 
 /**
@@ -345,7 +412,13 @@ export function estimateCd(proxyRecord, geometry, airspeedKmh) {
   // cls — they price on the PINNED (vNEXT-verbatim) line: conservative,
   // never flattering, exactly the pre-graduation behaviour.
   const cls = (proxyRecord && proxyRecord.cls) || 'pinned';
-  const pressureCd = calibratePressure(proxyRecord ? proxyRecord.proxy : NaN, cls);
+  // vRE (2026-08-17): the rounded class blends across the drag crisis
+  // on the EQUIVALENT-DIAMETER Reynolds number — size and speed now
+  // reach the pressure term, not just friction. D_eq from the same
+  // trusted geometry record as everything else.
+  const dEq = Math.sqrt((4 * A) / Math.PI);
+  const reD = (v * dEq) / NU_M2_S;
+  const pressureCd = calibratePressure(proxyRecord ? proxyRecord.proxy : NaN, cls, reD);
   const quality = proxyRecord && proxyRecord.quality ? proxyRecord.quality : null;
   const provenance = {
     label: 'ESTIMATED',
@@ -354,6 +427,9 @@ export function estimateCd(proxyRecord, geometry, airspeedKmh) {
     class: cls,
     triggers: (proxyRecord && proxyRecord.triggers) || null,
     metrology: { stations: 128, kFrac: SHOULDER_OPTS.kFrac, smoothW: SHOULDER_OPTS.smoothW, shoulderMax: SHOULDER_ANGLE_MAX },
+    // vRE: the regime this estimate was computed in (rounded class
+    // only carries a meaningful blend; 1 = fully high-Re).
+    regime: { reD, crisisBlend: cls === 'rounded' ? crisisBlend(reD) : 1, windowReD: CRISIS_WINDOW_RED },
     axis: proxyRecord ? proxyRecord.axis : null,
     oddFraction: quality ? quality.oddFraction : null,
     // INPUT IDENTITY (r12 send-back #1b, 2026-08-16): the exact inputs
