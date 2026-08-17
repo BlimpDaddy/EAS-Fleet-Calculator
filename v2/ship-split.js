@@ -118,6 +118,7 @@ function makeRibbon(side, targetKey, targetLabel, nav, enterClass) {
   label.textContent = targetLabel;
   rib.append(chev, label, chev.cloneNode(true));
   rib.addEventListener('click', () => {
+    viaRibbon = true; // ribbons flow straight between sections — no chooser
     setMode(targetKey);
     rib.classList.add('opening'); // the squished page starts expanding…
     setTimeout(() => {
@@ -185,13 +186,18 @@ function buildChooser(shipSection) {
 }
 
 /* ---- wiring ---- */
+let viaRibbon = false; // ribbon navigations bypass the chooser
 function boot() {
   ensureSwitchers();
   // Direct /dynamic entry = the DYNAMICS choice, recorded.
   if (location.pathname === '/dynamic' && !getMode()) setMode('dynamics');
-  // First SHIP entry per session gets the greeting.
+  // The SHIP title is the way BACK to the choice screen (Toby ruling
+  // 2026-08-17, amending the one-way door): every top-nav Ship click
+  // re-presents the chooser — it's the hub, and once the diagram art
+  // lands it's worth revisiting. Ribbons still flow straight between
+  // sections without it.
   navShip()?.addEventListener('click', () => {
-    if (getMode()) return;
+    if (viaRibbon) { viaRibbon = false; return; }
     const ship = $('[data-section="ship"]');
     if (ship && !ship.querySelector('.ship-chooser')) buildChooser(ship);
   });
