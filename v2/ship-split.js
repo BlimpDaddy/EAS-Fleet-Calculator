@@ -22,18 +22,19 @@
  * navigation happens through V1's own nav anchors.
  */
 
-const MODE_KEY = 'eas-ship-mode'; // 'statics' | 'dynamics' — session-scoped
+// 'statics' | 'dynamics' — PER PAGE LOAD (Toby final ruling
+// 2026-08-17: a hard refresh starts fresh, so the next SHIP press
+// greets with the choice page again; within one loaded page, SHIP
+// returns to the last-used sub-section). Deliberately NOT
+// sessionStorage — that survived refreshes, which felt sticky-wrong.
+let shipMode = null;
 
 const $ = (sel) => document.querySelector(sel);
 const navShip = () => $('nav a[href="/ship"]');
 const navDynamic = () => $('nav a[href="/dynamic"]');
 
-function getMode() {
-  try { return sessionStorage.getItem(MODE_KEY); } catch { return null; }
-}
-function setMode(m) {
-  try { sessionStorage.setItem(MODE_KEY, m); } catch { /* private mode: greeting simply reappears */ }
-}
+function getMode() { return shipMode; }
+function setMode(m) { shipMode = m; }
 
 /* ---- styles (V1 tokens: #111 bg, #eee text, #ff9900 orange, #c628a4 pink) ---- */
 const style = document.createElement('style');
@@ -232,7 +233,18 @@ function boot() {
   navShip()?.addEventListener('click', () => {
     if (viaRibbon) { viaRibbon = false; return; }
     const m = getMode();
-    if (m === 'dynamics') { setTimeout(() => navDynamic()?.click(), 0); return; }
+    if (m === 'dynamics') {
+      // Bounce through WITHOUT the one-frame statics flash (Toby,
+      // 2026-08-17): curtain the ship section synchronously so it
+      // never paints, then route and lift the curtain.
+      const ship = $('[data-section="ship"]');
+      if (ship) ship.style.visibility = 'hidden';
+      setTimeout(() => {
+        navDynamic()?.click();
+        if (ship) ship.style.visibility = '';
+      }, 0);
+      return;
+    }
     if (m === 'statics') return; // V1 already routed here
     const ship = $('[data-section="ship"]');
     if (ship && !ship.querySelector('.ship-chooser')) buildChooser(ship);
