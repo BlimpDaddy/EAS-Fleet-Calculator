@@ -242,7 +242,6 @@ function ensureModeBadge() {
   dotsEl = document.createElement('span');
   dotsEl.className = 'ship-mode-dots';
   dotsEl.append(document.createElement('i'), document.createElement('i'));
-  dotsEl.style.display = 'none';
   anchor.appendChild(dotsEl);
   wordEl = document.createElement('span');
   wordEl.className = 'ship-mode-word';
@@ -266,11 +265,10 @@ function syncModeBadge() {
   // Grey or berry ONLY (Toby final 2026-08-17 — white at no stage):
   // berry on any ship state, chooser included.
   navShip()?.classList.toggle('ship-live', !!(shipRouted || dynShown));
-  // The dots are PART OF THE TITLE (Toby ruling 2026-08-17): present
-  // on every ship state — both grey on the chooser — and gone on
-  // other pages. The word names only a chosen sub-page.
-  const onShipPages = !!(shipRouted || dynShown);
-  dotsEl.style.display = onShipPages ? '' : 'none';
+  // The dots are PART OF THE TITLE, at ALL times on ALL pages (Toby
+  // final 2026-08-17, reversing the earlier hide-off-ship): both grey
+  // when no sub-page is selected; the live one lights berry. The word
+  // still names only a chosen sub-page.
   wordEl.style.display = current ? '' : 'none';
   wordEl.textContent = current ? (current === 'statics' ? 'STATICS' : 'DYNAMICS') : '';
   const [d1, d2] = dotsEl.querySelectorAll('i');
