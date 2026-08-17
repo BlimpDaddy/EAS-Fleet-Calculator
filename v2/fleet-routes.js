@@ -66,7 +66,10 @@ if (v1Canvas && figure) {
   pauseBtn.textContent = '⏸';
   pauseBtn.title = 'Pause the route tour';
   const btnStyle = document.createElement('style');
-  btnStyle.textContent = '.fleet-graph-container { position: relative; } .fleet-globe-pause { position: absolute; top: 42px; right: 10px; z-index: 5; }';
+  // Same square as page 1's button: 48x51 at bottom:16/right:16
+  // (measured off the live SHAPE page; the bare class stretched to the
+  // figure's full height here — explicit box pins it).
+  btnStyle.textContent = '.fleet-graph-container { position: relative; } .fleet-globe-pause { position: absolute; top: auto; bottom: 16px; right: 16px; width: 48px; height: 51px; z-index: 5; }';
   document.head.appendChild(btnStyle);
   pauseBtn.addEventListener('click', () => {
     paused = !paused;
@@ -114,7 +117,7 @@ if (v1Canvas && figure) {
     c.width = 512; c.height = 64;
     const ctx = c.getContext('2d');
     ctx.fillStyle = '#C628A5';
-    ctx.font = '700 44px Arial, sans-serif';
+    ctx.font = '700 58px Arial, sans-serif'; // bumped 44→58 (Toby: hard to see)
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(name.toUpperCase(), 256, 34);
@@ -142,7 +145,7 @@ if (v1Canvas && figure) {
       m.position.copy(v);
       routeGroup.add(m);
       const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: labelTexture(name), depthTest: true, transparent: true }));
-      sprite.scale.set(0.512, 0.064, 1);
+      sprite.scale.set(0.64, 0.08, 1); // V1's .512×.064 grown 25% (Toby: labels hard to see)
       sprite.position.copy(v).multiplyScalar(1.2 / 1.02);
       routeGroup.add(sprite);
     }
