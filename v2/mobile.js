@@ -76,6 +76,14 @@ css.textContent = `
   .has-tooltip { width: 1.05rem; height: 1.05rem; font-size: 0.78rem; border-width: 1.5px; }
   .shape-control-button-icon { max-height: 92px; margin-top: 18px; }
   .shape-button-primary .shape-button-circles { max-width: 32px; padding: 0.3rem; }
+  /* UPLOAD .OBJ carries an inline min-height: 4.5rem from
+     shape-upload.js — proportionate at desktop type scale, but at
+     phone scale its single 15px label left a blank line below (Toby
+     round 4). Overridden (inline style needs !important) and the
+     label centred so the box hugs its text. */
+  .shape-controls .shape-control-button[style*="grid-column"] {
+    min-height: 2.5rem !important; justify-content: center;
+  }
 
   /* ONE tooltip symbol, not two (Toby round 2): the ℹ︎ glyph renders
      as a filled emoji on some phones DESPITE the text-presentation
