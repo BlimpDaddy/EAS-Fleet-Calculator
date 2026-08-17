@@ -408,14 +408,16 @@ function buildChooser(shipSection) {
   });
   const dynamics = mk('≋→', 'DYNAMICS', 'Can it fly? Drag, power, fuel.', () => {
     setMode('dynamics');
-    overlay.classList.add('swipe-out');
-    // Navigate FIRST, remove the overlay AFTER (Toby flash catch,
-    // 2026-08-17): removing before routing uncovered the statics
-    // section for a frame. The overlay lives inside the ship section,
-    // so once V1 hides that section the overlay is invisible anyway —
-    // it lingers as the curtain through any routing latency.
-    setTimeout(() => { navDynamic()?.click(); syncModeBadge(); }, 380);
-    setTimeout(() => overlay.remove(), 560);
+    // NO swipe-out on the dynamics pick (Toby's second flash catch,
+    // 2026-08-17): the swipe animation itself was the flash — the
+    // overlay slid away revealing STATICS underneath for 380ms before
+    // routing. (The statics pick swipes correctly: revealing statics
+    // IS its point.) Dynamics routes INSTANTLY instead — V1 hides the
+    // ship section (overlay included) in the same tick, so nothing
+    // wrong can ever paint; the overlay is removed silently after.
+    navDynamic()?.click();
+    syncModeBadge();
+    setTimeout(() => overlay.remove(), 600);
   });
   overlay.append(hint, statics, dynamics);
   const pos = getComputedStyle(shipSection).position;
