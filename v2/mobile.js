@@ -109,20 +109,25 @@ css.textContent = `
     position: fixed; inset: 0; height: auto;
     grid-template-columns: 1fr 1fr;
     grid-template-rows: auto auto;
-    align-content: start;
-    gap: 14px;
-    padding: 14px 12px;
+    /* Round 5 (Toby): the pair sat hard against the titles with the
+       page blank beneath. Centring the rows in the space below the
+       header balances the screen — and because the overlay already
+       starts at the header's bottom, "centred" means visually centred
+       between the nav and the bottom edge. */
+    align-content: center;
+    gap: 26px;
+    padding: 14px 12px 26px;
   }
   .ship-chooser button:nth-of-type(1) { grid-row: 1; grid-column: 1 / 2; }  /* STATICS  top-left  */
   .ship-chooser button:nth-of-type(2) { grid-row: 2; grid-column: 2 / 3; }  /* DYNAMICS bottom-right */
   .ship-chooser button {
-    flex-direction: row; gap: 10px;
-    padding: 12px 10px; min-height: 0; border-radius: 10px;
+    flex-direction: row; gap: 11px;
+    padding: 16px 12px; min-height: 96px; border-radius: 10px;
     text-align: left;
   }
-  .ship-chooser .glyph { font-size: 26px; }
-  .ship-chooser .title { font-size: 15px; letter-spacing: .06em; }
-  .ship-chooser .sub   { font-size: 11px; margin-top: 2px; }
+  .ship-chooser .glyph { font-size: 30px; }
+  .ship-chooser .title { font-size: 16px; letter-spacing: .06em; }
+  .ship-chooser .sub   { font-size: 11.5px; margin-top: 3px; }
 
   /* 3. FLEET: restore V1's mobile row flow (the desktop 272px/1fr rule
      is unscoped and would otherwise win here), then give the globe a
