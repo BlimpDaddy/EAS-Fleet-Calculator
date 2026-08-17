@@ -63,8 +63,19 @@ css.textContent = `
      allows. Capping the icon shortens every tile without touching the
      grid or the labels. */
   .shape-control-button { padding: 6px; }
-  .shape-control-button-icon { max-height: 92px; }
   .shape-controls { gap: 8px; }
+  /* Round 3 (Toby): keep the shorter tiles, fix their two side effects.
+     (a) The longest labels — WASHING MACHINE, LENTICULAR (UFO) — wrapped
+     to a second line once their ℹ︎ no longer fit beside them, so the
+     label type and the ℹ︎ circle both come down a notch.
+     (b) The berry logo badge (absolute, top-right, 50px) started
+     clipping the Sunship wireframe in the shorter tile: the badge
+     shrinks and the artwork is pushed DOWN in its box, which is also
+     the "shapes sit a few % lower" Toby asked for. */
+  .shape-control-button-label { font-size: 0.78rem; letter-spacing: 0; }
+  .has-tooltip { width: 1.05rem; height: 1.05rem; font-size: 0.78rem; border-width: 1.5px; }
+  .shape-control-button-icon { max-height: 92px; margin-top: 18px; }
+  .shape-button-primary .shape-button-circles { max-width: 32px; padding: 0.3rem; }
 
   /* ONE tooltip symbol, not two (Toby round 2): the ℹ︎ glyph renders
      as a filled emoji on some phones DESPITE the text-presentation
