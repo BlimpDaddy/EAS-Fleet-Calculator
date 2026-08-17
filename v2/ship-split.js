@@ -143,19 +143,25 @@ style.textContent = `
      two dots (berry = where you are; statics first, the chooser's
      order) + the current sub-page's name. Hidden off the ship pages.
      Taste knobs: font-size, dot size, gap, top offset. */
+  /* Dot placement re-ruled (Toby, 2026-08-17): the PAIR sits directly
+     under the word SHIP — "one under H and one under I" — so the DOTS
+     are the anchored element (centred on the link) and the mode word
+     trails to their right without shifting them. Live dot = berry,
+     not-live = grey. */
   .ship-mode-badge {
     position: absolute; top: calc(100% + 3px); left: 50%;
-    transform: translateX(-50%);
-    display: flex; align-items: center; gap: 7px;
+    transform: translateX(-12px); /* centre the 24px dot pair, not the whole badge */
+    display: flex; align-items: center;
     white-space: nowrap; pointer-events: none;
   }
   .ship-mode-badge .word {
+    position: absolute; left: calc(100% + 8px);
     font-size: 11px; letter-spacing: .25em; color: #eee; font-weight: 700;
   }
   .ship-mode-badge .dots { display: flex; gap: 6px; }
   .ship-mode-badge .dots i {
     width: 9px; height: 9px; border-radius: 50%; display: block;
-    border: 1.5px solid #474747; box-sizing: border-box;
+    background: #555; border: 1.5px solid #666; box-sizing: border-box;
   }
   .ship-mode-badge .dots i.on { background: #c628a4; border-color: #c628a4; }
   .ship-ribbon.opening { width: 34vw; color: #ff9900; transition: width .35s ease-in, color .2s ease; }
@@ -179,10 +185,14 @@ function makeRibbon(side, targetKey, targetLabel, nav, enterClass) {
   rib.className = `ship-ribbon rib-${side}`;
   rib.setAttribute('role', 'button');
   rib.title = `Open ${targetLabel}`;
+  // Direction re-ruled (Toby, 2026-08-17, on sight): arrows gesture
+  // DRAGGING THE NEW PAGE INTO THE SCREEN — the right ribbon pulls
+  // leftward '❮', the left ribbon pulls rightward '❯' (opposite of
+  // the first pointing-out version).
   for (let i = 0; i < 7; i++) {
     const chev = document.createElement('span');
     chev.className = 'chev';
-    chev.textContent = side === 'right' ? '❯' : '❮';
+    chev.textContent = side === 'right' ? '❮' : '❯';
     rib.appendChild(chev);
   }
   rib.addEventListener('click', () => {
@@ -233,8 +243,15 @@ function syncModeBadge() {
   if (!badgeEl) return;
   const ship = $('[data-section="ship"]');
   const dyn = [...document.querySelectorAll('section')].find((s) => s.querySelector('.dyn-eas-chip'));
-  const shipShown = ship && getComputedStyle(ship).display !== 'none' && !ship.querySelector('.ship-chooser');
+  const shipRouted = ship && getComputedStyle(ship).display !== 'none';
+  const shipShown = shipRouted && !ship.querySelector('.ship-chooser');
   const dynShown = dyn && getComputedStyle(dyn).display !== 'none';
+  // NAV TRUTH (Toby catch 2026-08-17: SHIP went white on statics but
+  // stayed grey on dynamics): V1 gives `current-page` to the ROUTED
+  // link, which on dynamics is the hidden /dynamic anchor. SHIP is
+  // the visible parent of both sub-pages, so it reads current
+  // whenever either is on screen (chooser included).
+  navShip()?.classList.toggle('current-page', !!(shipRouted || dynShown));
   const current = dynShown ? 'dynamics' : (shipShown ? 'statics' : null);
   badgeEl.style.display = current ? '' : 'none';
   if (!current) return;
