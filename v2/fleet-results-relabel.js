@@ -148,11 +148,20 @@ if (box) {
   reqFlags.className = 'v2-reqflags';
   reqName.insertAdjacentElement('afterend', reqFlags);
   // Economics carries the SAME flags (Toby 2026-08-17: "you keep the
-  // warnings on both pages") — anchored on the recap heading.
+  // warnings on both pages") — anchored AFTER THE TOTAL REVENUE value
+  // ("$91.14B ⚠ ⚠", re-ruled from the recap heading). revenue.js sets
+  // that cell via textContent on every recompute, which deletes
+  // children, so a guarded childList observer re-appends (the shape
+  // name cell's precedent).
   const econFlags = document.createElement('span');
   econFlags.className = 'v2-reqflags';
-  const econHeading = $('.section-economics .fleet-selected-heading');
-  if (econHeading) econHeading.appendChild(econFlags);
+  const econTotal = $('.section-economics .fleet-results-required-data');
+  if (econTotal) {
+    econTotal.appendChild(econFlags);
+    new MutationObserver(() => {
+      if (econFlags.parentElement !== econTotal) { econTotal.appendChild(econFlags); syncFlags(); }
+    }).observe(econTotal, { childList: true });
+  }
   const flagStyle = document.createElement('style');
   flagStyle.textContent = `
     .v2-reqflags { cursor: help; white-space: nowrap; }
@@ -209,7 +218,7 @@ if (box) {
     closePop();
     const w = collectWarnings();
     renderFlags(reqFlags, reqSpan.parentElement, w);
-    if (econHeading) renderFlags(econFlags, econHeading, w);
+    if (econTotal) renderFlags(econFlags, econTotal, w);
   };
   document.addEventListener('click', closePop);
   // Recompute on fleet OR economics reveal (V1 toggles inline style) —
