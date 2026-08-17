@@ -142,6 +142,40 @@ css.textContent = `
     max-height: 210px; width: 100%;
   }
 
+  /* DYNAMICS interim tidy (2026-08-18) — stop-it-looking-broken ONLY.
+     The real phone layout follows the M7 ruling (plan view, top→bottom
+     flow) and replaces this wholesale; nothing here is load-bearing.
+     Loads after dynamic-page.js, so equal-specificity rules here win
+     its base styles AND its own 900px wrap rules. */
+  /* Panels stack as three natural-height bands — the 1fr centre row
+     otherwise stretches the empty visualiser to fill the viewport. */
+  .section-dynamic { grid-template-rows: auto auto auto; }
+  /* Controls: one per line, sliders full width; the two toggles share
+     one row so they don't burn two more lines. */
+  .dyn-controls-row { flex-direction: column; align-items: stretch; }
+  .dyn-controls-row .fleet-control { min-width: 0; width: 100%; }
+  .dyn-controls-row .fleet-control-slider { width: 100%; }
+  .dyn-toggle-col {
+    flex-direction: row; align-self: flex-start;
+    gap: 1.4em; padding: 0;
+  }
+  /* Visualiser reservation: modest fixed height so it reads as
+     reserved space, not a squashed band (32vh/22vh are viewport-tall
+     nonsense in portrait). */
+  .dyn-visual-panel { min-height: 0; height: 180px; }
+  /* Results: 2-column grid instead of 8-across. Selector carries
+     .section-dynamic because ship-split.js's desktop one-line-strip
+     rules do (0,2,0 — they'd beat a bare .dyn-results-row here). */
+  .section-dynamic .dyn-results-row {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 0.6rem var(--space-base);
+    align-items: start; margin-bottom: 0; padding: 0;
+  }
+  .section-dynamic .dyn-results-row .dyn-stat { min-width: 0; }
+  /* ship-split's 32px nowrap values are one-line-strip sizing; in a
+     half-width column they'd overflow the phone. */
+  .section-dynamic .fleet-results-data { font-size: 22px; }
+
   /* Ribbons: slimmer so they don't eat a narrow screen. */
   .ship-ribbon { width: 26px; }
   [data-section="ship"] .ship-ribbon.rib-right { width: 30px; }
@@ -181,6 +215,16 @@ if (window.matchMedia(PHONE).matches) {
   new MutationObserver(lock).observe(document.body, { childList: true, subtree: true });
   window.addEventListener('resize', lock);
   lock();
+
+  // Ver-chip re-place (2026-08-18): revenue.js parks its "Ver x.x"
+  // chip by MEASURING the logo — and it runs before this file shrinks
+  // the logo to 56vw. With the image cached, its load-event re-measure
+  // never fires, so the chip kept a desktop-width left (≈446px) and
+  // was the sole horizontal-scroll source on phones (scrollWidth 480
+  // on a 375 screen — every page, not just DYNAMICS). revenue.js
+  // already re-places on resize; one synthetic resize after our styles
+  // apply re-measures it. Phone-gated: desktop never sees this event.
+  window.dispatchEvent(new Event('resize'));
 }
 
 /* ------------------------------------------------------------------ */
