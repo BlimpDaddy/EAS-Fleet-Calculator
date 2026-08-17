@@ -115,6 +115,101 @@ if (box) {
       : ` ${n === 1 ? shapeName(false) : shapeName(true)}`;
   };
 
+  /* ---- LIVE WARNING FLAGS on the key number (Toby, 2026-08-17):
+   * any shape carrying a live ORANGE or RED warning anywhere in the
+   * calculator gets an asterisk + per-severity ⚠ beside "Required:
+   * X Ships"; hover or click lists that colour's short warning texts.
+   * Sources scraped from the live adapters' own DOM: the shape page's
+   * .v2-warn glyphs (existence = active; red = #FF2A2A fill; the VE
+   * overlay is display-toggled) and the dynamics page's .dyn-warning
+   * icons (class orange/red, title = the ruled minimal words). The
+   * warning state can only change from OTHER pages, so it recomputes
+   * on fleet reveal + shape change — never stale while watched. */
+  const warnSvg = (fill, mark) => // the shape page's exact triangle (shape-upload.js)
+    '<svg viewBox="0 0 24 22" width="0.85em" height="0.85em" aria-label="warning">' +
+    `<path d="M12 1 L23 21 H1 Z" fill="${fill}"/>` +
+    `<rect x="10.9" y="7.5" width="2.2" height="7" rx="1.1" fill="${mark}"/>` +
+    `<circle cx="12" cy="17.5" r="1.4" fill="${mark}"/></svg>`;
+  const collectWarnings = () => {
+    const list = { orange: [], red: [] };
+    for (const w of document.querySelectorAll('.v2-warn')) {
+      if (w.classList.contains('v2-warn-ve') && getComputedStyle(w).display === 'none') continue;
+      if (!w.title) continue;
+      (w.innerHTML.includes('#FF2A2A') ? list.red : list.orange).push(w.title);
+    }
+    for (const w of document.querySelectorAll('.dyn-stat-warnings .dyn-warning')) {
+      if (w.title) (w.classList.contains('red') ? list.red : list.orange).push(w.title);
+    }
+    list.orange = [...new Set(list.orange)];
+    list.red = [...new Set(list.red)];
+    return list;
+  };
+  const reqFlags = document.createElement('span');
+  reqFlags.className = 'v2-reqflags';
+  reqName.insertAdjacentElement('afterend', reqFlags);
+  const flagStyle = document.createElement('style');
+  flagStyle.textContent = `
+    .v2-reqflags { cursor: help; white-space: nowrap; }
+    .v2-reqflags .star { color: #eee; margin: 0 2px 0 1px; }
+    .v2-reqflags .w { margin-left: 3px; }
+    .v2-reqpop {
+      position: absolute; right: 0; z-index: 30; background: #191919;
+      border: 1px solid #474747; border-radius: 8px; padding: 8px 12px;
+      font-size: 13px; font-weight: 400; color: #eee; text-align: left;
+      white-space: nowrap;
+    }
+    .v2-reqpop li { list-style: none; margin: 2px 0; }
+    .v2-reqpop li.red::before { content: '⚠ '; color: #ff2a2a; }
+    .v2-reqpop li.orange::before { content: '⚠ '; color: #ff9900; }
+  `;
+  document.head.appendChild(flagStyle);
+  let pop = null;
+  const closePop = () => { if (pop) { pop.remove(); pop = null; } };
+  const syncFlags = () => {
+    closePop();
+    const w = collectWarnings();
+    reqFlags.textContent = '';
+    if (!w.orange.length && !w.red.length) return;
+    const star = document.createElement('span');
+    star.className = 'star';
+    star.textContent = '*';
+    reqFlags.appendChild(star);
+    const mkIcon = (level, texts) => {
+      if (!texts.length) return;
+      const s = document.createElement('span');
+      s.className = 'w';
+      s.innerHTML = level === 'red' ? warnSvg('#FF2A2A', '#FFFFFF') : warnSvg('#FF9900', '#111111');
+      s.title = texts.map((t) => `• ${t}`).join('\n');
+      s.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const wasOpen = !!pop;
+        closePop();
+        if (wasOpen) return;
+        pop = document.createElement('ul');
+        pop.className = 'v2-reqpop';
+        for (const t of texts) {
+          const li = document.createElement('li');
+          li.className = level;
+          li.textContent = t;
+          pop.appendChild(li);
+        }
+        const holder = reqSpan.parentElement;
+        holder.style.position = 'relative';
+        holder.appendChild(pop);
+      });
+      reqFlags.appendChild(s);
+    };
+    mkIcon('orange', w.orange);
+    mkIcon('red', w.red);
+  };
+  document.addEventListener('click', closePop);
+  // Recompute on fleet reveal (V1 toggles the section's inline style).
+  const fleetSection = $('.section-fleet');
+  if (fleetSection) {
+    new MutationObserver(() => setTimeout(syncFlags, 0))
+      .observe(fleetSection, { attributes: true, attributeFilter: ['style'] });
+  }
+
   /* Average Ton-km → x.x Million (V1's raw span hidden, kept as source). */
   const tonkmSpan = $('[data-fleet="resuls-averagetonkmtrip"]');
   tonkmSpan.style.display = 'none';
@@ -150,6 +245,7 @@ if (box) {
   const syncNames = () => {
     for (const el of box.querySelectorAll('.v2-shapename')) el.textContent = shapeName(false);
     syncRequired();
+    syncFlags();
   };
   window.addEventListener('v2-shape-change', syncNames);
 
