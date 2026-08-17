@@ -56,6 +56,25 @@ if (v1Canvas && figure) {
   canvas.className = 'fleet-distance-canvas fleet-routes-canvas'; // inherit V1's sizing CSS
   figure.appendChild(canvas);
 
+  // Pause button (Toby 2026-08-17) — same look as the SHAPE page's ⏸
+  // (V1's .shape-viewer-button class reused so the styling is
+  // literally the same button). Pausing holds the current trip;
+  // any in-flight flick finishes; ▶ resumes the 2s cycle.
+  let paused = false;
+  const pauseBtn = document.createElement('button');
+  pauseBtn.className = 'shape-viewer-button fleet-globe-pause';
+  pauseBtn.textContent = '⏸';
+  pauseBtn.title = 'Pause the route tour';
+  const btnStyle = document.createElement('style');
+  btnStyle.textContent = '.fleet-graph-container { position: relative; } .fleet-globe-pause { position: absolute; top: 42px; right: 10px; z-index: 5; }';
+  document.head.appendChild(btnStyle);
+  pauseBtn.addEventListener('click', () => {
+    paused = !paused;
+    pauseBtn.textContent = paused ? '▶' : '⏸';
+    pauseBtn.title = paused ? 'Resume the route tour' : 'Pause the route tour';
+  });
+  figure.appendChild(pauseBtn);
+
   // ---- replica scene (constants from the bundle, see header) ----
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
@@ -185,7 +204,7 @@ if (v1Canvas && figure) {
     return deck.pop();
   };
   setInterval(() => {
-    if (canvas.clientWidth > 0) showPair(nextPair()); // paused while hidden
+    if (!paused && canvas.clientWidth > 0) showPair(nextPair()); // holds while paused or hidden
   }, CYCLE_MS);
   showPair(nextPair()); // first route immediately (draws once visible)
 
