@@ -80,11 +80,21 @@ const lengthOut = $('[data-ship="length-output"]');
 const rectSpan = mkSpan('v2-warn-static');
 if (lengthOut) lengthOut.closest('.ship-control-output')?.appendChild(rectSpan);
 
-// Shape page: after the shape name cell (sibling — V1 rewrites the
-// cell's own text on shape change).
+// Shape page: INSIDE the shape name cell, inline after the name
+// (Toby alignment fix 2026-08-17: a sibling span became its own grid
+// item and wrapped to a new line, throwing the results grid off — the
+// VS warning glyphs live inside their cells, so does this one). V1
+// rewrites the cell's textContent on shape change, nuking children —
+// the observer below re-appends (childList only, no subtree, and the
+// append is guarded so it can't loop).
 const nameCell = $('[data-shape="shape"]');
 const dirSpan = mkSpan('v2-warn-dir');
-if (nameCell) nameCell.insertAdjacentElement('afterend', dirSpan);
+if (nameCell) {
+  nameCell.appendChild(dirSpan);
+  new MutationObserver(() => {
+    if (dirSpan.parentElement !== nameCell) { nameCell.appendChild(dirSpan); sync(); }
+  }).observe(nameCell, { childList: true });
+}
 
 const sync = () => {
   const { id, dyn } = activeDyn();

@@ -162,10 +162,6 @@ style.textContent = `
   .ship-chooser .glyph { font-size: 72px; line-height: 1; opacity: .8; }
   .ship-chooser .title { font-size: 28px; letter-spacing: .1em; color: #ff9900; }
   .ship-chooser .sub { font-size: 15px; color: #888; margin-top: 6px; }
-  .ship-chooser .order-hint {
-    position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
-    font-size: 12px; color: #666; letter-spacing: .04em;
-  }
   /* THE RIBBON — CHEVRONS ONLY (Toby re-ruling 2026-08-17 evening,
      supersedes the worded ribbons: the giant vertical word was the
      OTHER page's title, which read as if each page were mistitled).
@@ -382,9 +378,7 @@ function ensureSwitchers() {
 function buildChooser(shipSection) {
   const overlay = document.createElement('div');
   overlay.className = 'ship-chooser';
-  const hint = document.createElement('div');
-  hint.className = 'order-hint';
-  hint.textContent = 'TWO QUESTIONS, IN ORDER';
+  // ('TWO QUESTIONS, IN ORDER' hint removed — Toby 2026-08-17.)
   const mk = (glyph, title, sub, onPick) => {
     const b = document.createElement('button');
     const g = document.createElement('span'); g.className = 'glyph'; g.textContent = glyph;
@@ -419,7 +413,7 @@ function buildChooser(shipSection) {
     syncModeBadge();
     setTimeout(() => overlay.remove(), 600);
   });
-  overlay.append(hint, statics, dynamics);
+  overlay.append(statics, dynamics);
   const pos = getComputedStyle(shipSection).position;
   if (pos === 'static' || !pos) shipSection.style.position = 'relative';
   shipSection.appendChild(overlay);
