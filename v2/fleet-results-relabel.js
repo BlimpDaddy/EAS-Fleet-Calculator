@@ -87,7 +87,11 @@ if (box) {
   relabel(byText('Average Ton-km per trip'), 'Average Ton-km:');
   relabel(byText('Average days per trip'), 'Trip time:');
   relabel(byText('CO₂ avoided'), 'Potential CO₂ Displaced: ');
-  relabel(pctHeader, 'Industry Total:');
+  // Owner naming 2026-08-17. The r21 reviewer's point stands (a label
+  // must not imply a denominator it doesn't use), so the basis moves
+  // to the row's hover instead of the visible text.
+  relabel(pctHeader, 'Industry CO₂ Displaced: ');
+  pctHeader.title = 'Share of the modelled air-freight + marine CO₂ pool (1,135 Mt/yr)';
 
   /* ---- value decorations ---- */
   const decorate = (span, unitHtml, subText) => {
@@ -250,10 +254,11 @@ if (box) {
   const pctData = pctHeader.nextElementSibling;
   const gHeader = document.createElement('div');
   gHeader.className = 'fleet-results-data-header';
-  // r21 #3: label names the actual denominator + its year (was
-  // "Global Total:", which implied all global CO2 while dividing by
-  // the fossil subset).
-  gHeader.textContent = 'Global Fossil CO₂ (2024):';
+  // Owner naming 2026-08-17 (supersedes the r21 label wording): the
+  // visible text is plain, and the fossil basis + year that r21
+  // insisted on being disclosed lives in the hover instead.
+  gHeader.textContent = 'Global CO₂ Displaced: ';
+  gHeader.title = 'Share of global FOSSIL CO₂ — 37,800 Mt/yr (Global Carbon Budget 2025, year 2024)';
   const gData = document.createElement('div');
   gData.className = 'fleet-results-data';
   const gVal = document.createElement('span');
