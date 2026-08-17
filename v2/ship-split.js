@@ -77,10 +77,16 @@ style.textContent = `
   [data-section="ship"] .ship-ribbon.rib-right:hover { width: 72px; }
   .section-dynamic .dyn-key-result { color: #c628a4; font-weight: 700; }
   /* Warnings as hover icons beside the Results title — zero height
-     impact (Toby ruling 2026-08-17). */
+     impact (Toby ruling 2026-08-17). Placement fix 2026-08-17 (live
+     spot-check): the old translateY(-34px) nudge measured from the
+     box's natural spot BELOW the results row, and with no positioned
+     ancestor right:18px anchored to the VIEWPORT — the icons landed on
+     the values row, overlapping the berry key result. Now the results
+     panel is the anchor and the icons pin to the title row itself. */
+  .section-dynamic .dyn-panel:has(> .dyn-warnings) { position: relative; }
   .section-dynamic .dyn-warnings {
-    position: absolute; right: 18px; transform: translateY(-34px);
-    display: flex; gap: 8px; height: 0; overflow: visible;
+    position: absolute; top: 10px; right: 18px;
+    display: flex; gap: 8px;
   }
   .section-dynamic .dyn-warning { font-size: 20px; cursor: help; line-height: 1; }
   .section-dynamic .dyn-warning.orange { color: #ff9900; }
