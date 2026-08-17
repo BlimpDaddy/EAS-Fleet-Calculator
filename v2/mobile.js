@@ -58,11 +58,36 @@ css.textContent = `
   .header-nav { flex-wrap: wrap; justify-content: center; gap: 0.15em; }
   .header-logo { max-width: 56vw; height: auto; }
 
+  /* SHAPE tiles were tall vertical rectangles (Toby round 2): V1 gives
+     the icon height:100%, so the tile grows to whatever the grid row
+     allows. Capping the icon shortens every tile without touching the
+     grid or the labels. */
+  .shape-control-button { padding: 6px; }
+  .shape-control-button-icon { max-height: 92px; }
+  .shape-controls { gap: 8px; }
+
+  /* ONE tooltip symbol, not two (Toby round 2): the ℹ︎ glyph renders
+     as a filled emoji on some phones DESPITE the text-presentation
+     selector, which then sits inside V1's own CSS circle — reading as
+     two stacked symbols. The glyph is hidden and a single plain 'i' is
+     drawn in the circle instead. (All tooltips are due a redesign
+     later; this just stops the doubling.) */
+  .has-tooltip { position: relative; color: transparent !important; }
+  .has-tooltip::after {
+    content: 'i'; position: absolute; inset: 0;
+    display: grid; place-items: center;
+    color: var(--color-secondary); font-family: Georgia, serif;
+    font-style: italic; font-size: 0.9em; line-height: 1;
+  }
+
   /* 2. Chooser: compact rectangles, diagonal preserved, no scrolling. */
   .ship-chooser {
     /* FIXED to the viewport, not the (very tall) ship section — while
-       the chooser is up the phone must not scroll at all (Toby). */
-    position: fixed; inset: 0; height: 100dvh;
+       the chooser is up the phone must not scroll at all (Toby).
+       'top' is set at runtime to the header's bottom edge so the
+       Shape > Ship > Fleet > Economic nav stays visible: the first
+       cut used inset:0 and swallowed the whole header (Toby round 2). */
+    position: fixed; inset: 0; height: auto;
     grid-template-columns: 1fr 1fr;
     grid-template-rows: auto auto;
     align-content: start;
@@ -117,11 +142,20 @@ document.head.appendChild(css);
  * rather than coupled to; the lock is phone-only and self-clearing. */
 if (window.matchMedia(PHONE).matches) {
   const lock = () => {
-    const open = !!document.querySelector('.ship-chooser');
-    document.documentElement.style.overflow = open ? 'hidden' : '';
-    document.body.style.overflow = open ? 'hidden' : '';
+    const chooser = document.querySelector('.ship-chooser');
+    document.documentElement.style.overflow = chooser ? 'hidden' : '';
+    document.body.style.overflow = chooser ? 'hidden' : '';
+    // Keep the header + nav visible above the chooser: park its top
+    // edge at the header's bottom. Measured live because the header's
+    // height moves with the wrapped nav and the phone type scale.
+    if (chooser) {
+      const header = document.querySelector('header.header');
+      const top = header ? Math.round(header.getBoundingClientRect().bottom) : 0;
+      chooser.style.top = `${Math.max(0, top)}px`;
+    }
   };
   new MutationObserver(lock).observe(document.body, { childList: true, subtree: true });
+  window.addEventListener('resize', lock);
   lock();
 }
 
