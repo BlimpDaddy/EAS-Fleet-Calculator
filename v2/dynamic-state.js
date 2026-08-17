@@ -422,13 +422,14 @@ export function renderModel(contract) {
   // anchors each icon over the result it warns about — 'fuel' over
   // LH2 + Storage, everything else ('aero') over Drag.
   const warnings = [];
-  if (contract.aerodynamicStatus === 'ORANGE') warnings.push({ level: 'orange', kind: 'aero', text: 'Inefficient dynamics' });
-  if (contract.aerodynamicStatus === 'RED') warnings.push({ level: 'red', kind: 'aero', text: 'Critically inefficient' });
-  if (contract.fuelMassStatus === 'ORANGE') warnings.push({ level: 'orange', kind: 'fuel', text: 'High fuel weight' });
-  if (contract.fuelMassStatus === 'RED') warnings.push({ level: 'red', kind: 'fuel', text: 'Critical fuel weight' });
+  // Every hover text ends in '!' (Toby house rule, 2026-08-17).
+  if (contract.aerodynamicStatus === 'ORANGE') warnings.push({ level: 'orange', kind: 'aero', text: 'Inefficient dynamics!' });
+  if (contract.aerodynamicStatus === 'RED') warnings.push({ level: 'red', kind: 'aero', text: 'Critically inefficient!' });
+  if (contract.fuelMassStatus === 'ORANGE') warnings.push({ level: 'orange', kind: 'fuel', text: 'High fuel weight!' });
+  if (contract.fuelMassStatus === 'RED') warnings.push({ level: 'red', kind: 'fuel', text: 'Critical fuel weight!' });
   for (const w of contract.warnings) {
-    if (w.startsWith('cd-below-friction-estimate')) warnings.push({ level: 'red', kind: 'aero', text: 'Cd below friction floor' });
-    else if (w.startsWith('below-screening-floor')) warnings.push({ level: 'red', kind: 'aero', text: 'Below screening floor' });
+    if (w.startsWith('cd-below-friction-estimate')) warnings.push({ level: 'red', kind: 'aero', text: 'Cd below friction floor!' });
+    else if (w.startsWith('below-screening-floor')) warnings.push({ level: 'red', kind: 'aero', text: 'Below screening floor!' });
     else if (w.startsWith('wetted-') || w.startsWith('no-faces')) { /* geometry-source notes stay contract-side */ }
     else warnings.push({ level: 'orange', kind: 'aero', text: w });
   }

@@ -163,23 +163,23 @@ console.log('\n== r6: ORANGE/RED = correct warning (minimal words, Toby 2026-08-
   const orange = compute(setInput(setInput(initialState(), 'cd', 0.18), 'airspeedKmh', 100), engine, undefined, ESTIMATOR);
   const rmO = renderModel(orange);
   check('ORANGE Cd → exactly one orange "Inefficient dynamics"',
-    rmO.warnings.filter((w) => w.level === 'orange' && w.text === 'Inefficient dynamics').length === 1,
+    rmO.warnings.filter((w) => w.level === 'orange' && w.text === 'Inefficient dynamics!').length === 1,
     JSON.stringify(rmO.warnings));
   check('fuel RED → red "Critical fuel weight"',
-    rmO.warnings.some((w) => w.level === 'red' && w.text === 'Critical fuel weight'));
+    rmO.warnings.some((w) => w.level === 'red' && w.text === 'Critical fuel weight!'));
   check('warnings are short labels, no sentences',
     rmO.warnings.every((w) => w.text.split(' ').length <= 4), JSON.stringify(rmO.warnings));
   // Placement kinds (Toby refinement 2026-08-17): fuel warnings anchor
   // over LH2 + Storage, everything else over Drag.
   check('every warning carries a placement kind (fuel ones fuel, aero ones aero)',
     rmO.warnings.every((w) => w.kind === 'fuel' || w.kind === 'aero')
-    && rmO.warnings.find((w) => w.text === 'Critical fuel weight').kind === 'fuel'
-    && rmO.warnings.find((w) => w.text === 'Inefficient dynamics').kind === 'aero');
+    && rmO.warnings.find((w) => w.text === 'Critical fuel weight!').kind === 'fuel'
+    && rmO.warnings.find((w) => w.text === 'Inefficient dynamics!').kind === 'aero');
   // RED floor breach: Cd below the friction estimate (~0.0084)
   const red = compute(setInput(setInput(initialState(), 'cd', 0.005), 'airspeedKmh', 100), engine, undefined, ESTIMATOR);
   const rmR = renderModel(red);
   check('below-floor RED → red "Cd below friction floor"',
-    red.floorStatus === 'RED' && rmR.warnings.some((w) => w.level === 'red' && w.text === 'Cd below friction floor'));
+    red.floorStatus === 'RED' && rmR.warnings.some((w) => w.level === 'red' && w.text === 'Cd below friction floor!'));
   check('warnings never hide outputs (flagged, not hidden)',
     rmR.rows.every(([, v]) => v !== '—'));
 }

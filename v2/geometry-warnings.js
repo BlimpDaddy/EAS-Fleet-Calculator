@@ -96,6 +96,23 @@ if (nameCell) {
   }).observe(nameCell, { childList: true });
 }
 
+// NET LIFT (Toby 2026-08-17): strictly negative — "not exactly 0,
+// just under" — shows a single ⚠ 'No Lift!' beside the tonnes (the
+// v2-warn-static class feeds the copy summary + fleet flags free);
+// and the VALUE reads BERRY above 500 t, plain white otherwise.
+const netliftOut = $('[data-ship="netlift-output"]');
+const liftSpan = mkSpan('v2-warn-static');
+if (netliftOut) {
+  netliftOut.parentElement.appendChild(liftSpan);
+  const syncLift = () => {
+    const v = Number(netliftOut.textContent.replace(/[^\d.-]/g, ''));
+    setWarn(liftSpan, Number.isFinite(v) && v < 0, 'No Lift!');
+    netliftOut.style.color = Number.isFinite(v) && v > 500 ? '#c628a4' : '';
+  };
+  new MutationObserver(syncLift).observe(netliftOut, { childList: true, characterData: true, subtree: true });
+  syncLift();
+}
+
 const sync = () => {
   const { id, dyn } = activeDyn();
   // Rectilinear shows only at 100 m and above (Toby 2026-08-17) —

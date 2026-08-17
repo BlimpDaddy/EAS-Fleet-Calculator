@@ -327,10 +327,10 @@ const summaryWarnings = (i, e) => ({
   shape: [...document.querySelectorAll('.v2-warn:not(.v2-warn-static)')]
     .filter((w) => !(w.classList.contains('v2-warn-ve') && getComputedStyle(w).display === 'none'))
     .map((w) => w.title).filter(Boolean),
-  statics: [
-    ...(i.netLiftT <= 0 ? ['Unfliable - net lift <= 0'] : []),
-    ...[...document.querySelectorAll('.v2-warn-static')].map((w) => w.title).filter(Boolean),
-  ],
+  // Statics warnings all come from the page's own icons now ('No
+  // Lift!' etc. — the hardcoded unfliable line retired 2026-08-17;
+  // Toby's rule is strictly negative and the icon owns it).
+  statics: [...document.querySelectorAll('.v2-warn-static')].map((w) => w.title).filter(Boolean),
   dynamics: [...document.querySelectorAll('.dyn-stat-warnings .dyn-warning')]
     .map((w) => w.title).filter(Boolean),
   fleet: isOperating() ? [] : ['Fleet idle - not operating'],
