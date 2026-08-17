@@ -525,29 +525,36 @@ for (const sel of ['[data-ship="netlift-output"]', '[data-fleet="airSpeed-output
 // fly (pre-existing bundle behaviour). Rewrite it to N/A whenever it goes negative —
 // the rewrite re-fires the observer, which then parses "N/A" as NaN and stops, so
 // there's no loop.
-// First-load UX: Toby wants average trip distance to START at 0 like the other
-// fleet inputs. V1's boot validator FORBIDS initial state 0 (its assertion
-// "initial average distance must equal its configured max" caused the
-// 2026-08-10 black-page incident) — but runtime 0 is perfectly legal: the
-// slider's own minimum is 0 and every derived formula zero-guards. So V1 boots
-// at its mandated 12000, and the moment its first render writes the output
-// span, the slider is pushed to 0 through V1's own input pathway. One-shot:
-// after that the slider is entirely the user's (and the ideal button's).
+// First-load trip distance = THE 9,000 km REFERENCE (Toby ruling 2026-08-17,
+// supersedes the v1.6 zero-boot for THIS slider: "it's supposed to boot at
+// 9000km so first view it shows a nice long pink line most across the
+// ocean"). 9,000 km is the same reference journey the DYNAMIC page's fuel
+// cells quote (REF_TRIP alignment, 2026-08-17) — both pages now greet with
+// one number. V1's boot validator FORBIDS changing its initial state (its
+// assertion "initial average distance must equal its configured max" caused
+// the 2026-08-10 black-page incident), so V1 boots at its mandated 12,000 and
+// the moment its first render writes the output span, the slider is pushed to
+// 9,000 through V1's own input pathway. One-shot: after that the slider is
+// entirely the user's (and the ideal button's).
+// MECHANICS (measured live 2026-08-17): view→km is 1,000 + 110×view over
+// view 0–100 (bundle-internal; the 1,000 floor stands), so exactly 9,000
+// needs view 8000/110 = 72.72… — a fractional view the slider's default
+// step-1 would clamp to 73 (= 9,030). step="any" is set for the one push and
+// removed after, so user drags stay integer. The globe's trip arc is drawn
+// from the view fraction (view/100): the boot arc is the ruled long line.
 {
   const distOut = $('[data-fleet="averagetripdistance-output"]');
   const distSlider = $('[data-fleet="averagedistance"]');
   if (distOut && distSlider) {
-    const zeroOnce = new MutationObserver(() => {
+    const bootRefOnce = new MutationObserver(() => {
       if (distOut.textContent.trim() === '') return; // not V1's render yet
-      zeroOnce.disconnect();
-      // V1's fleet sliders are 0-100 VIEW units (no min/max attrs; V1 maps to
-      // real values internally). View 0 = the domain minimum, which the bundle
-      // patch floors at 1,000 km — distance is deliberately never zero: an
-      // average trip below ~1,000 km isn't a scenario the calculator argues.
-      distSlider.value = '0';
+      bootRefOnce.disconnect();
+      distSlider.setAttribute('step', 'any');
+      distSlider.value = String(8000 / 110); // view for exactly 9,000 km
       distSlider.dispatchEvent(new Event('input', { bubbles: true }));
+      distSlider.removeAttribute('step');
     });
-    zeroOnce.observe(distOut, { childList: true, characterData: true, subtree: true });
+    bootRefOnce.observe(distOut, { childList: true, characterData: true, subtree: true });
   }
 }
 
