@@ -374,9 +374,15 @@ console.log('\n== M6 STAGE 2: per-shape inheritance (r8 #4 reset, gated systems,
   };
   const wmBare = estimateCd(wmSeam.proxyRecord, wmGeometry, 100);
   const wmTailed = applyGenericTail(wmBare);
-  check('records carry the authored NATURAL attitudes (cigar +Z pointed-first, bottle -Y cap-first, wm +Y)',
-    PRESET_DYNAMICS.bottle.defaultAxis === '-Y' && PRESET_DYNAMICS.cigar.defaultAxis === '+Z'
+  // Cigar amended 2026-08-17: the record now derives from the RATIFIED
+  // aero hull (lab/cigar-aerohull-candidate.obj) in the hull's own
+  // frame — defaultAxis '+X' (nose leading, tapered stern trailing),
+  // superseding the corpus-hull '+Z' attitude.
+  check('records carry the authored NATURAL attitudes (cigar +X aero-hull frame, bottle -Y cap-first, wm +Y)',
+    PRESET_DYNAMICS.bottle.defaultAxis === '-Y' && PRESET_DYNAMICS.cigar.defaultAxis === '+X'
     && wmAxis === '+Y' && PRESET_DYNAMICS.sunship.defaultAxis === '+Z');
+  check('cigar record derives from the ratified aero hull (displayMesh/aeroHullMesh doctrine)',
+    /aero-hull/.test(PRESET_DYNAMICS.cigar.source));
 
   // Shape change RESETS Cd (r8 #4) — even over a hand-set user value —
   // and the systems arrive OFF: they are the Sunship's designs (Toby

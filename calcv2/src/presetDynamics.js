@@ -5,7 +5,7 @@
  *
  * Raw values are MESH UNITS — scale at page time via scaleGeometryRecord()
  * (dynamicsGeometry.js) with the inherited length. Proxies are scale-free.
- * Generated 2026-08-16.
+ * Generated 2026-08-17.
  */
 export const PRESET_DYNAMICS = {
   "sunship": {
@@ -13,6 +13,7 @@ export const PRESET_DYNAMICS = {
     "source": "corpus-obj(Sunship.obj)",
     "glbSha256": "5bb5e708aebae75e466759bfb6dcf2425ad1d7940d7bdb055bbf723f0b16b414",
     "objSha256": "dee482af0af99bd01cb5002cae61c969dba114a9b2ca67e336e8a00fd18d3e64",
+    "aeroObj": null,
     "defaultAxis": "+Z",
     "raw": {
       "extents": [
@@ -110,99 +111,100 @@ export const PRESET_DYNAMICS = {
   },
   "cigar": {
     "id": "cigar",
-    "source": "convex-hull(corpus cigar.obj)",
+    "source": "aero-hull(lab/cigar-aerohull-candidate.obj)",
     "glbSha256": "55f41a9bc09c575b59ea3a3e0e6c59fe9516699e7751ab5ca7fd32a681d7063d",
-    "objSha256": "36b34666d9b650c5574b36fe6904fd6dfc0b98db11f733d15757b432bd5567f8",
-    "defaultAxis": "+Z",
+    "objSha256": "2a2c7a33c50958b589c543d29b4b8f6e4c802ee81b6196638c946c4f12e1cf77",
+    "aeroObj": "lab/cigar-aerohull-candidate.obj",
+    "defaultAxis": "+X",
     "raw": {
       "extents": [
-        0.27163,
-        0.27163,
-        1.985066
+        100,
+        20,
+        20
       ],
       "frontalRaw": {
-        "X": 0.44793646503350004,
-        "Y": 0.4371198930565,
-        "Z": 0.04203625950650001
+        "X": 313.2628413643999,
+        "Y": 1607.8071375000002,
+        "Z": 1607.8071375000004
       },
-      "wettedRaw": 1.3788501972940128,
-      "hullRaw": 1.3788501972940128,
-      "meshRaw": 1.3788501972940128,
+      "wettedRaw": 5189.779550503826,
+      "hullRaw": 5189.779550503804,
+      "meshRaw": 5189.779550503826,
       "wettedSource": "mesh",
-      "volumeRaw": 0.06878516080719284,
+      "volumeRaw": 22705.689496844116,
       "volumeSource": "convex-envelope",
       "warnings": []
     },
     "proxies": {
       "+X": {
-        "proxy": 0.9813074929299013,
-        "cls": "pinned",
+        "proxy": 0.04487323070020768,
+        "cls": "rounded",
         "triggers": {
-          "softFore": 0.03704867783188853,
-          "softAft": 0.9813074929299013,
-          "terminalBaseFrac": 0.01169993117687543,
+          "softFore": 0.0010662643714619195,
+          "softAft": 0.04487323070020768,
+          "terminalBaseFrac": 0.00019924287706714485,
           "rawRatio": 1,
-          "shoulder": 0.3535815585138546
+          "shoulder": 0.027498791473955293
         },
         "oddFraction": 0
       },
       "-X": {
-        "proxy": 0.9813074929299009,
-        "cls": "pinned",
+        "proxy": 0.6681134713125567,
+        "cls": "rounded",
         "triggers": {
-          "softFore": 0.03704867783188853,
-          "softAft": 0.9813074929299009,
-          "terminalBaseFrac": 0.012044046799724708,
+          "softFore": 0,
+          "softAft": 0.6681134713125567,
+          "terminalBaseFrac": 0.03187886033074318,
           "rawRatio": 1,
-          "shoulder": 0.3483622486177446
+          "shoulder": 0.1277061831367696
         },
         "oddFraction": 0
       },
       "+Y": {
-        "proxy": 0.9901724708689986,
+        "proxy": 0.9341083496905879,
         "cls": "pinned",
         "triggers": {
-          "softFore": 0.026583921575204093,
-          "softAft": 0.9901724708689986,
-          "terminalBaseFrac": 0.013732394366197184,
+          "softFore": 0.14466510109266506,
+          "softAft": 0.9341083496905879,
+          "terminalBaseFrac": 0.06799417192812045,
           "rawRatio": 1,
-          "shoulder": 0.7321792036676285
+          "shoulder": 0.513165491557998
         },
         "oddFraction": 0
       },
       "-Y": {
-        "proxy": 0.9888302611430345,
+        "proxy": 0.9341083496905879,
         "cls": "pinned",
         "triggers": {
-          "softFore": 0.06562008914423614,
-          "softAft": 0.9888302611430345,
-          "terminalBaseFrac": 0.009507042253521126,
+          "softFore": 0.14466510109266506,
+          "softAft": 0.9341083496905879,
+          "terminalBaseFrac": 0.06799417192812045,
           "rawRatio": 1,
-          "shoulder": 0.5580215010984866
+          "shoulder": 0.513165491557998
         },
         "oddFraction": 0
       },
       "+Z": {
-        "proxy": 0.4988402750475998,
+        "proxy": 0.9341083496905879,
         "cls": "pinned",
         "triggers": {
-          "softFore": 0.4988402750475998,
-          "softAft": 0.25263858918862236,
-          "terminalBaseFrac": 0.015549215406562055,
-          "rawRatio": 1.000000000170923,
-          "shoulder": 0.09157981740145307
+          "softFore": 0.14466510109266506,
+          "softAft": 0.9341083496905879,
+          "terminalBaseFrac": 0.06799417192812045,
+          "rawRatio": 1,
+          "shoulder": 0.513165491557998
         },
         "oddFraction": 0
       },
       "-Z": {
-        "proxy": 0.9244034132504214,
+        "proxy": 0.9341083496905879,
         "cls": "pinned",
         "triggers": {
-          "softFore": 0,
-          "softAft": 0.9244034132504214,
-          "terminalBaseFrac": 0.9243937232524965,
-          "rawRatio": 1.0000001567453973,
-          "shoulder": 0.01933153558905885
+          "softFore": 0.14466510109266506,
+          "softAft": 0.9341083496905879,
+          "terminalBaseFrac": 0.06799417192812045,
+          "rawRatio": 1,
+          "shoulder": 0.513165491557998
         },
         "oddFraction": 0
       }
@@ -213,6 +215,7 @@ export const PRESET_DYNAMICS = {
     "source": "convex-hull(corpus Bottle.obj)",
     "glbSha256": "f26de3ede2304b06b7841a5c4d8320f17640ad2a83c6057ed2ca4ad2a169a1b8",
     "objSha256": "05bc2f2e391b9af2e451a8bda769a9c3c6b515b996c26a2d40c2e96265147e48",
+    "aeroObj": null,
     "defaultAxis": "-Y",
     "raw": {
       "extents": [
@@ -313,6 +316,7 @@ export const PRESET_DYNAMICS = {
     "source": "convex-hull(corpus car.obj)",
     "glbSha256": "bba8628ed72796e29886f1e4569ecbf6387efb435274df842e959d75275efa10",
     "objSha256": "8003e51077fee54477d161150351a29c9a6cf8ee6f4d448b88e7b1fa23f50028",
+    "aeroObj": null,
     "defaultAxis": "+Z",
     "raw": {
       "extents": [
@@ -413,6 +417,7 @@ export const PRESET_DYNAMICS = {
     "source": "corpus-obj(washingmachine.obj)",
     "glbSha256": "da4c6c7d356067fc28588857bd1839b83c2a135d0df18f56f588b89b77be7824",
     "objSha256": "7ebc8c97e8e54e6090756fef6f3697cdab6c5c50e60be487adaccd1d1da07020",
+    "aeroObj": null,
     "defaultAxis": "+Y",
     "raw": {
       "extents": [
@@ -513,6 +518,7 @@ export const PRESET_DYNAMICS = {
     "source": "convex-hull(corpus Aerosmena.obj)",
     "glbSha256": "9e42adc8b4a90196415e459f2bc5ab2e3caf1299e01eca6b1673a8d6ff6f8dbf",
     "objSha256": "d5140eff3e51cfe3d7fd155866025f66261f3504b25e3896922f414b80d0f035",
+    "aeroObj": null,
     "defaultAxis": "+Z",
     "raw": {
       "extents": [
