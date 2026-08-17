@@ -418,16 +418,19 @@ export function renderModel(contract) {
   }
   const savingPct = Math.round(contract.selectedS * 100);
   // Warnings-only statuses, MINIMAL WORDS (rulings 2026-08-13/15).
+  // `kind` added 2026-08-17 (Toby placement refinement): the page
+  // anchors each icon over the result it warns about — 'fuel' over
+  // LH2 + Storage, everything else ('aero') over Drag.
   const warnings = [];
-  if (contract.aerodynamicStatus === 'ORANGE') warnings.push({ level: 'orange', text: 'Inefficient dynamics' });
-  if (contract.aerodynamicStatus === 'RED') warnings.push({ level: 'red', text: 'Critically inefficient' });
-  if (contract.fuelMassStatus === 'ORANGE') warnings.push({ level: 'orange', text: 'High fuel weight' });
-  if (contract.fuelMassStatus === 'RED') warnings.push({ level: 'red', text: 'Critical fuel weight' });
+  if (contract.aerodynamicStatus === 'ORANGE') warnings.push({ level: 'orange', kind: 'aero', text: 'Inefficient dynamics' });
+  if (contract.aerodynamicStatus === 'RED') warnings.push({ level: 'red', kind: 'aero', text: 'Critically inefficient' });
+  if (contract.fuelMassStatus === 'ORANGE') warnings.push({ level: 'orange', kind: 'fuel', text: 'High fuel weight' });
+  if (contract.fuelMassStatus === 'RED') warnings.push({ level: 'red', kind: 'fuel', text: 'Critical fuel weight' });
   for (const w of contract.warnings) {
-    if (w.startsWith('cd-below-friction-estimate')) warnings.push({ level: 'red', text: 'Cd below friction floor' });
-    else if (w.startsWith('below-screening-floor')) warnings.push({ level: 'red', text: 'Below screening floor' });
+    if (w.startsWith('cd-below-friction-estimate')) warnings.push({ level: 'red', kind: 'aero', text: 'Cd below friction floor' });
+    else if (w.startsWith('below-screening-floor')) warnings.push({ level: 'red', kind: 'aero', text: 'Below screening floor' });
     else if (w.startsWith('wetted-') || w.startsWith('no-faces')) { /* geometry-source notes stay contract-side */ }
-    else warnings.push({ level: 'orange', text: w });
+    else warnings.push({ level: 'orange', kind: 'aero', text: w });
   }
   const est = contract.estimate;
   const marker = est && est.status === 'ok' && Number.isFinite(est.cdEstimate)

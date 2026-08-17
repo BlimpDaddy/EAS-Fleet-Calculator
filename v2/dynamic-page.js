@@ -188,7 +188,7 @@ style.textContent = `
      setting (M3 display amendment 1). */
   .dyn-power-tag { color: var(--color-accent-1); margin-left: 0.4em; }
   /* Warnings-only status area: minimal words, silence is good news. */
-  .dyn-warnings { display: flex; gap: var(--space-base); flex-wrap: wrap; margin-top: 0.6rem; }
+  .dyn-stat-warnings { display: flex; gap: 6px; justify-content: center; }
   .dyn-warning { font-size: var(--font-base); font-weight: 600; }
   .dyn-warning.red { color: var(--color-critical, #ff2a2a); }
   .dyn-warning.orange { color: var(--color-accent-2, #ff9900); }
@@ -387,6 +387,7 @@ const resultsRow = document.createElement('div');
 resultsRow.className = 'dyn-results-row';
 
 const outCells = new Map();
+const warnCells = new Map(); // 'aero' | 'fuel' -> per-stat warning anchor
 function statBlock(label) {
   const block = document.createElement('div');
   block.className = 'dyn-stat';
@@ -413,6 +414,16 @@ function statBlock(label) {
   // THE key result reads EAS berry (Toby ruling 2026-08-17): the fuel
   // system total is what the page exists to compute.
   if (label.startsWith('LH2 + Storage')) d.classList.add('dyn-key-result');
+  // Warning anchors (Toby placement refinement 2026-08-17, supersedes
+  // beside-the-title): each ⚠ floats over the result it warns about —
+  // aero warnings over Drag (bigger), fuel warnings over the berry
+  // LH2 + Storage. Absolutely positioned: zero height impact holds.
+  if (label === 'Drag' || label.startsWith('LH2 + Storage')) {
+    const wa = document.createElement('div');
+    wa.className = `dyn-stat-warnings ${label === 'Drag' ? 'aero' : 'fuel'}`;
+    block.appendChild(wa);
+    warnCells.set(label === 'Drag' ? 'aero' : 'fuel', wa);
+  }
   resultsRow.appendChild(block);
   outCells.set(label, d);
 }
@@ -423,12 +434,43 @@ for (const label of [
   'LH2 weight (9,000 km)', 'LH2 + Storage (9,000 km)', // 9,000 km ruling 2026-08-17 — MUST match dynamic-state's row keys exactly (a mismatch crashes paint and kills the page's nav interception)
 ]) statBlock(label);
 
-const warningsBox = document.createElement('div');
-warningsBox.className = 'dyn-warnings';
-resultsPanel.append(resultsHeading, resultsRow, warningsBox);
+// Warnings render into the per-stat anchors (warnCells) — the old
+// single warnings box beside the title retired 2026-08-17 (Toby).
+resultsPanel.append(resultsHeading, resultsRow);
 
 section.append(controlsPanel, visualPanel, resultsPanel);
 $('[data-section="fleet"]').after(section);
+
+// ------------------------------------------------------- airspeed bridge
+/**
+ * AIRSPEED OWNERSHIP (Toby ruling 2026-08-17): airspeed lives on
+ * DYNAMIC now — the Fleet page's own airspeed control is RETIRED
+ * (hidden adapter-side; the V1 bundle is untouched and still owns the
+ * value and the view→km/h mapping). DYNAMIC pushes its speed through
+ * V1's OWN input pathway (set view units, dispatch 'input' — the exact
+ * bridge the M3 adapter probe proved), so FLEET always computes at the
+ * ship's actual speed. Never visiting DYNAMIC leaves 0 → Fleet's own
+ * zero operating gate shows its N/A state (Toby's stated expectation).
+ * Mapping verified live 2026-08-17: V1's slider is 0–100 VIEW units =
+ * 0–200 km/h linear (view = kmh / 2); Dynamic's dial tops at 140 →
+ * view 70, always in range. The sync compares against the DOM (the
+ * DOM is the memo) so paints never thrash the bundle — and V1's own
+ * fleet preset button, which also writes airspeed (100 km/h), gets a
+ * click listener that re-asserts DYNAMIC's speed a macrotask later:
+ * ownership survives every mutation path the bundle has.
+ */
+const fleetAirspeedSlider = $('[data-fleet="airSpeed"]');
+const fleetAirspeedBox = fleetAirspeedSlider && fleetAirspeedSlider.closest('.fleet-control');
+if (fleetAirspeedBox) fleetAirspeedBox.style.display = 'none';
+function syncFleetAirspeed(kmh) {
+  if (!fleetAirspeedSlider || !Number.isFinite(kmh)) return;
+  const view = kmh / 2;
+  if (Number(fleetAirspeedSlider.value) === view) return;
+  fleetAirspeedSlider.value = view;
+  fleetAirspeedSlider.dispatchEvent(new Event('input', { bubbles: true }));
+}
+const fleetPresetBtn = $('.section-fleet .fleet-control-preset');
+if (fleetPresetBtn) fleetPresetBtn.addEventListener('click', () => setTimeout(() => syncFleetAirspeed(state.airspeedKmh), 0));
 
 // ---------------------------------------------------------------- render
 
@@ -541,17 +583,26 @@ function paint() {
       cell.textContent = value;
     }
   }
-  warningsBox.replaceChildren(...rm.warnings.map((w) => {
+  // Compact form (Toby ruling 2026-08-17): warnings render as ⚠ icons
+  // only — full text on hover (native tooltip). Placement refinement
+  // same day (supersedes beside-the-title): each icon floats over the
+  // result it warns about — kind 'fuel' → the LH2 + Storage anchor,
+  // everything else → the Drag anchor. Absolute positioning keeps the
+  // zero-height-impact ruling intact.
+  const toIcon = (w) => {
     const div = document.createElement('div');
-    // Compact form (Toby ruling 2026-08-17): warnings render as ⚠
-    // icons only — full text on hover (native tooltip) — parked in
-    // the dead space beside the Results title so they never change
-    // the section's height.
     div.className = `dyn-warning ${w.level}`;
     div.textContent = '⚠';
     div.title = w.text;
     return div;
-  }));
+  };
+  warnCells.get('aero').replaceChildren(...rm.warnings.filter((w) => w.kind !== 'fuel').map(toIcon));
+  warnCells.get('fuel').replaceChildren(...rm.warnings.filter((w) => w.kind === 'fuel').map(toIcon));
+
+  // Airspeed bridge (ruling 2026-08-17): every paint re-declares the
+  // ship's speed to FLEET through V1's own pathway (no-op unless it
+  // actually changed — the DOM comparison inside is the memo).
+  syncFleetAirspeed(state.airspeedKmh);
 }
 
 speedCtl.slider.addEventListener('input', () => { state = setInput(state, 'airspeedKmh', Number(speedCtl.slider.value)); paint(); });
