@@ -1,0 +1,94 @@
+/**
+ * GEOMETRY WARNINGS (Toby, 2026-08-17, two rulings squeezed pre-1.88):
+ *
+ * 1. RECTILINEAR — statics page, orange, after the metres output:
+ *    "Rectilinear Detected. Poor Structural Scaling". Test: BOX-FILL
+ *    fraction (volume ÷ bounding box) ≥ 0.75 — a brick fills its box,
+ *    a hull doesn't. Measured: washingmachine 0.972, car 0.819 flag;
+ *    everything else ≤ 0.568. (The 90°-dihedral scan proper is the
+ *    backlogged structural screen; box-fill is its honest cheap proxy
+ *    — the shoulder trigger was tried and fires too broadly.)
+ *
+ * 2. POOR DIRECTIONALITY — shape page, orange, after the shape name:
+ *    "Poor 'Inherent Directionality' Detected". Test: any two of the
+ *    three pairwise extent ratios equal (±2%) AND both < 3 — a square
+ *    cross-section with nothing long enough to point somewhere. The
+ *    cigar (5/5) and bottle (3.5/3.5) escape via the <3 condition by
+ *    construction of the rule; the Sunship escapes on tolerance
+ *    (1.21 vs 1.27). RIGGED per Toby: washingmachine always flags —
+ *    its lip breaks the exact-box ratios; model update later.
+ *
+ * Both spans carry class v2-warn + title, so the fleet Required-line
+ * flags and the copy-summary collectors pick them up with zero extra
+ * wiring (title emptied when inactive — collectors skip untitled).
+ */
+import { PRESET_DYNAMICS } from '/calcv2/src/presetDynamics.js';
+
+const $ = (s) => document.querySelector(s);
+const RECT_FILL = 0.75, RATIO_TOL = 0.02, RATIO_MAX = 3;
+const RECT_TEXT = 'Rectilinear Detected. Poor Structural Scaling';
+const DIR_TEXT = "Poor 'Inherent Directionality' Detected";
+
+const activeDyn = () => {
+  const s = window.__v2ActiveShape;
+  if (!s) return { id: 'sunship', dyn: PRESET_DYNAMICS.sunship };
+  return s.kind === 'preset'
+    ? { id: s.id, dyn: PRESET_DYNAMICS[s.id] }
+    : { id: null, dyn: s.dynamics };
+};
+const isRect = (d) => {
+  if (!d || !d.raw || !Number.isFinite(d.raw.volumeRaw)) return false;
+  const [x, y, z] = d.raw.extents;
+  return d.raw.volumeRaw / (x * y * z) >= RECT_FILL;
+};
+const poorDir = (d, id) => {
+  if (id === 'washingmachine') return true; // RIGGED (see header)
+  if (!d || !d.raw) return false;
+  const s = [...d.raw.extents].sort((a, b) => b - a);
+  const r = [s[0] / s[1], s[0] / s[2], s[1] / s[2]];
+  for (let i = 0; i < 3; i++) for (let j = i + 1; j < 3; j++) {
+    if (Math.abs(r[i] - r[j]) / r[j] <= RATIO_TOL && r[i] < RATIO_MAX && r[j] < RATIO_MAX) return true;
+  }
+  return false;
+};
+
+const style = document.createElement('style');
+style.textContent = `
+  .v2-warn-inlinetext {
+    color: #ff9900; font-size: 12px; letter-spacing: .02em;
+    margin-left: 8px; white-space: nowrap; cursor: help;
+  }
+  /* the metres row shrinks a touch when flagged so the line fits */
+  .ship-control-output:has(.v2-warn-static:not(:empty)) { font-size: 20px; }
+`;
+document.head.appendChild(style);
+
+const mkSpan = (extraClass) => {
+  const s = document.createElement('span');
+  s.className = `v2-warn v2-warn-inlinetext ${extraClass}`;
+  return s;
+};
+const setWarn = (span, on, text) => {
+  span.textContent = on ? `⚠ ${text}` : '';
+  span.title = on ? text : '';
+  span.style.display = on ? '' : 'none';
+};
+
+// Statics: after the metres output value.
+const lengthOut = $('[data-ship="length-output"]');
+const rectSpan = mkSpan('v2-warn-static');
+if (lengthOut) lengthOut.closest('.ship-control-output')?.appendChild(rectSpan);
+
+// Shape page: after the shape name cell (sibling — V1 rewrites the
+// cell's own text on shape change).
+const nameCell = $('[data-shape="shape"]');
+const dirSpan = mkSpan('v2-warn-dir');
+if (nameCell) nameCell.insertAdjacentElement('afterend', dirSpan);
+
+const sync = () => {
+  const { id, dyn } = activeDyn();
+  setWarn(rectSpan, isRect(dyn), RECT_TEXT);
+  setWarn(dirSpan, poorDir(dyn, id), DIR_TEXT);
+};
+window.addEventListener('v2-shape-change', sync);
+sync();

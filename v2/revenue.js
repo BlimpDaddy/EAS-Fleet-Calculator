@@ -324,10 +324,13 @@ const EAS_VERSION = '1.8';
  * refined it'll be harder and harder for the dodgy shapes to get
  * through"). Sources are the adapters' own live DOM + the model. */
 const summaryWarnings = (i, e) => ({
-  shape: [...document.querySelectorAll('.v2-warn')]
+  shape: [...document.querySelectorAll('.v2-warn:not(.v2-warn-static)')]
     .filter((w) => !(w.classList.contains('v2-warn-ve') && getComputedStyle(w).display === 'none'))
     .map((w) => w.title).filter(Boolean),
-  statics: i.netLiftT <= 0 ? ['Unfliable - net lift <= 0'] : [],
+  statics: [
+    ...(i.netLiftT <= 0 ? ['Unfliable - net lift <= 0'] : []),
+    ...[...document.querySelectorAll('.v2-warn-static')].map((w) => w.title).filter(Boolean),
+  ],
   dynamics: [...document.querySelectorAll('.dyn-stat-warnings .dyn-warning')]
     .map((w) => w.title).filter(Boolean),
   fleet: isOperating() ? [] : ['Fleet idle - not operating'],
