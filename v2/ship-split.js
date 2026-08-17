@@ -140,7 +140,8 @@ style.textContent = `
      never missed or forgotten. Knobs: the warm colour, the 12px, the
      3s, the .45s stagger, the .85 peak opacity. */
   .ship-ribbon .chev-soft {
-    font-size: 12px; font-weight: 700; color: #ff7300; line-height: 1;
+    font-size: 20px; /* same size as the mains (Toby, 2026-08-17, on sight) */
+    font-weight: 700; color: #ff7300; line-height: 1;
     text-shadow: 0 0 6px rgba(0,0,0,.9); opacity: 0;
     animation: ship-chev-breathe 3s ease-in-out infinite alternate;
   }
