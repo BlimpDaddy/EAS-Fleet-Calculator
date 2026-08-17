@@ -46,7 +46,8 @@ style.textContent = `
      be big and the blocks close (Toby, 2026-08-17). */
   .section-dynamic .dyn-results-row {
     flex-wrap: nowrap; display: flex; gap: 26px; align-items: end;
-    justify-content: center; /* squeezed cluster, not full-width spread */
+    justify-content: space-between; /* content-hugging blocks, edge to edge — no dead margins */
+    padding: 0 6px;
   }
   /* Blocks hug their content (no stretched empty columns — Toby's
      red circles, 2026-08-17); the row spreads edge to edge and the
@@ -57,7 +58,16 @@ style.textContent = `
     white-space: nowrap;
   }
   .section-dynamic .dyn-hdr-sub { font-size: 12px; color: #777; }
-  .section-dynamic .fleet-results-data { font-size: 30px; white-space: nowrap; }
+  .section-dynamic .fleet-results-data { font-size: 32px; white-space: nowrap; }
+  /* WIDER ribbons (Toby, 2026-08-17: "slightly more obnoxious") — the
+     page content steps clear of them; the statics page's ribbon grows
+     widest since no text competes there. */
+  .section-dynamic { padding-left: 52px; box-sizing: border-box; }
+  [data-section="ship"] { padding-right: 64px; box-sizing: border-box; }
+  .section-dynamic .ship-ribbon.rib-left { width: 44px; }
+  .section-dynamic .ship-ribbon.rib-left:hover { width: 58px; }
+  [data-section="ship"] .ship-ribbon.rib-right { width: 56px; font-size: 14px; }
+  [data-section="ship"] .ship-ribbon.rib-right:hover { width: 72px; }
   .section-dynamic .dyn-key-result { color: #c628a4; font-weight: 700; }
   .ship-chooser {
     position: absolute; inset: 0; z-index: 40; display: flex;
