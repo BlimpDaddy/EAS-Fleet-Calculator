@@ -159,13 +159,19 @@ style.textContent = `
   }
   .ship-logo-half svg { display: block; width: 100%; height: auto; }
   .ship-logo-half.on { color: #c628a4; }
-  /* The nav anchor is a TALL line box (58px) with the glyphs centred
-     (~22–42), so the halves anchor to the BOX CENTRE with glyph-hugging
-     offsets — 'above the box' was above the viewport (first-cut bug). */
-  .ship-half-top { top: calc(50% - 25px); transform: translateX(calc(-50% + 5px)); }
-  .ship-half-bottom { top: calc(50% + 14px); transform: translateX(calc(-50% - 5px)); }
+  /* OPENED ORBIT (Toby positioning ruling 2026-08-17): the halves
+     spread to the word's ENDS — top half over/slightly PAST the p,
+     bottom half over/slightly BEFORE the S — and hug vertically: the
+     top swoosh sits fully in the page (small gap above), its bottom
+     edge near the i-dot line; the bottom swoosh tucks just under the
+     S's baseline. Measured against the real 48px glyphs
+     (S 496–522 · p 555–579 · anchor centre 537 · i-dot ≈ y12):
+     +36px/−32px from centre, tops at 50%∓28/+15. The mode word moves
+     BELOW the anchor, aligned with the word start. */
+  .ship-half-top { top: calc(50% - 28px); transform: translateX(calc(-50% + 36px)); }
+  .ship-half-bottom { top: calc(50% + 15px); transform: translateX(calc(-50% - 32px)); }
   .ship-mode-word {
-    position: absolute; top: calc(50% + 15px); left: calc(50% + 20px);
+    position: absolute; top: calc(100% + 2px); left: 2px;
     font-size: 11px; letter-spacing: .25em; color: #eee; font-weight: 700;
     white-space: nowrap; pointer-events: none;
   }
