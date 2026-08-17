@@ -145,7 +145,12 @@ export const TANKAGE_FACTOR = 5;
  *        only this screen uses a distance, and it is labelled.
  * REPLACE WHEN: STATIC lands (budgets) / Toby retunes (RED line).
  */
-export const REF_TRIP_KM = 10000;
+// 10,000 → 9,000 (Toby ruling 2026-08-17): matched to the FLEET
+// page's default trip so the two pages quote the same reference
+// journey — pure relabel-and-rescale of the screening cells (the
+// contract stays rate-based, §3.6); fuel-status thresholds
+// deliberately UNCHANGED per the same ruling.
+export const REF_TRIP_KM = 9000;
 export const GROSS_LIFT_T_300 = 5600;
 export const STRUCTURE_T_300 = 500;
 export const FUEL_GREEN_MAX_T_300 = 500;   // relaxed from 350 (Toby, 2026-08-13; no annotation)

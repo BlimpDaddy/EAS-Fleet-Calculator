@@ -1,4 +1,4 @@
-/**
+﻿/**
  * DYNAMIC page state — pure, Node-tested, DOM-free (M3, DYNAMIC-SPEC §14;
  * M6 estimator amendments 2026-08-16; M6 STAGE 2: per-shape inheritance).
  *
@@ -411,7 +411,7 @@ export function renderModel(contract) {
         ['Frontal area', DASH], ['Wetted area', DASH], ['Drag', DASH],
         ['Drag area (Cd·A)', DASH], ['Cd (V^⅔ basis)', DASH],
         ['Propulsion power', DASH],
-        ['LH2 weight (10,000 km)', DASH], ['LH2 + Storage (10,000 km)', DASH],
+        ['LH2 weight (9,000 km)', DASH], ['LH2 + Storage (9,000 km)', DASH],
       ],
       powerTag: '', warnings: [], marker: null,
     };
@@ -451,8 +451,8 @@ export function renderModel(contract) {
       ['Drag area (Cd·A)', fmt.m2(contract.dragAreaM2)],
       ['Cd (V^⅔ basis)', fmt.cd3(contract.cdVolumetric)],
       ['Propulsion power', fmt.mw(contract.powerMW)],
-      ['LH2 weight (10,000 km)', fmt.t1(contract.refTripFuelT)],
-      ['LH2 + Storage (10,000 km)', fmt.t0(contract.refTripFuelSystemT)],
+      ['LH2 weight (9,000 km)', fmt.t1(contract.refTripFuelT)],
+      ['LH2 + Storage (9,000 km)', fmt.t0(contract.refTripFuelSystemT)],
     ],
     powerTag: savingPct > 0 ? `(−${savingPct}%)` : '',
     warnings,

@@ -539,8 +539,13 @@ function paint() {
   }
   warningsBox.replaceChildren(...rm.warnings.map((w) => {
     const div = document.createElement('div');
+    // Compact form (Toby ruling 2026-08-17): warnings render as ⚠
+    // icons only — full text on hover (native tooltip) — parked in
+    // the dead space beside the Results title so they never change
+    // the section's height.
     div.className = `dyn-warning ${w.level}`;
-    div.textContent = w.text;
+    div.textContent = '⚠';
+    div.title = w.text;
     return div;
   }));
 }

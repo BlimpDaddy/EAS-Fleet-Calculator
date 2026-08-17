@@ -76,6 +76,15 @@ style.textContent = `
   [data-section="ship"] .ship-ribbon.rib-right { width: 56px; font-size: 23px; }
   [data-section="ship"] .ship-ribbon.rib-right:hover { width: 72px; }
   .section-dynamic .dyn-key-result { color: #c628a4; font-weight: 700; }
+  /* Warnings as hover icons beside the Results title — zero height
+     impact (Toby ruling 2026-08-17). */
+  .section-dynamic .dyn-warnings {
+    position: absolute; right: 18px; transform: translateY(-34px);
+    display: flex; gap: 8px; height: 0; overflow: visible;
+  }
+  .section-dynamic .dyn-warning { font-size: 20px; cursor: help; line-height: 1; }
+  .section-dynamic .dyn-warning.orange { color: #ff9900; }
+  .section-dynamic .dyn-warning.red { color: #ff2a2a; }
   .ship-chooser {
     position: absolute; inset: 0; z-index: 40; display: flex;
     flex-direction: column; gap: 18px; align-items: center;
