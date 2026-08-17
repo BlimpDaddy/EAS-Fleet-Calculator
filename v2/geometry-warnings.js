@@ -55,11 +55,13 @@ const poorDir = (d, id) => {
 // ICON-ONLY (Toby refinement 2026-08-17): the same amber triangle the
 // shape page uses (shape-upload.js), text on hover only — the long
 // inline text was reflowing boxes.
-const WARN_SVG =
+const warnSvg = (fill, mark) =>
   '<svg viewBox="0 0 24 22" width="0.85em" height="0.85em" aria-label="warning">' +
-  '<path d="M12 1 L23 21 H1 Z" fill="#FF9900"/>' +
-  '<rect x="10.9" y="7.5" width="2.2" height="7" rx="1.1" fill="#111111"/>' +
-  '<circle cx="12" cy="17.5" r="1.4" fill="#111111"/></svg>';
+  `<path d="M12 1 L23 21 H1 Z" fill="${fill}"/>` +
+  `<rect x="10.9" y="7.5" width="2.2" height="7" rx="1.1" fill="${mark}"/>` +
+  `<circle cx="12" cy="17.5" r="1.4" fill="${mark}"/></svg>`;
+const WARN_SVG = warnSvg('#FF9900', '#111111');
+const WARN_SVG_RED = warnSvg('#FF2A2A', '#FFFFFF');
 const style = document.createElement('style');
 style.textContent = '.v2-warn-geom { margin-left: .35em; cursor: help; display: inline-block; line-height: 1; vertical-align: baseline; }';
 document.head.appendChild(style);
@@ -69,8 +71,8 @@ const mkSpan = (extraClass) => {
   s.className = `v2-warn v2-warn-geom ${extraClass}`;
   return s;
 };
-const setWarn = (span, on, text) => {
-  span.innerHTML = on ? WARN_SVG : '';
+const setWarn = (span, on, text, level = 'orange') => {
+  span.innerHTML = on ? (level === 'red' ? WARN_SVG_RED : WARN_SVG) : '';
   span.title = on ? text : '';
   span.style.display = on ? '' : 'none';
 };
@@ -107,7 +109,10 @@ if (netliftOut) {
   const syncLift = () => {
     const v = Number(netliftOut.textContent.replace(/[^\d.-]/g, ''));
     setWarn(liftSpan, Number.isFinite(v) && v < 0, 'No Lift!');
-    netliftOut.style.color = Number.isFinite(v) && v > 500 ? '#c628a4' : '';
+    const berry = Number.isFinite(v) && v > 500 ? '#c628a4' : '';
+    netliftOut.style.color = berry;
+    const unit = document.querySelector('[data-ship="netlift-unit"]');
+    if (unit) unit.style.color = berry; // 'tonnes' goes berry with the number (Toby)
   };
   new MutationObserver(syncLift).observe(netliftOut, { childList: true, characterData: true, subtree: true });
   syncLift();
@@ -115,10 +120,11 @@ if (netliftOut) {
 
 const sync = () => {
   const { id, dyn } = activeDyn();
-  // Rectilinear shows only at 100 m and above (Toby 2026-08-17) —
-  // structural scaling is a big-ship complaint.
+  // Rectilinear severity by size (Toby 2026-08-17): 50–150 m ORANGE,
+  // 150 m+ RED — structural scaling bites harder the bigger the brick
+  // (the car at 300 m earns its red). Below 50 m: silent.
   const metres = Number(String(lengthOut?.textContent ?? '').replace(/[^\d.]/g, ''));
-  setWarn(rectSpan, isRect(dyn) && metres >= 100, RECT_TEXT);
+  setWarn(rectSpan, isRect(dyn) && metres >= 50, RECT_TEXT, metres >= 150 ? 'red' : 'orange');
   setWarn(dirSpan, poorDir(dyn, id), DIR_TEXT);
 };
 window.addEventListener('v2-shape-change', sync);

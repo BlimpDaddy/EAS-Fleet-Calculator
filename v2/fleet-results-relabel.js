@@ -147,6 +147,12 @@ if (box) {
   const reqFlags = document.createElement('span');
   reqFlags.className = 'v2-reqflags';
   reqName.insertAdjacentElement('afterend', reqFlags);
+  // Economics carries the SAME flags (Toby 2026-08-17: "you keep the
+  // warnings on both pages") — anchored on the recap heading.
+  const econFlags = document.createElement('span');
+  econFlags.className = 'v2-reqflags';
+  const econHeading = $('.section-economics .fleet-selected-heading');
+  if (econHeading) econHeading.appendChild(econFlags);
   const flagStyle = document.createElement('style');
   flagStyle.textContent = `
     .v2-reqflags { cursor: help; white-space: nowrap; }
@@ -165,15 +171,13 @@ if (box) {
   document.head.appendChild(flagStyle);
   let pop = null;
   const closePop = () => { if (pop) { pop.remove(); pop = null; } };
-  const syncFlags = () => {
-    closePop();
-    const w = collectWarnings();
-    reqFlags.textContent = '';
+  const renderFlags = (flagsEl, popHolder, w) => {
+    flagsEl.textContent = '';
     if (!w.orange.length && !w.red.length) return;
     const star = document.createElement('span');
     star.className = 'star';
     star.textContent = '*';
-    reqFlags.appendChild(star);
+    flagsEl.appendChild(star);
     const mkIcon = (level, texts) => {
       if (!texts.length) return;
       const s = document.createElement('span');
@@ -193,21 +197,30 @@ if (box) {
           li.textContent = t;
           pop.appendChild(li);
         }
-        const holder = reqSpan.parentElement;
-        holder.style.position = 'relative';
-        holder.appendChild(pop);
+        popHolder.style.position = 'relative';
+        popHolder.appendChild(pop);
       });
-      reqFlags.appendChild(s);
+      flagsEl.appendChild(s);
     };
     mkIcon('orange', w.orange);
     mkIcon('red', w.red);
   };
+  const syncFlags = () => {
+    closePop();
+    const w = collectWarnings();
+    renderFlags(reqFlags, reqSpan.parentElement, w);
+    if (econHeading) renderFlags(econFlags, econHeading, w);
+  };
   document.addEventListener('click', closePop);
-  // Recompute on fleet reveal (V1 toggles the section's inline style).
-  const fleetSection = $('.section-fleet');
-  if (fleetSection) {
-    new MutationObserver(() => setTimeout(syncFlags, 0))
-      .observe(fleetSection, { attributes: true, attributeFilter: ['style'] });
+  // Recompute on fleet OR economics reveal (V1 toggles inline style) —
+  // warning state only changes from other pages, so reveal-time
+  // recompute keeps both flag sets true.
+  for (const sel of ['.section-fleet', '.section-economics']) {
+    const sec = $(sel);
+    if (sec) {
+      new MutationObserver(() => setTimeout(syncFlags, 0))
+        .observe(sec, { attributes: true, attributeFilter: ['style'] });
+    }
   }
 
   /* Average Ton-km → x.x Million (V1's raw span hidden, kept as source). */
