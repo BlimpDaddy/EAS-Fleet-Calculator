@@ -187,12 +187,6 @@ style.textContent = `
     background: #555;
   }
   .ship-mode-dots i.on { background: #c628a4; }
-  .ship-mode-word {
-    position: absolute; top: calc(100% + 4px); left: 50%;
-    transform: translateX(-50%);
-    font-size: 11px; letter-spacing: .25em; color: #eee; font-weight: 700;
-    white-space: nowrap; pointer-events: none;
-  }
   .ship-ribbon.opening { width: 34vw; color: #ff9900; transition: width .35s ease-in, color .2s ease; }
   /* Accordion unfold, now horizontal: the incoming page stretches open
      from the edge it was squished into. */
@@ -260,10 +254,12 @@ function makeRibbon(side, targetKey, targetLabel, nav, enterClass) {
 }
 
 /* Two fat dots at Ship's underline height (statics = first dot, the
- * chooser's order) + the mode word below the anchor. Kept true by
- * syncModeBadge(). (The split-orbit logo-halves experiment lived here
- * for an hour on 2026-08-17 — retired by Toby on sight; see git.) */
-let dotsEl = null, wordEl = null;
+ * chooser's order). Kept true by syncModeBadge(). The tiny mode word
+ * below the dots retired 2026-08-17 (Toby) — the sub-page's own panel
+ * title ('STATICS' / 'DYNAMICS', replacing the redundant 'Current
+ * Properties') does the naming now. (The split-orbit logo-halves
+ * experiment lived here for an hour the same day — see git.) */
+let dotsEl = null;
 function ensureModeBadge() {
   const anchor = navShip();
   if (!anchor || dotsEl) return;
@@ -272,10 +268,6 @@ function ensureModeBadge() {
   dotsEl.className = 'ship-mode-dots';
   dotsEl.append(document.createElement('i'), document.createElement('i'));
   anchor.appendChild(dotsEl);
-  wordEl = document.createElement('span');
-  wordEl.className = 'ship-mode-word';
-  wordEl.style.display = 'none';
-  anchor.appendChild(wordEl);
 }
 function syncModeBadge() {
   if (!dotsEl) return;
@@ -296,10 +288,7 @@ function syncModeBadge() {
   navShip()?.classList.toggle('ship-live', !!(shipRouted || dynShown));
   // The dots are PART OF THE TITLE, at ALL times on ALL pages (Toby
   // final 2026-08-17, reversing the earlier hide-off-ship): both grey
-  // when no sub-page is selected; the live one lights berry. The word
-  // still names only a chosen sub-page.
-  wordEl.style.display = current ? '' : 'none';
-  wordEl.textContent = current ? (current === 'statics' ? 'STATICS' : 'DYNAMICS') : '';
+  // when no sub-page is selected; the live one lights berry.
   const [d1, d2] = dotsEl.querySelectorAll('i');
   d1.classList.toggle('on', current === 'statics');
   d2.classList.toggle('on', current === 'dynamics');

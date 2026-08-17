@@ -274,7 +274,11 @@ const headingContainer = document.createElement('div');
 headingContainer.className = 'fleet-controls-heading-container';
 const controlsHeading = document.createElement('h2');
 controlsHeading.className = 'fleet-controls-heading';
-controlsHeading.textContent = 'Current Properties';
+// Panel title = the sub-page's NAME (Toby ruling 2026-08-17: 'Current
+// Properties' was redundant — the user selected these properties —
+// and the tiny mode word under the nav dots retired with it; the
+// panel title now does the naming, two problems one fix).
+controlsHeading.textContent = 'DYNAMICS';
 const idealBtn = document.createElement('button');
 idealBtn.className = 'fleet-control-preset';
 idealBtn.dataset.v2 = 'dynamic-ideal';
