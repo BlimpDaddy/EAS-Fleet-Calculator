@@ -132,21 +132,24 @@ style.textContent = `
      matching the ribbons' L/R model — each mostly empty space where
      the diagram art (statics curving-air, dynamics L→R flow) will
      live. The order-hint reads left→right now. */
-  /* QUARTERS layout (Toby v3, 2026-08-17): the space reads as a 2×2 —
-     STATICS lives in the TOP-LEFT quarter only, DYNAMICS in the
-     BOTTOM-RIGHT, the other two quarters deliberately blank (the
-     diagonal composition; L/R sides kept). */
+  /* DIAGONAL layout v2 (Toby, 2026-08-17: "STATICS 2/3 of the page
+     weighted on the left... DYNAMICS opposite, mostly on right but
+     over halfway"): a 12-column grid — STATICS spans cols 1–8 (2/3,
+     anchored left) on the top row; DYNAMICS spans cols 5–12 (2/3,
+     anchored right, its left edge crossing the midline) on the
+     bottom row. The overlap region stays blank on each other's row —
+     the diagonal composition, now with longer reach. */
   .ship-chooser {
     position: absolute; inset: 0; z-index: 40; display: grid;
-    grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr;
-    gap: 24px; background: #111;
+    grid-template-columns: repeat(12, 1fr); grid-template-rows: 1fr 1fr;
+    gap: 24px 8px; background: #111;
     padding: 44px 36px 28px;
     box-sizing: border-box;
     transition: transform .45s ease, opacity .45s ease;
   }
   .ship-chooser.swipe-out { transform: translateX(-100%); opacity: 0; pointer-events: none; }
-  .ship-chooser button:nth-of-type(1) { grid-area: 1 / 1; } /* STATICS — top-left */
-  .ship-chooser button:nth-of-type(2) { grid-area: 2 / 2; } /* DYNAMICS — bottom-right */
+  .ship-chooser button:nth-of-type(1) { grid-row: 1; grid-column: 1 / 9; }  /* STATICS — 2/3, left */
+  .ship-chooser button:nth-of-type(2) { grid-row: 2; grid-column: 5 / 13; } /* DYNAMICS — 2/3, right */
   .ship-chooser button {
     background: #191919;
     border: 1px solid #474747; border-radius: 14px; color: #eee;
@@ -406,7 +409,13 @@ function buildChooser(shipSection) {
   const dynamics = mk('≋→', 'DYNAMICS', 'Can it fly? Drag, power, fuel.', () => {
     setMode('dynamics');
     overlay.classList.add('swipe-out');
-    setTimeout(() => { overlay.remove(); navDynamic()?.click(); syncModeBadge(); }, 380);
+    // Navigate FIRST, remove the overlay AFTER (Toby flash catch,
+    // 2026-08-17): removing before routing uncovered the statics
+    // section for a frame. The overlay lives inside the ship section,
+    // so once V1 hides that section the overlay is invisible anyway —
+    // it lingers as the curtain through any routing latency.
+    setTimeout(() => { navDynamic()?.click(); syncModeBadge(); }, 380);
+    setTimeout(() => overlay.remove(), 560);
   });
   overlay.append(hint, statics, dynamics);
   const pos = getComputedStyle(shipSection).position;
