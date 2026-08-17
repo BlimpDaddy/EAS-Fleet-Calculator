@@ -80,6 +80,9 @@ style.textContent = `
   .section-fleet .fleet-control-output { white-space: nowrap; }
   .section-fleet .marketsize-input { width: 2.6em; }
   .section-fleet [data-fleet="marketsize-unit"] { font-size: 14px; }
+  /* 'Trillion' stays value-sized — it's the load-bearing suffix
+     (Toby 2026-08-17); only 'Ton-km / year' rides small. */
+  .section-fleet .fleet-unit-big { font-size: 24px; }
   /* Dynamics: Smart Tail + BLI checkboxes DOUBLED (Toby 2026-08-17)
      — same place, same text, twice the box. */
   .section-dynamic .dyn-toggle-row input[type="checkbox"] { width: 26px; height: 26px; }
@@ -374,6 +377,17 @@ function buildChooser(shipSection) {
 let viaRibbon = false; // ribbon navigations bypass the chooser
 function boot() {
   ensureSwitchers();
+  // 'Trillion' stays value-sized (Toby 2026-08-17): V1's unit label is
+  // one text span, so the word gets its own span — guarded on the
+  // exact expected text so a future V1 label change can't be clobbered.
+  const wpUnit = $('[data-fleet="marketsize-unit"]');
+  if (wpUnit && wpUnit.textContent.trim() === 'Trillion Ton-km / year') {
+    wpUnit.textContent = '';
+    const big = document.createElement('span');
+    big.className = 'fleet-unit-big';
+    big.textContent = 'Trillion';
+    wpUnit.append(big, ' Ton-km / year');
+  }
   // Deep-link/refresh at /dynamic RESTORES THE VIEW but records NO
   // choice (Toby 2026-08-17: a hard refresh must never swallow the
   // choice screen — the next SHIP press greets fresh; only explicit
