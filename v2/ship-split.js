@@ -57,6 +57,7 @@ style.textContent = `
   .section-dynamic .fleet-results-data-header {
     font-size: 14px; letter-spacing: .02em; line-height: 1.25;
     white-space: nowrap;
+    color: #eee; /* result titles WHITE (Toby 2026-08-17) — brackets stay grey below */
   }
   .section-dynamic .dyn-hdr-sub { font-size: 12px; color: #777; }
   .section-dynamic .fleet-results-data { font-size: 32px; white-space: nowrap; }
