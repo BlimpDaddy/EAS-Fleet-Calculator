@@ -143,35 +143,28 @@ style.textContent = `
      two dots (berry = where you are; statics first, the chooser's
      order) + the current sub-page's name. Hidden off the ship pages.
      Taste knobs: font-size, dot size, gap, top offset. */
-  /* THE SPLIT ORBIT (Toby ruling 2026-08-17, supersedes the dots):
-     the EAS logo's two swoosh halves — lifted VERBATIM from
-     logo_circles.svg, which is already built as two separate paths —
-     sandwich the word SHIP: TOP half above = STATICS (the lift half,
-     the chooser's first question), BOTTOM half below = DYNAMICS.
-     Berry when live, grey when not; both grey on the chooser; the
-     whole mark disappears off the ship pages. The halves keep the
-     original mark's diagonal offset (top shifted right, bottom left)
-     so the orbit reads as itself, just opened around the title.
-     Taste knobs: width, the ±offset px, the top/bottom gaps. */
-  .ship-logo-half {
-    position: absolute; left: 50%; width: 22px;
-    color: #555; pointer-events: none;
+  /* TWO FAT DOTS (Toby re-ruling 2026-08-17, retiring the split-orbit
+     experiment on sight): the dots ARE Ship's underline — V1 underlines
+     the current nav word (text-decoration on .current-page), but SHIP
+     never underlines; on its pages it wears two fat dots at the
+     underline's own height instead, centred under the word. Statics =
+     first dot (chooser order); berry live, grey not; both grey on the
+     chooser; gone off the ship pages. Taste knobs: dot size, gap, the
+     50%+19px underline height. */
+  nav a[href="/ship"] { text-decoration: none !important; }
+  .ship-mode-dots {
+    position: absolute; top: calc(50% + 19px); left: 50%;
+    transform: translateX(-50%);
+    display: flex; gap: 8px; pointer-events: none;
   }
-  .ship-logo-half svg { display: block; width: 100%; height: auto; }
-  .ship-logo-half.on { color: #c628a4; }
-  /* OPENED ORBIT (Toby positioning ruling 2026-08-17): the halves
-     spread to the word's ENDS — top half over/slightly PAST the p,
-     bottom half over/slightly BEFORE the S — and hug vertically: the
-     top swoosh sits fully in the page (small gap above), its bottom
-     edge near the i-dot line; the bottom swoosh tucks just under the
-     S's baseline. Measured against the real 48px glyphs
-     (S 496–522 · p 555–579 · anchor centre 537 · i-dot ≈ y12):
-     +36px/−32px from centre, tops at 50%∓28/+15. The mode word moves
-     BELOW the anchor, aligned with the word start. */
-  .ship-half-top { top: calc(50% - 28px); transform: translateX(calc(-50% + 36px)); }
-  .ship-half-bottom { top: calc(50% + 15px); transform: translateX(calc(-50% - 32px)); }
+  .ship-mode-dots i {
+    width: 12px; height: 12px; border-radius: 50%; display: block;
+    background: #555;
+  }
+  .ship-mode-dots i.on { background: #c628a4; }
   .ship-mode-word {
-    position: absolute; top: calc(100% + 2px); left: 2px;
+    position: absolute; top: calc(100% + 4px); left: 50%;
+    transform: translateX(-50%);
     font-size: 11px; letter-spacing: .25em; color: #eee; font-weight: 700;
     white-space: nowrap; pointer-events: none;
   }
@@ -218,6 +211,7 @@ function makeRibbon(side, targetKey, targetLabel, nav, enterClass) {
       nav()?.click(); // …then V1 routes; the target UNFOLDS from its edge
       viaRibbon = false;
       rib.classList.remove('opening');
+      syncModeBadge(); // direct — observers are backstop only (2026-08-17)
       const target = targetKey === 'dynamics'
         ? [...document.querySelectorAll('section')].find((s) => s.querySelector('.dyn-eas-chip'))
         : $('[data-section="ship"]');
@@ -230,35 +224,27 @@ function makeRibbon(side, targetKey, targetLabel, nav, enterClass) {
   return rib;
 }
 
-/* The split orbit: the EAS logo's two crescent paths (verbatim from
- * assets/logo_circles.svg — the mark is genuinely two paths) wrap the
- * SHIP nav title. Top = STATICS, bottom = DYNAMICS; the word names a
- * chosen sub-page beside the bottom half. Kept true by
- * syncModeBadge(). */
-const SWOOSH_BOTTOM_D = 'm 1.78827,20.5365 c -3.64225,10.5095 -1.664653,15.7991 5.41991,15.7991 7.08452,0 17.44632,-6.1241 28.92502,-15.8643 z';
-const SWOOSH_TOP_D = 'M 61.4986,15.799 C 65.1408,5.28952 63.1632,0 56.0786,0 48.9941,0 38.6324,6.12402 27.1536,15.8642 Z';
-let halfTop = null, halfBottom = null, wordEl = null;
+/* Two fat dots at Ship's underline height (statics = first dot, the
+ * chooser's order) + the mode word below the anchor. Kept true by
+ * syncModeBadge(). (The split-orbit logo-halves experiment lived here
+ * for an hour on 2026-08-17 — retired by Toby on sight; see git.) */
+let dotsEl = null, wordEl = null;
 function ensureModeBadge() {
   const anchor = navShip();
-  if (!anchor || halfTop) return;
+  if (!anchor || dotsEl) return;
   anchor.style.position = 'relative';
-  const mkHalf = (cls, viewBox, d) => {
-    const span = document.createElement('span');
-    span.className = `ship-logo-half ${cls}`;
-    span.innerHTML = `<svg viewBox="${viewBox}" xmlns="http://www.w3.org/2000/svg"><path d="${d}" fill="currentColor"/></svg>`;
-    span.style.display = 'none';
-    anchor.appendChild(span);
-    return span;
-  };
-  halfTop = mkHalf('ship-half-top', '27 -0.5 40 17', SWOOSH_TOP_D);
-  halfBottom = mkHalf('ship-half-bottom', '-2 20 40 17', SWOOSH_BOTTOM_D);
+  dotsEl = document.createElement('span');
+  dotsEl.className = 'ship-mode-dots';
+  dotsEl.append(document.createElement('i'), document.createElement('i'));
+  dotsEl.style.display = 'none';
+  anchor.appendChild(dotsEl);
   wordEl = document.createElement('span');
   wordEl.className = 'ship-mode-word';
   wordEl.style.display = 'none';
   anchor.appendChild(wordEl);
 }
 function syncModeBadge() {
-  if (!halfTop) return;
+  if (!dotsEl) return;
   const ship = $('[data-section="ship"]');
   const dyn = [...document.querySelectorAll('section')].find((s) => s.querySelector('.dyn-eas-chip'));
   const shipRouted = ship && getComputedStyle(ship).display !== 'none';
@@ -271,17 +257,16 @@ function syncModeBadge() {
   // whenever either is on screen (chooser included).
   navShip()?.classList.toggle('current-page', !!(shipRouted || dynShown));
   const current = dynShown ? 'dynamics' : (shipShown ? 'statics' : null);
-  // The split orbit is PART OF THE TITLE (Toby ruling 2026-08-17):
-  // present on every ship state — both halves grey on the chooser —
-  // and gone on other pages. The word names only a chosen sub-page.
+  // The dots are PART OF THE TITLE (Toby ruling 2026-08-17): present
+  // on every ship state — both grey on the chooser — and gone on
+  // other pages. The word names only a chosen sub-page.
   const onShipPages = !!(shipRouted || dynShown);
-  const disp = onShipPages ? '' : 'none';
-  halfTop.style.display = disp;
-  halfBottom.style.display = disp;
+  dotsEl.style.display = onShipPages ? '' : 'none';
   wordEl.style.display = current ? '' : 'none';
   wordEl.textContent = current ? (current === 'statics' ? 'STATICS' : 'DYNAMICS') : '';
-  halfTop.classList.toggle('on', current === 'statics');
-  halfBottom.classList.toggle('on', current === 'dynamics');
+  const [d1, d2] = dotsEl.querySelectorAll('i');
+  d1.classList.toggle('on', current === 'statics');
+  d2.classList.toggle('on', current === 'dynamics');
 }
 
 function ensureSwitchers() {
@@ -331,15 +316,18 @@ function buildChooser(shipSection) {
   };
   // Placeholder glyphs — the aerostatics / aerodynamics diagram art
   // replaces these later (Toby, 2026-08-17).
+  // Direct syncModeBadge() calls after each transition we cause —
+  // the observers alone proved lazy on the chooser path (dots stayed
+  // grey ~1s after the pick; caught 2026-08-17).
   const statics = mk('☁︎↺', 'STATICS', 'Can it lift? Size, buoyancy, net lift.', () => {
     setMode('statics');
     overlay.classList.add('swipe-out');
-    setTimeout(() => overlay.remove(), 500);
+    setTimeout(() => { overlay.remove(); syncModeBadge(); }, 500);
   });
   const dynamics = mk('≋→', 'DYNAMICS', 'Can it fly? Drag, power, fuel.', () => {
     setMode('dynamics');
     overlay.classList.add('swipe-out');
-    setTimeout(() => { overlay.remove(); navDynamic()?.click(); }, 380);
+    setTimeout(() => { overlay.remove(); navDynamic()?.click(); syncModeBadge(); }, 380);
   });
   overlay.append(hint, statics, dynamics);
   const pos = getComputedStyle(shipSection).position;
@@ -377,6 +365,7 @@ function boot() {
       setTimeout(() => {
         navDynamic()?.click();
         if (ship) ship.style.visibility = '';
+        syncModeBadge(); // direct — observers are backstop only
       }, 0);
       return;
     }
