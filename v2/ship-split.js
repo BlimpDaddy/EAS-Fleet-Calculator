@@ -227,8 +227,10 @@ function buildChooser(shipSection) {
 let viaRibbon = false; // ribbon navigations bypass the chooser
 function boot() {
   ensureSwitchers();
-  // Direct /dynamic entry = the DYNAMICS choice, recorded.
-  if (location.pathname === '/dynamic' && !getMode()) setMode('dynamics');
+  // Deep-link/refresh at /dynamic RESTORES THE VIEW but records NO
+  // choice (Toby 2026-08-17: a hard refresh must never swallow the
+  // choice screen — the next SHIP press greets fresh; only explicit
+  // picks — chooser buttons or ribbons — set the mode).
   // The SHIP title is the way BACK to the choice screen (Toby ruling
   // 2026-08-17, amending the one-way door): every top-nav Ship click
   // re-presents the chooser — it's the hub, and once the diagram art
