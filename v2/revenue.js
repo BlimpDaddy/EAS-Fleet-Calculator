@@ -289,9 +289,56 @@ recapPanel.appendChild(shareRow);
 // spacer lines survive copy-paste where blank lines get eaten). Deliberate
 // cuts, confirmed in revision: VS-inf, per-ship revenue/margin/payback, the
 // capex/opex-per-ship assumptions, and the "(80% creditable)" qualifier.
+// Displayed version (Toby, 2026-08-17) — the header chip and the copy
+// summary title read from this one constant.
+const EAS_VERSION = '1.8';
+
+// Small "Ver x.x" chip beside the top-left logo (Toby, 2026-08-17).
+// Runtime-placed: the logo sits in a display:contents anchor inside
+// the header grid, so a static grid child would disturb the layout —
+// the chip floats absolutely, measured off the logo's own rect.
+{
+  const header = document.querySelector('header.header');
+  const logo = header && header.querySelector('.header-logo');
+  if (header && logo) {
+    header.style.position = 'relative';
+    const chip = document.createElement('span');
+    chip.className = 'eas-version';
+    chip.textContent = `Ver ${EAS_VERSION}`;
+    chip.style.cssText = 'position:absolute;font-size:11px;color:#888;letter-spacing:.08em;white-space:nowrap;pointer-events:none;';
+    header.appendChild(chip);
+    const place = () => {
+      const hr = header.getBoundingClientRect();
+      const lr = logo.getBoundingClientRect();
+      chip.style.left = `${Math.round(lr.right - hr.left + 10)}px`;
+      chip.style.top = `${Math.round(lr.bottom - hr.top - 14)}px`;
+    };
+    place();
+    window.addEventListener('resize', place);
+    if (!logo.complete) logo.addEventListener('load', place);
+  }
+}
+
+/* Per-section LIVE warnings for the copy summary (Toby, 2026-08-17:
+ * "the warnings/failure modes go with the shape — as they get better
+ * refined it'll be harder and harder for the dodgy shapes to get
+ * through"). Sources are the adapters' own live DOM + the model. */
+const summaryWarnings = (i, e) => ({
+  shape: [...document.querySelectorAll('.v2-warn')]
+    .filter((w) => !(w.classList.contains('v2-warn-ve') && getComputedStyle(w).display === 'none'))
+    .map((w) => w.title).filter(Boolean),
+  statics: i.netLiftT <= 0 ? ['Unfliable - net lift <= 0'] : [],
+  dynamics: [...document.querySelectorAll('.dyn-stat-warnings .dyn-warning')]
+    .map((w) => w.title).filter(Boolean),
+  fleet: isOperating() ? [] : ['Fleet idle - not operating'],
+  economic: e.fleetProfit !== null && e.fleetProfit < 0 ? ['Negative profit'] : [],
+});
+const warnLine = (arr) => `Warnings: ${arr.length ? arr.join(', ') : 'none'}`;
+
 function buildSummary() {
   const i = readInputs();
   const e = computeEconomics(i);
+  const w = summaryWarnings(i, e);
   const trunc1 = (x) => (Math.floor(x * 10) / 10).toFixed(1);
   const required = e.requiredShips !== null ? Math.round(e.requiredShips).toLocaleString('en-US') : 'N/A';
   const length = $('[data-ship="length-output"]')?.textContent ?? '—';
@@ -302,21 +349,25 @@ function buildSummary() {
   const co2Mt = e.co2AvoidedMt; // operating-gated: idle fleet avoids nothing
   const co2Pct = co2Mt !== null ? (100 * co2Mt) / TOTAL_CO2_MT : null;
   return [
-    'EAS FLEET CALCULATOR (Ver 1.6)',
+    `EAS FLEET CALCULATOR (Ver ${EAS_VERSION})`,
     '.',
     `SHAPE: ${shape}`,
     `VS/VE ${vs} / ${Number.isFinite(ve) ? trunc1(ve) : '—'}%`,
+    warnLine(w.shape),
     '.',
     'SHIP (Static):',
     `${length}m @ ${temp}°C → Net Lift ${Math.round(i.netLiftT).toLocaleString('en-US')}t`,
+    warnLine(w.statics),
     'SHIP (Dynamic):',
     `Airspeed: ${i.airSpeedKmh} km/h`,
+    warnLine(w.dynamics),
     '.',
     'FLEET:',
     `Work Performed: ${i.marketSizeTtkm.toFixed(i.marketSizeTtkm > 0 && i.marketSizeTtkm < 1 ? 3 : 2)} Trillion Ton-km/yr`,
     `Total Airships Required: ${required}`,
     `Utilisation: ${i.utilisationPct}%`,
     `CO2 Avoided: ${co2Mt !== null ? trunc1(co2Mt) : '—'} Million t/yr (${co2Pct !== null ? trunc1(co2Pct) : '—'}% global over-ocean freight)`,
+    warnLine(w.fleet),
     '.',
     'ECONOMIC:',
     `Total Revenue: ${fmtMoney(e.totalRevenue)}/yr`,
@@ -327,6 +378,7 @@ function buildSummary() {
     `Capex Per Sunship: ${fmtMoney(i.capex)}`,
     `Program Pre Capex: ${fmtMoney(i.preCapex)}`,
     `Program Breakeven: ${fmtPayback(e.breakevenYears)} (from completion)`,
+    warnLine(w.economic),
     '.',
     '(Design for planet + humanity)',
     '.',
