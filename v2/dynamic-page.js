@@ -510,14 +510,20 @@ function paint() {
   const { cd: cdInForce, cdSource } = resolveCd(state, bareEst, tailedEst);
   const sInForce = state.bliOn ? state.s : 0;
 
-  // EAS IDEAL: Sunship-only (preset identity, never filename — ruling
-  // 2026-08-16). Greyed, visible, inert elsewhere.
+  // EAS IDEAL (re-ruled 2026-08-17, amending the 2026-08-16 greyed-out
+  // ruling): the button is LIVE on every shape — full colour, never
+  // greyed — so a user can click the EAS button through every page
+  // with no sliding. But its VERB narrows off-Sunship: it sets speed
+  // to 100 km/h and NOTHING else — Cd stays the estimator's, the
+  // toggles stay locked/grey (Smart Tail + BLI remain the Sunship's
+  // designs; the authored 0.043 still never leaks — the identity gate
+  // that was the seal's honesty content is untouched).
   const sunship = isSunship(activeShape);
-  idealBtn.disabled = !sunship;
-  idealBtn.style.opacity = sunship ? '' : '0.35';
+  idealBtn.disabled = false;
+  idealBtn.style.opacity = '';
   idealBtn.title = sunship
     ? 'EAS IDEAL — 100 km/h, Cd 0.043, S 27%'
-    : 'EAS IDEAL is the Sunship’s authored configuration';
+    : 'EAS IDEAL — 100 km/h (Smart Tail and BLI are the Sunship’s designs)';
 
   // System toggles: Sunship-only in public (Toby ruling 2026-08-16 —
   // the greyed hard limit IS the lesson: these are the Sunship's
@@ -614,7 +620,14 @@ cdCtl.slider.addEventListener('input', () => { state = setInput(state, 'cd', Num
 sCtl.slider.addEventListener('input', () => { state = setInput(state, 's', Number(sCtl.slider.value)); paint(); });
 tailToggle.box.addEventListener('change', () => { state = setToggle(state, 'tailOn', tailToggle.box.checked); paint(); });
 bliToggle.box.addEventListener('change', () => { state = setToggle(state, 'bliOn', bliToggle.box.checked); paint(); });
-idealBtn.addEventListener('click', () => { if (isSunship(activeShape)) { state = applyIdeal(state); paint(); } });
+idealBtn.addEventListener('click', () => {
+  // Sunship: the full authored configuration (unchanged). Any other
+  // shape: SPEED ONLY — 100 km/h through the normal input pathway
+  // (ruling 2026-08-17; applyIdeal still throws off-Sunship, unused
+  // here by design — the state seal is untouched).
+  state = isSunship(activeShape) ? applyIdeal(state) : setInput(state, 'airspeedKmh', 100);
+  paint();
+});
 
 // M6 stage 2: shape inheritance. On a page-1 shape change: adopt the new
 // records, RESET Cd to the new shape's estimator posture (r8 #4 — the
