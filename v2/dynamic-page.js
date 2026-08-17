@@ -420,7 +420,7 @@ for (const label of [
   'Frontal area', 'Wetted area', 'Drag',
   'Drag area (Cd·A)', 'Cd (V^⅔ basis)', // comparison metrics, 2026-08-16
   'Propulsion power',
-  'LH2 weight (10,000 km)', 'LH2 + Storage (10,000 km)',
+  'LH2 weight (9,000 km)', 'LH2 + Storage (9,000 km)', // 9,000 km ruling 2026-08-17 — MUST match dynamic-state's row keys exactly (a mismatch crashes paint and kills the page's nav interception)
 ]) statBlock(label);
 
 const warningsBox = document.createElement('div');
@@ -527,6 +527,10 @@ function paint() {
   }
   for (const [label, value] of rm.rows) {
     const cell = outCells.get(label);
+    // FAIL-SOFT (lesson of 2026-08-17): a state/page label mismatch
+    // once crashed paint and killed the module — taking the nav
+    // interception with it. Unknown labels now skip loudly instead.
+    if (!cell) { console.warn('dynamic-page: no cell for row label', label); continue; }
     if (label === 'Propulsion power' && !rm.parked) {
       cell.textContent = value;
       const tag = document.createElement('span');
