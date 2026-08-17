@@ -208,7 +208,13 @@ if (window.matchMedia(PHONE).matches) {
     // height moves with the wrapped nav and the phone type scale.
     if (chooser) {
       const header = document.querySelector('header.header');
-      const top = header ? Math.round(header.getBoundingClientRect().bottom) : 0;
+      let top = header ? Math.round(header.getBoundingClientRect().bottom) : 0;
+      // SHIP's two mode dots are its underline and hang BELOW the
+      // header box (top: 50% + 19px) — parking the overlay at
+      // header.bottom covered their lower half (Toby, phone round 7:
+      // dots 83–95px vs overlay top 89px, measured). Park below them.
+      const dots = document.querySelector('.ship-mode-dots');
+      if (dots) top = Math.max(top, Math.round(dots.getBoundingClientRect().bottom) + 4);
       chooser.style.top = `${Math.max(0, top)}px`;
     }
   };
