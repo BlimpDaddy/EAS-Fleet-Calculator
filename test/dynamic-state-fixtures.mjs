@@ -312,14 +312,16 @@ console.log('\n== M6: the estimator on the page — marker, band, dial, firming 
   check('dial bottom is the friction floor ceiled to the 0.001 grid (Sunship: 0.009)',
     dial.min === 0.009 && dial.min >= contract.frictionCd);
   // Graduation: 1.5 × 0.178 ≈ 0.268 < the dial's 0.40 FLOOR — the
-  // floor governs, so the Sunship dial keeps exploratory headroom up
-  // to 0.40 (formula max(0.40, 1.5×est) working as designed).
-  check('dial top = the 0.40 floor (1.5×graduated estimate ≈ 0.268 sits under it) — the band always fits',
-    dial.max === 0.40 && dial.max > contract.estimate.band[1]);
+  // Floor raised 0.40 → 0.55 (Toby's sphere catch 2026-08-17): the
+  // honest high-Re sphere reads ~0.19, but the dial must ALWAYS let a
+  // skeptic hand-set the textbook subcritical 0.47. Floor governs
+  // here (1.5 × 0.178 ≈ 0.268 sits under it).
+  check('dial top = the 0.55 floor — textbook sphere 0.47 always hand-dialable; the band always fits',
+    dial.max === 0.55 && dial.max > 0.47 && dial.max > contract.estimate.band[1]);
   check('dial parked defaults hold before any values flow',
-    cdDialRange(null, null).min === 0.009 && cdDialRange(null, null).max === 0.40);
+    cdDialRange(null, null).min === 0.009 && cdDialRange(null, null).max === 0.55);
   const smallEst = { ...contract.estimate, cdEstimate: 0.05, band: [0.04, 0.06] };
-  check('dial top floors at 0.40 for small estimates', cdDialRange(contract, smallEst).max === 0.40);
+  check('dial top floors at 0.55 for small estimates', cdDialRange(contract, smallEst).max === 0.55);
   // The estimate TRACKS speed while snapped (friction term is Re-dependent).
   const off = setToggle(moving, 'tailOn', false);
   const at50 = compute(setInput(off, 'airspeedKmh', 50), engine, undefined, ESTIMATOR);

@@ -313,7 +313,7 @@ function control(labelText, unitText, { min, max, step, value }) {
 // max(0.40, 1.5 × estimate) — cdDialRange() in the state module; the
 // values here are only the parked-load defaults.
 const speedCtl = control('Airspeed', 'km/hr', { min: SPEED_MIN, max: SPEED_MAX, step: 1, value: 0 });
-const cdCtl = control('Drag Coefficient (Cd)', '', { min: 0.009, max: 0.40, step: 0.001, value: EAS_IDEAL.cd });
+const cdCtl = control('Drag Coefficient (Cd)', '', { min: 0.009, max: 0.55, step: 0.001, value: EAS_IDEAL.cd });
 const sCtl = control('Power Saving (S)', '', { min: 0, max: S_MAX, step: 0.01, value: EAS_IDEAL.s });
 // M6: the estimator marker + silent ±band under the Cd slider. Hidden
 // until the first movement produces an estimate (dormant while parked);

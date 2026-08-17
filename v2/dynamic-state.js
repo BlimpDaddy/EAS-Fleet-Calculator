@@ -105,9 +105,15 @@ const ESTIMATED_GENERIC_TAIL_LABEL = 'ESTIMATED — generic Smart Tail, 20% of p
 export const SPEED_MIN = 0, SPEED_MAX = 140;
 export const S_MAX = 0.75;
 
-/* Cd dial fallbacks before any contract/estimate exists (parked load). */
+/* Cd dial fallbacks before any contract/estimate exists (parked load).
+ * TOP floor raised 0.40 → 0.55 (Toby's sphere catch, 2026-08-17): the
+ * graduated estimator honestly reads a big sphere at ~0.19 (high-Re
+ * crisis value), but every textbook reader knows subcritical 0.47 —
+ * the dial must ALWAYS let a skeptic set the familiar value by hand.
+ * Estimator proposes, slider disposes — and the slider must reach the
+ * numbers people arrive with. */
 const CD_DIAL_BOTTOM_PARKED = 0.009;
-const CD_DIAL_TOP_DEFAULT = 0.40;
+const CD_DIAL_TOP_DEFAULT = 0.55;
 
 /** The tracking-vs-authored Cd posture for a fresh configuration of a
  *  shape (the ONE derivation of "what does Cd reset to" — used by
