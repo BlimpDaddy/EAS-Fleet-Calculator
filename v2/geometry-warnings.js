@@ -26,8 +26,8 @@ import { PRESET_DYNAMICS } from '/calcv2/src/presetDynamics.js';
 
 const $ = (s) => document.querySelector(s);
 const RECT_FILL = 0.75, RATIO_TOL = 0.02, RATIO_MAX = 3;
-const RECT_TEXT = 'Rectilinear Detected. Poor Structural Scaling';
-const DIR_TEXT = "Poor 'Inherent Directionality' Detected";
+const RECT_TEXT = 'Rectilinear Structural Scaling!';
+const DIR_TEXT = "Poor 'Inherent Directionality' Detected!";
 
 const activeDyn = () => {
   const s = window.__v2ActiveShape;
@@ -52,24 +52,25 @@ const poorDir = (d, id) => {
   return false;
 };
 
+// ICON-ONLY (Toby refinement 2026-08-17): the same amber triangle the
+// shape page uses (shape-upload.js), text on hover only — the long
+// inline text was reflowing boxes.
+const WARN_SVG =
+  '<svg viewBox="0 0 24 22" width="0.85em" height="0.85em" aria-label="warning">' +
+  '<path d="M12 1 L23 21 H1 Z" fill="#FF9900"/>' +
+  '<rect x="10.9" y="7.5" width="2.2" height="7" rx="1.1" fill="#111111"/>' +
+  '<circle cx="12" cy="17.5" r="1.4" fill="#111111"/></svg>';
 const style = document.createElement('style');
-style.textContent = `
-  .v2-warn-inlinetext {
-    color: #ff9900; font-size: 12px; letter-spacing: .02em;
-    margin-left: 8px; white-space: nowrap; cursor: help;
-  }
-  /* the metres row shrinks a touch when flagged so the line fits */
-  .ship-control-output:has(.v2-warn-static:not(:empty)) { font-size: 20px; }
-`;
+style.textContent = '.v2-warn-geom { margin-left: .35em; cursor: help; display: inline-block; line-height: 1; vertical-align: baseline; }';
 document.head.appendChild(style);
 
 const mkSpan = (extraClass) => {
   const s = document.createElement('span');
-  s.className = `v2-warn v2-warn-inlinetext ${extraClass}`;
+  s.className = `v2-warn v2-warn-geom ${extraClass}`;
   return s;
 };
 const setWarn = (span, on, text) => {
-  span.textContent = on ? `⚠ ${text}` : '';
+  span.innerHTML = on ? WARN_SVG : '';
   span.title = on ? text : '';
   span.style.display = on ? '' : 'none';
 };
@@ -87,8 +88,12 @@ if (nameCell) nameCell.insertAdjacentElement('afterend', dirSpan);
 
 const sync = () => {
   const { id, dyn } = activeDyn();
-  setWarn(rectSpan, isRect(dyn), RECT_TEXT);
+  // Rectilinear shows only at 100 m and above (Toby 2026-08-17) —
+  // structural scaling is a big-ship complaint.
+  const metres = Number(String(lengthOut?.textContent ?? '').replace(/[^\d.]/g, ''));
+  setWarn(rectSpan, isRect(dyn) && metres >= 100, RECT_TEXT);
   setWarn(dirSpan, poorDir(dyn, id), DIR_TEXT);
 };
 window.addEventListener('v2-shape-change', sync);
+if (lengthOut) new MutationObserver(sync).observe(lengthOut, { childList: true, characterData: true, subtree: true });
 sync();

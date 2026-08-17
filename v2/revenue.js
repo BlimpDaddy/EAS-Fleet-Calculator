@@ -336,7 +336,9 @@ const summaryWarnings = (i, e) => ({
   fleet: isOperating() ? [] : ['Fleet idle - not operating'],
   economic: e.fleetProfit !== null && e.fleetProfit < 0 ? ['Negative profit'] : [],
 });
-const warnLine = (arr) => `Warnings: ${arr.length ? arr.join(', ') : 'none'}`;
+// Clean section = 'PASS', no 'Warnings' word at all (Toby 2026-08-17:
+// "sunship will just say PASS like 5 times").
+const warnLine = (arr) => (arr.length ? `Warnings: ${arr.join(', ')}` : 'PASS');
 
 function buildSummary() {
   const i = readInputs();
