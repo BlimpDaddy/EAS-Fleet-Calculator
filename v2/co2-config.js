@@ -57,3 +57,10 @@ export const TOTAL_CO2_MT = AIR_CO2_MT + MARINE_CO2_MT; // 1135 — the whole mo
 
 export const CREDIT_FRACTION = 0.8;      // share of displaced CO2 that earns carbon
                                          // revenue — the 20% nerf described above
+
+// Global fossil CO2 emissions — the denominator for the fleet results
+// "Global Total" line (Toby, 2026-08-17). Global Carbon Budget 2024:
+// fossil CO2 ~37.4 Gt/yr (fossil + cement, excluding land use — the
+// conservative/smaller denominator, consistent with the direct-
+// combustion-only stance above). Toby-editable.
+export const GLOBAL_FOSSIL_CO2_MT = 37400; // Mt CO2/yr
