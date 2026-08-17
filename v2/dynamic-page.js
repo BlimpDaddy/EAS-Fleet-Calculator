@@ -37,7 +37,7 @@ import {
   SUNSHIP_SHAPE, CD_TRACKS_ESTIMATE, isSunship,
   initialState, isParked, setInput, setToggle, setShape, applyIdeal,
   resolveCd, compute, renderModel, cdDialRange,
-} from './dynamic-state.js';
+} from './dynamic-state.js?v=1.8';
 
 // ---------------------------------------------------------------- shape inheritance
 // M6 stage 2: the ACTIVE shape comes from the page-1 channel

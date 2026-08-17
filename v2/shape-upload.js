@@ -19,7 +19,7 @@
  */
 
 import { ReplicaViewer } from './viewer3d.js';
-import { VS_WARNINGS } from './shape-config.js';
+import { VS_WARNINGS } from './shape-config.js?v=1.8';
 
 const SAMPLES = 69420; // reference figure from the Shape-Volume Scalar paper
 const PRESETS = ['sunship', 'cigar', 'bottle', 'car', 'washingmachine', 'aerosmena'];

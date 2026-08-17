@@ -26,7 +26,7 @@
  * Tooltip ℹ︎ elements are preserved by node (V1 may hold bindings) —
  * labels are rebuilt around them, never over them.
  */
-import { GLOBAL_FOSSIL_CO2_MT } from '/v2/co2-config.js';
+import { GLOBAL_FOSSIL_CO2_MT } from '/v2/co2-config.js?v=1.8';
 
 const $ = (sel) => document.querySelector(sel);
 const box = $('.section-fleet .fleet-results');

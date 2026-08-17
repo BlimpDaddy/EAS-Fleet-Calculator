@@ -24,7 +24,7 @@ import {
   fmtMoney, fmtRate, fmtPayback, parseDisplay,
   computeDisplacement, CREDIT_FRACTION,
 } from './economics.js';
-import { TOTAL_CO2_MT } from './co2-config.js';
+import { TOTAL_CO2_MT } from './co2-config.js?v=1.8';
 
 const $ = (sel) => document.querySelector(sel);
 
