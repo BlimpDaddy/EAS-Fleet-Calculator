@@ -45,19 +45,19 @@ style.textContent = `
   /* One row of blocks; titles may WRAP to two lines so the values can
      be big and the blocks close (Toby, 2026-08-17). */
   .section-dynamic .dyn-results-row {
-    flex-wrap: nowrap; display: flex; gap: 12px; align-items: end;
-    justify-content: space-between;
+    flex-wrap: nowrap; display: flex; gap: 26px; align-items: end;
+    justify-content: center; /* squeezed cluster, not full-width spread */
   }
   /* Blocks hug their content (no stretched empty columns — Toby's
      red circles, 2026-08-17); the row spreads edge to edge and the
      recovered space goes into TYPE SIZE. */
   .section-dynamic .dyn-results-row > div { min-width: 0; flex: 0 1 auto; }
   .section-dynamic .fleet-results-data-header {
-    font-size: 13px; letter-spacing: .02em; line-height: 1.25;
+    font-size: 14px; letter-spacing: .02em; line-height: 1.25;
     white-space: nowrap;
   }
-  .section-dynamic .dyn-hdr-sub { font-size: 11px; color: #777; }
-  .section-dynamic .fleet-results-data { font-size: 26px; white-space: nowrap; }
+  .section-dynamic .dyn-hdr-sub { font-size: 12px; color: #777; }
+  .section-dynamic .fleet-results-data { font-size: 30px; white-space: nowrap; }
   .section-dynamic .dyn-key-result { color: #c628a4; font-weight: 700; }
   .ship-chooser {
     position: absolute; inset: 0; z-index: 40; display: flex;
