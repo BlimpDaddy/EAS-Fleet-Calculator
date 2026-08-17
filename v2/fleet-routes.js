@@ -43,7 +43,6 @@ import { ROUTE_CITIES, ROUTE_PAIRS } from '/v2/route-data.js';
 
 const BERRY = 0xC628A5;
 const CYCLE_MS = 2000;          // Toby 2026-08-17: 2s to savour each trip ("might even go 3")
-const TOL_FRAC = 0.08, TOL_MIN = 400; // distance-match window (km)
 const SPIN_MS = 450;            // the flick — quick, like spinning a real globe
 let spin = null;                // active flick: {from, to, start, dur}
 
@@ -183,28 +182,36 @@ if (v1Canvas && figure) {
     const n = Number(String(distOut?.textContent ?? '').replace(/[^\d.]/g, ''));
     return Number.isFinite(n) && n > 0 ? n : 9000;
   };
-  let deck = [], deckKey = '';
-  const candidates = (km) => {
-    let tol = Math.max(TOL_MIN, km * TOL_FRAC);
-    let c = [];
-    while (c.length < 2 && tol < 26000) { // widen until liveable
-      c = ROUTE_PAIRS.filter((p) => Math.abs(p[2] - km) <= tol);
-      tol *= 2;
-    }
-    return c.length ? c : ROUTE_PAIRS.slice(-2);
-  };
+  /* THE AVERAGING TOUR (Toby re-ruling 2026-08-17, supersedes the
+   * ±8% filter — "shows trips of all distance length... averaging out
+   * to your selected"): every pick aims at target ± SPREAD (wide —
+   * shorts, mediums, longs all appear) with a running DEBT correction
+   * pulling the mean back to the slider: show a short trip, owe a
+   * long one. Debt is capped so edge targets (near the pool's min/max)
+   * degrade gracefully instead of pinning. Recent-pair memory kills
+   * repetition. Knobs: SPREAD_KM (tour wildness), DEBT_GAIN/CAP
+   * (how hard the average is enforced). */
+  const SPREAD_KM = 3500, DEBT_GAIN = 0.6, DEBT_CAP = 4000;
+  let debt = 0, lastTarget = 0;
+  const recent = [];
   const nextPair = () => {
     const km = targetKm();
-    const key = String(Math.round(km / 100));
-    if (key !== deckKey || deck.length === 0) {
-      deckKey = key;
-      deck = candidates(km).slice();
-      for (let i = deck.length - 1; i > 0; i--) { // shuffle
-        const j = Math.floor(Math.random() * (i + 1));
-        [deck[i], deck[j]] = [deck[j], deck[i]];
-      }
+    if (Math.abs(km - lastTarget) > 1) { debt = 0; lastTarget = km; }
+    const lo = ROUTE_PAIRS[0][2], hi = ROUTE_PAIRS[ROUTE_PAIRS.length - 1][2];
+    const wish = km + (Math.random() * 2 - 1) * SPREAD_KM - DEBT_GAIN * debt;
+    const need = Math.min(hi, Math.max(lo, wish));
+    let tol = Math.max(250, need * 0.06);
+    let c = [];
+    while (c.length < 3 && tol < 30000) {
+      c = ROUTE_PAIRS.filter((p) => Math.abs(p[2] - need) <= tol && !recent.includes(p));
+      tol *= 1.7;
     }
-    return deck.pop();
+    if (!c.length) c = ROUTE_PAIRS;
+    const pick = c[Math.floor(Math.random() * c.length)];
+    debt = Math.max(-DEBT_CAP, Math.min(DEBT_CAP, debt + (pick[2] - km)));
+    recent.push(pick);
+    if (recent.length > 8) recent.shift();
+    return pick;
   };
   setInterval(() => {
     if (!paused && canvas.clientWidth > 0) showPair(nextPair()); // holds while paused or hidden
