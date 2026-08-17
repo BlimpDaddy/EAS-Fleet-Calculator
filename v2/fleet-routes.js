@@ -39,7 +39,14 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { Line2 } from 'three/addons/lines/Line2.js';
 import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
-import { ROUTE_CITIES, ROUTE_PAIRS } from '/v2/route-data.js';
+import { ROUTE_CITIES, ROUTE_PAIRS as ROUTE_DIRECT, ROUTE_GATES, ROUTE_GATED } from '/v2/route-data.js?v=1.9';
+
+/* SEA GATES (v4, 2026-08-18): the direct pairs and the gated ones are one
+ * pool, re-sorted by km because nextPair() reads ROUTE_PAIRS[0] and
+ * [length-1] as the range ends. A gated entry carries a 4th element — the
+ * waypoint chain — and is otherwise identical, so everything downstream
+ * (distance matching, the debt steering, recent-pair memory) is unchanged. */
+const ROUTE_PAIRS = [...ROUTE_DIRECT, ...ROUTE_GATED].sort((a, b) => a[2] - b[2]);
 
 const BERRY = 0xC628A5;
 const CYCLE_MS = 2000;          // Toby 2026-08-17: 2s to savour each trip ("might even go 3")
@@ -150,8 +157,41 @@ if (v1Canvas && figure) {
     }
     const a = toVec(ROUTE_CITIES[ia][1], ROUTE_CITIES[ia][2], 1.02);
     const b = toVec(ROUTE_CITIES[ib][1], ROUTE_CITIES[ib][2], 1.02);
-    const mid = a.clone().add(b).normalize().multiplyScalar(1.5);
-    const pts = new THREE.QuadraticBezierCurve3(a, mid, b).getPoints(100);
+    // A DIRECT pair keeps V1's exact curve — same QuadraticBezierCurve3,
+    // same 1.5R midpoint, same 100 points, byte-for-byte the old picture.
+    // A GATED pair (4th element) instead follows its waypoint chain along
+    // the surface and then gets the SAME lift profile applied, so the
+    // silhouette matches: up to 1.5R at mid-route, back down at both ends.
+    let pts;
+    if (pair[3] && pair[3].length) {
+      const chain = [a, ...pair[3].map((k) => toVec(ROUTE_GATES[k][1], ROUTE_GATES[k][2], 1.02)), b];
+      const ground = [];
+      for (let s = 0; s < chain.length - 1; s++) {
+        const p = chain[s], q = chain[s + 1];
+        const om = Math.acos(Math.min(1, Math.max(-1, p.clone().normalize().dot(q.clone().normalize()))));
+        const steps = Math.max(2, Math.round(100 * (om / Math.PI)) + 8);
+        for (let i = 0; i < steps; i++) {
+          // slerp along the great circle of THIS leg (a straight lerp would
+          // cut through the sphere and read as a chord, not a track)
+          const t = i / steps;
+          const v = om < 1e-6
+            ? p.clone()
+            : p.clone().multiplyScalar(Math.sin((1 - t) * om) / Math.sin(om))
+               .add(q.clone().multiplyScalar(Math.sin(t * om) / Math.sin(om)));
+          ground.push(v);
+        }
+      }
+      ground.push(b.clone());
+      // Lift: 1.02R at the ends rising to 1.5R at mid-route, the same arc
+      // height V1's Bezier reaches, so gated and direct routes read alike.
+      pts = ground.map((v, i) => {
+        const t = i / (ground.length - 1);
+        return v.clone().normalize().multiplyScalar(1.02 + (1.5 - 1.02) * Math.sin(Math.PI * t));
+      });
+    } else {
+      const mid = a.clone().add(b).normalize().multiplyScalar(1.5);
+      pts = new THREE.QuadraticBezierCurve3(a, mid, b).getPoints(100);
+    }
     const pos = [];
     for (const p of pts) pos.push(p.x, p.y, p.z);
     const geo = new LineGeometry();
@@ -173,7 +213,9 @@ if (v1Canvas && figure) {
     const delta = ((targetY - from + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI;
     spin = { from, to: from + delta, start: performance.now(), dur: SPIN_MS };
     // Console handle (verification/probing; no UI):
-    window.__fleetRoute = { from: ROUTE_CITIES[ia][0], to: ROUTE_CITIES[ib][0], km: pair[2], spinTo: +(from + delta).toFixed(3) };
+    window.__fleetRoute = { from: ROUTE_CITIES[ia][0], to: ROUTE_CITIES[ib][0], km: pair[2],
+      via: pair[3] ? pair[3].map((k) => ROUTE_GATES[k][0]) : null,
+      spinTo: +(from + delta).toFixed(3) };
   };
 
   // ---- distance-matched cycling ----
@@ -193,6 +235,36 @@ if (v1Canvas && figure) {
    * 3,056 / 8,898 / 11,889 at targets 3/9/12k, full-range variety
    * in all three). Recent-pair memory kills repetition. */
   const WISH_MIN = 1000, WISH_MAX = 12000, DEBT_GAIN = 1.0, DEBT_CAP = 12000;
+  /* PORT FAME (v4, Toby 2026-08-18: "the busiest ports on earth should at
+   * least show *at all* — although it's v cool to see busy > ultra obscure,
+   * that's valuable too"). The weight is applied WITHIN the distance-matched
+   * candidate set and never narrows it, so the long tail keeps its airtime;
+   * Papeete and Walvis Bay still turn up, just less often than Singapore.
+   * FAME_GAIN is the single knob — 0 restores the pre-v4 uniform draw. */
+  const FAME_MEGA = new Set(['Shanghai', 'Singapore', 'Shenzhen', 'Busan', 'Hong Kong',
+    'Qingdao', 'Tianjin', 'Rotterdam', 'Jebel Ali', 'Port Klang', 'Antwerp', 'Xiamen',
+    'Kaohsiung', 'Los Angeles', 'Hamburg', 'New York', 'Yokohama']);
+  const FAME_MAJOR = new Set(['Dalian', 'Keelung', 'Manila', 'Ho Chi Minh', 'Laem Chabang',
+    'Jakarta', 'Colombo', 'Chennai', 'Mumbai', 'Kolkata', 'Karachi', 'Jeddah', 'Incheon',
+    'Kobe', 'Nagoya', 'Alexandria', 'Port Said', 'Durban', 'Cape Town', 'Lagos', 'Santos',
+    'Rio de Janeiro', 'Buenos Aires', 'Valparaiso', 'Callao', 'Colon', 'Miami', 'Houston',
+    'New Orleans', 'Savannah', 'Charleston', 'Norfolk', 'Oakland', 'Seattle', 'Vancouver',
+    'Montreal', 'London Gateway', 'Southampton', 'Le Havre', 'Marseille', 'Barcelona',
+    'Valencia', 'Genoa', 'Piraeus', 'Istanbul', 'Bremerhaven', 'Amsterdam', 'Lisbon',
+    'Casablanca', 'Sydney', 'Melbourne', 'Auckland', 'Dammam', 'Muscat', 'Bandar Abbas']);
+  const FAME_GAIN = 1.0;
+  const fame = (i) => {
+    const n = ROUTE_CITIES[i][0];
+    return FAME_MEGA.has(n) ? 4 : FAME_MAJOR.has(n) ? 2 : 1;
+  };
+  const weightOf = (p) => (fame(p[0]) * fame(p[1])) ** FAME_GAIN;
+  const pickWeighted = (list) => {
+    let total = 0;
+    for (const p of list) total += weightOf(p);
+    let r = Math.random() * total;
+    for (const p of list) { r -= weightOf(p); if (r <= 0) return p; }
+    return list[list.length - 1];
+  };
   let debt = 0, lastTarget = 0;
   const recent = [];
   const nextPair = () => {
@@ -208,7 +280,7 @@ if (v1Canvas && figure) {
       tol *= 1.7;
     }
     if (!c.length) c = ROUTE_PAIRS;
-    const pick = c[Math.floor(Math.random() * c.length)];
+    const pick = pickWeighted(c);
     debt = Math.max(-DEBT_CAP, Math.min(DEBT_CAP, debt + (pick[2] - km)));
     recent.push(pick);
     if (recent.length > 8) recent.shift();
