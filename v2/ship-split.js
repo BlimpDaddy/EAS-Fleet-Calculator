@@ -132,17 +132,22 @@ style.textContent = `
      matching the ribbons' L/R model — each mostly empty space where
      the diagram art (statics curving-air, dynamics L→R flow) will
      live. The order-hint reads left→right now. */
+  /* QUARTERS layout (Toby v3, 2026-08-17): the space reads as a 2×2 —
+     STATICS lives in the TOP-LEFT quarter only, DYNAMICS in the
+     BOTTOM-RIGHT, the other two quarters deliberately blank (the
+     diagonal composition; L/R sides kept). */
   .ship-chooser {
-    position: absolute; inset: 0; z-index: 40; display: flex;
-    flex-direction: row; gap: 28px; align-items: stretch;
-    justify-content: center; background: #111;
+    position: absolute; inset: 0; z-index: 40; display: grid;
+    grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr;
+    gap: 24px; background: #111;
     padding: 44px 36px 28px;
     box-sizing: border-box;
     transition: transform .45s ease, opacity .45s ease;
   }
   .ship-chooser.swipe-out { transform: translateX(-100%); opacity: 0; pointer-events: none; }
+  .ship-chooser button:nth-of-type(1) { grid-area: 1 / 1; } /* STATICS — top-left */
+  .ship-chooser button:nth-of-type(2) { grid-area: 2 / 2; } /* DYNAMICS — bottom-right */
   .ship-chooser button {
-    flex: 1 1 0; max-width: 46%;
     background: #191919;
     border: 1px solid #474747; border-radius: 14px; color: #eee;
     font: inherit; cursor: pointer; text-align: center;
@@ -438,14 +443,44 @@ function boot() {
   // Economics lands you where you were — statics stays, dynamics
   // bounces straight through. The chooser greets only when no choice
   // exists yet this session.
+  // Where was the user BEFORE this SHIP press? V1's router runs before
+  // our click listener (its handler saw the ship section already
+  // visible on every press), so the location is snapshotted on
+  // pointerdown — which fires before any routing.
+  let preClick = null;
+  navShip()?.addEventListener('pointerdown', () => {
+    const ship = $('[data-section="ship"]');
+    const dyn = [...document.querySelectorAll('section')].find((s) => s.querySelector('.dyn-eas-chip'));
+    preClick = {
+      onDynamics: !!(dyn && getComputedStyle(dyn).display !== 'none'),
+      onStatics: !!(ship && getComputedStyle(ship).display !== 'none' && !ship.querySelector('.ship-chooser')),
+      choosing: !!(ship && ship.querySelector('.ship-chooser')),
+    };
+  });
   navShip()?.addEventListener('click', () => {
-    if (viaRibbon) { viaRibbon = false; return; }
+    if (viaRibbon) { viaRibbon = false; preClick = null; return; }
+    const ship = $('[data-section="ship"]');
+    const was = preClick ?? { onDynamics: false, onStatics: false, choosing: !!(ship && ship.querySelector('.ship-chooser')) };
+    preClick = null;
+    // Already choosing? SHIP is a no-op (double-press safe — without
+    // this, the stored mode would bounce the chooser away).
+    if (was.choosing) return;
+    // RE-RULING (Toby 2026-08-17, amends last-used-only): pressed FROM
+    // statics or dynamics — and only from those two — SHIP is the way
+    // BACK to the choice page (revisit the artwork, re-choose, no
+    // refresh, uploads intact). From anywhere else it stays last-used.
+    if (was.onDynamics || was.onStatics) {
+      // From dynamics V1 routes to /ship natively; the opaque chooser
+      // overlay covers the statics section before it can flash.
+      if (ship) buildChooser(ship);
+      setTimeout(syncModeBadge, 0);
+      return;
+    }
     const m = getMode();
     if (m === 'dynamics') {
       // Bounce through WITHOUT the one-frame statics flash (Toby,
       // 2026-08-17): curtain the ship section synchronously so it
       // never paints, then route and lift the curtain.
-      const ship = $('[data-section="ship"]');
       if (ship) ship.style.visibility = 'hidden';
       setTimeout(() => {
         navDynamic()?.click();
@@ -455,7 +490,6 @@ function boot() {
       return;
     }
     if (m === 'statics') return; // V1 already routed here
-    const ship = $('[data-section="ship"]');
     if (ship && !ship.querySelector('.ship-chooser')) buildChooser(ship);
   });
   // Landing directly on /ship pristine also greets.
