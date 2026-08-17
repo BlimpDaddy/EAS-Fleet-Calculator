@@ -126,25 +126,38 @@ style.textContent = `
   .section-dynamic .dyn-warning { cursor: help; line-height: 1; }
   .section-dynamic .dyn-warning.orange { color: #ff9900; }
   .section-dynamic .dyn-warning.red { color: #ff2a2a; }
+  /* CHOOSER v2 (Toby 2026-08-17: "bigger... each on its own
+     respective L/R side... placeholdery for eventual graphics"):
+     two LARGE half-screen panels — STATICS left, DYNAMICS right,
+     matching the ribbons' L/R model — each mostly empty space where
+     the diagram art (statics curving-air, dynamics L→R flow) will
+     live. The order-hint reads left→right now. */
   .ship-chooser {
     position: absolute; inset: 0; z-index: 40; display: flex;
-    flex-direction: column; gap: 18px; align-items: center;
+    flex-direction: row; gap: 28px; align-items: stretch;
     justify-content: center; background: #111;
+    padding: 44px 36px 28px;
+    box-sizing: border-box;
     transition: transform .45s ease, opacity .45s ease;
   }
   .ship-chooser.swipe-out { transform: translateX(-100%); opacity: 0; pointer-events: none; }
   .ship-chooser button {
-    width: min(520px, 80%); padding: 26px 22px; background: #191919;
-    border: 1px solid #474747; border-radius: 10px; color: #eee;
-    font: inherit; cursor: pointer; text-align: left;
-    display: flex; align-items: center; gap: 18px;
+    flex: 1 1 0; max-width: 46%;
+    background: #191919;
+    border: 1px solid #474747; border-radius: 14px; color: #eee;
+    font: inherit; cursor: pointer; text-align: center;
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 16px;
     transition: border-color .15s ease, transform .15s ease;
   }
-  .ship-chooser button:hover { border-color: #ff9900; transform: translateY(-2px); }
-  .ship-chooser .glyph { font-size: 30px; width: 56px; text-align: center; flex: none; }
-  .ship-chooser .title { font-size: 19px; letter-spacing: .06em; color: #ff9900; }
-  .ship-chooser .sub { font-size: 13px; color: #888; margin-top: 4px; }
-  .ship-chooser .order-hint { font-size: 12px; color: #666; letter-spacing: .04em; }
+  .ship-chooser button:hover { border-color: #ff9900; transform: translateY(-3px); }
+  .ship-chooser .glyph { font-size: 72px; line-height: 1; opacity: .8; }
+  .ship-chooser .title { font-size: 28px; letter-spacing: .1em; color: #ff9900; }
+  .ship-chooser .sub { font-size: 15px; color: #888; margin-top: 6px; }
+  .ship-chooser .order-hint {
+    position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+    font-size: 12px; color: #666; letter-spacing: .04em;
+  }
   /* THE RIBBON — CHEVRONS ONLY (Toby re-ruling 2026-08-17 evening,
      supersedes the worded ribbons: the giant vertical word was the
      OTHER page's title, which read as if each page were mistitled).

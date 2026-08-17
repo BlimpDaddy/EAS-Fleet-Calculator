@@ -172,6 +172,7 @@ style.textContent = `
     font-size: var(--font-base);
     opacity: 0.5;
     text-align: center;
+    letter-spacing: .25em; /* the COMING SOON placeholder reads as signage (Toby 2026-08-17) */
   }
   /* Bottom band: results as a horizontal strip of stat blocks. */
   .dyn-results-row {
@@ -378,7 +379,7 @@ const visualPanel = document.createElement('div');
 visualPanel.className = 'panel-border dyn-panel dyn-visual-panel';
 const visualNote = document.createElement('div');
 visualNote.className = 'dyn-visual-note';
-visualNote.textContent = ' ';
+visualNote.textContent = 'VISUALIZER COMING SOON'; // placeholder (Toby 2026-08-17) until M7
 visualPanel.appendChild(visualNote);
 
 // --- Band 3 (bottom): the condensed output strip ---
