@@ -1,4 +1,4 @@
-/**
+﻿/**
  * PAGE-2 SPLIT — the SHIP chooser + STATICS ⇄ DYNAMICS switcher
  * (Toby's design ruling 2026-08-17; discharges the backlogged
  * "Dynamic becomes a sub-button of Ship" ruling of 2026-08-15).
@@ -72,7 +72,7 @@ style.textContent = `
      the visualiser (Toby's red ellipse). */
   .section-dynamic .dyn-results-row { margin-bottom: -12px; }
   .section-dynamic .ship-ribbon.rib-left:hover { width: 58px; }
-  [data-section="ship"] .ship-ribbon.rib-right { width: 56px; font-size: 19px; }
+  [data-section="ship"] .ship-ribbon.rib-right { width: 56px; font-size: 23px; }
   [data-section="ship"] .ship-ribbon.rib-right:hover { width: 72px; }
   .section-dynamic .dyn-key-result { color: #c628a4; font-weight: 700; }
   .ship-chooser {
@@ -109,7 +109,7 @@ style.textContent = `
     justify-content: center; gap: 12px; box-sizing: border-box;
     background: repeating-linear-gradient(90deg, rgba(255,153,0,.28) 0 2px, #161616 2px 5px);
     border: 1px solid #ff9900; border-top: none; border-bottom: none;
-    color: #c628a4; font-size: 17px; font-weight: 700;
+    color: #c628a4; font-size: 21px; font-weight: 700;
     letter-spacing: .22em; cursor: pointer; user-select: none;
     writing-mode: vertical-rl; text-orientation: mixed;
     transition: width .18s ease, filter .18s ease; overflow: hidden;
