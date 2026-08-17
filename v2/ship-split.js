@@ -74,6 +74,15 @@ style.textContent = `
   [data-section="ship"] .ship-ribbon.rib-right { width: 56px; font-size: 23px; }
   [data-section="ship"] .ship-ribbon.rib-right:hover { width: 72px; }
   .section-dynamic .dyn-key-result { color: #c628a4; font-weight: 700; }
+  /* Fleet: the Work Performed readout on ONE line (Toby 2026-08-17 —
+     'x Trillion Ton-km / year' wrapped to two): the 222px value input
+     shrinks to fit its digits, the unit drops to 14px, nothing wraps. */
+  .section-fleet .fleet-control-output { white-space: nowrap; }
+  .section-fleet .marketsize-input { width: 2.6em; }
+  .section-fleet [data-fleet="marketsize-unit"] { font-size: 14px; }
+  /* Dynamics: Smart Tail + BLI checkboxes DOUBLED (Toby 2026-08-17)
+     — same place, same text, twice the box. */
+  .section-dynamic .dyn-toggle-row input[type="checkbox"] { width: 26px; height: 26px; }
   /* Warnings as hover ⚠ icons, zero height impact (Toby ruling
      2026-08-17). Placement v2 same day (Toby, supersedes beside-the-
      title): each icon floats OVER the result it warns about — the
