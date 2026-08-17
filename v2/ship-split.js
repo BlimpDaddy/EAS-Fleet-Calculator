@@ -143,27 +143,32 @@ style.textContent = `
      two dots (berry = where you are; statics first, the chooser's
      order) + the current sub-page's name. Hidden off the ship pages.
      Taste knobs: font-size, dot size, gap, top offset. */
-  /* Dot placement re-ruled (Toby, 2026-08-17): the PAIR sits directly
-     under the word SHIP — "one under H and one under I" — so the DOTS
-     are the anchored element (centred on the link) and the mode word
-     trails to their right without shifting them. Live dot = berry,
-     not-live = grey. */
-  .ship-mode-badge {
-    position: absolute; top: calc(100% + 3px); left: 50%;
-    transform: translateX(-12px); /* centre the 24px dot pair, not the whole badge */
-    display: flex; align-items: center;
+  /* THE SPLIT ORBIT (Toby ruling 2026-08-17, supersedes the dots):
+     the EAS logo's two swoosh halves — lifted VERBATIM from
+     logo_circles.svg, which is already built as two separate paths —
+     sandwich the word SHIP: TOP half above = STATICS (the lift half,
+     the chooser's first question), BOTTOM half below = DYNAMICS.
+     Berry when live, grey when not; both grey on the chooser; the
+     whole mark disappears off the ship pages. The halves keep the
+     original mark's diagonal offset (top shifted right, bottom left)
+     so the orbit reads as itself, just opened around the title.
+     Taste knobs: width, the ±offset px, the top/bottom gaps. */
+  .ship-logo-half {
+    position: absolute; left: 50%; width: 22px;
+    color: #555; pointer-events: none;
+  }
+  .ship-logo-half svg { display: block; width: 100%; height: auto; }
+  .ship-logo-half.on { color: #c628a4; }
+  /* The nav anchor is a TALL line box (58px) with the glyphs centred
+     (~22–42), so the halves anchor to the BOX CENTRE with glyph-hugging
+     offsets — 'above the box' was above the viewport (first-cut bug). */
+  .ship-half-top { top: calc(50% - 25px); transform: translateX(calc(-50% + 5px)); }
+  .ship-half-bottom { top: calc(50% + 14px); transform: translateX(calc(-50% - 5px)); }
+  .ship-mode-word {
+    position: absolute; top: calc(50% + 15px); left: calc(50% + 20px);
+    font-size: 11px; letter-spacing: .25em; color: #eee; font-weight: 700;
     white-space: nowrap; pointer-events: none;
   }
-  .ship-mode-badge .word {
-    position: absolute; left: calc(100% + 8px);
-    font-size: 11px; letter-spacing: .25em; color: #eee; font-weight: 700;
-  }
-  .ship-mode-badge .dots { display: flex; gap: 6px; }
-  .ship-mode-badge .dots i {
-    width: 9px; height: 9px; border-radius: 50%; display: block;
-    background: #555; border: 1.5px solid #666; box-sizing: border-box;
-  }
-  .ship-mode-badge .dots i.on { background: #c628a4; border-color: #c628a4; }
   .ship-ribbon.opening { width: 34vw; color: #ff9900; transition: width .35s ease-in, color .2s ease; }
   /* Accordion unfold, now horizontal: the incoming page stretches open
      from the edge it was squished into. */
@@ -219,28 +224,35 @@ function makeRibbon(side, targetKey, targetLabel, nav, enterClass) {
   return rib;
 }
 
-/* The nav badge: dots + the current sub-page's name, hanging under
- * the SHIP nav link (statics = first dot — the chooser's order).
- * One element, kept true by syncModeBadge(): it names the page you
- * are ON, so it shows only while a ship sub-page is displayed. */
-let badgeEl = null;
+/* The split orbit: the EAS logo's two crescent paths (verbatim from
+ * assets/logo_circles.svg — the mark is genuinely two paths) wrap the
+ * SHIP nav title. Top = STATICS, bottom = DYNAMICS; the word names a
+ * chosen sub-page beside the bottom half. Kept true by
+ * syncModeBadge(). */
+const SWOOSH_BOTTOM_D = 'm 1.78827,20.5365 c -3.64225,10.5095 -1.664653,15.7991 5.41991,15.7991 7.08452,0 17.44632,-6.1241 28.92502,-15.8643 z';
+const SWOOSH_TOP_D = 'M 61.4986,15.799 C 65.1408,5.28952 63.1632,0 56.0786,0 48.9941,0 38.6324,6.12402 27.1536,15.8642 Z';
+let halfTop = null, halfBottom = null, wordEl = null;
 function ensureModeBadge() {
   const anchor = navShip();
-  if (!anchor || badgeEl) return;
+  if (!anchor || halfTop) return;
   anchor.style.position = 'relative';
-  badgeEl = document.createElement('span');
-  badgeEl.className = 'ship-mode-badge';
-  const dots = document.createElement('span');
-  dots.className = 'dots';
-  dots.append(document.createElement('i'), document.createElement('i'));
-  const word = document.createElement('span');
-  word.className = 'word';
-  badgeEl.append(dots, word);
-  badgeEl.style.display = 'none';
-  anchor.appendChild(badgeEl);
+  const mkHalf = (cls, viewBox, d) => {
+    const span = document.createElement('span');
+    span.className = `ship-logo-half ${cls}`;
+    span.innerHTML = `<svg viewBox="${viewBox}" xmlns="http://www.w3.org/2000/svg"><path d="${d}" fill="currentColor"/></svg>`;
+    span.style.display = 'none';
+    anchor.appendChild(span);
+    return span;
+  };
+  halfTop = mkHalf('ship-half-top', '27 -0.5 40 17', SWOOSH_TOP_D);
+  halfBottom = mkHalf('ship-half-bottom', '-2 20 40 17', SWOOSH_BOTTOM_D);
+  wordEl = document.createElement('span');
+  wordEl.className = 'ship-mode-word';
+  wordEl.style.display = 'none';
+  anchor.appendChild(wordEl);
 }
 function syncModeBadge() {
-  if (!badgeEl) return;
+  if (!halfTop) return;
   const ship = $('[data-section="ship"]');
   const dyn = [...document.querySelectorAll('section')].find((s) => s.querySelector('.dyn-eas-chip'));
   const shipRouted = ship && getComputedStyle(ship).display !== 'none';
@@ -253,17 +265,17 @@ function syncModeBadge() {
   // whenever either is on screen (chooser included).
   navShip()?.classList.toggle('current-page', !!(shipRouted || dynShown));
   const current = dynShown ? 'dynamics' : (shipShown ? 'statics' : null);
-  // Dots are OFFICIALLY PART OF THE TITLE (Toby ruling 2026-08-17):
-  // visible on every ship state — chooser included, both grey there —
-  // and disappear on other pages. The word names only a chosen
-  // sub-page.
+  // The split orbit is PART OF THE TITLE (Toby ruling 2026-08-17):
+  // present on every ship state — both halves grey on the chooser —
+  // and gone on other pages. The word names only a chosen sub-page.
   const onShipPages = !!(shipRouted || dynShown);
-  badgeEl.style.display = onShipPages ? '' : 'none';
-  const word = badgeEl.querySelector('.word');
-  word.textContent = current ? (current === 'statics' ? 'STATICS' : 'DYNAMICS') : '';
-  const [d1, d2] = badgeEl.querySelectorAll('.dots i');
-  d1.classList.toggle('on', current === 'statics');
-  d2.classList.toggle('on', current === 'dynamics');
+  const disp = onShipPages ? '' : 'none';
+  halfTop.style.display = disp;
+  halfBottom.style.display = disp;
+  wordEl.style.display = current ? '' : 'none';
+  wordEl.textContent = current ? (current === 'statics' ? 'STATICS' : 'DYNAMICS') : '';
+  halfTop.classList.toggle('on', current === 'statics');
+  halfBottom.classList.toggle('on', current === 'dynamics');
 }
 
 function ensureSwitchers() {
