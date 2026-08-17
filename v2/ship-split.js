@@ -224,8 +224,16 @@ function boot() {
   // re-presents the chooser — it's the hub, and once the diagram art
   // lands it's worth revisiting. Ribbons still flow straight between
   // sections without it.
+  // SHIP nav = LAST-USED sub-section (Toby ruling 2026-08-17, final,
+  // superseding the same-day chooser-hub idea): returning from Fleet/
+  // Economics lands you where you were — statics stays, dynamics
+  // bounces straight through. The chooser greets only when no choice
+  // exists yet this session.
   navShip()?.addEventListener('click', () => {
     if (viaRibbon) { viaRibbon = false; return; }
+    const m = getMode();
+    if (m === 'dynamics') { setTimeout(() => navDynamic()?.click(), 0); return; }
+    if (m === 'statics') return; // V1 already routed here
     const ship = $('[data-section="ship"]');
     if (ship && !ship.querySelector('.ship-chooser')) buildChooser(ship);
   });
