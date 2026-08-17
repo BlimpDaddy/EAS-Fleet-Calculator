@@ -133,6 +133,24 @@ style.textContent = `
     font-size: 20px; font-weight: 700; color: #ffb340; line-height: 1;
     text-shadow: 0 0 6px rgba(0,0,0,.9);
   }
+  /* Gentle life (Toby 2026-08-17: "leave the main ones as they are"):
+     the seven main chevrons stay static; SMALLER, WARMER chevrons
+     interleaved between them breathe on a slow 3s fade, each a beat
+     behind the last — a quiet wave down the ribbon so the buttons are
+     never missed or forgotten. Knobs: the warm colour, the 12px, the
+     3s, the .45s stagger, the .85 peak opacity. */
+  .ship-ribbon .chev-soft {
+    font-size: 12px; font-weight: 700; color: #ff7300; line-height: 1;
+    text-shadow: 0 0 6px rgba(0,0,0,.9); opacity: 0;
+    animation: ship-chev-breathe 3s ease-in-out infinite alternate;
+  }
+  @keyframes ship-chev-breathe {
+    from { opacity: 0; }
+    to   { opacity: .85; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ship-ribbon .chev-soft { animation: none; opacity: .5; }
+  }
   .ship-ribbon.rib-left { left: 0; border-left: none; }
   .ship-ribbon.rib-right { right: 0; border-right: none; }
   /* MODE BADGE (Toby direction 2026-08-17 evening — his own sketch:
@@ -198,12 +216,22 @@ function makeRibbon(side, targetKey, targetLabel, nav, enterClass) {
   // Direction re-ruled (Toby, 2026-08-17, on sight): arrows gesture
   // DRAGGING THE NEW PAGE INTO THE SCREEN — the right ribbon pulls
   // leftward '❮', the left ribbon pulls rightward '❯' (opposite of
-  // the first pointing-out version).
+  // the first pointing-out version). Between the seven static mains:
+  // six smaller, warmer BREATHING chevrons (3s fade, staggered — the
+  // quiet wave; delays inline because the mains are spans too).
+  const glyph = side === 'right' ? '❮' : '❯';
   for (let i = 0; i < 7; i++) {
     const chev = document.createElement('span');
     chev.className = 'chev';
-    chev.textContent = side === 'right' ? '❮' : '❯';
+    chev.textContent = glyph;
     rib.appendChild(chev);
+    if (i < 6) {
+      const soft = document.createElement('span');
+      soft.className = 'chev-soft';
+      soft.textContent = glyph;
+      soft.style.animationDelay = `${(i * 0.45).toFixed(2)}s`;
+      rib.appendChild(soft);
+    }
   }
   rib.addEventListener('click', () => {
     setMode(targetKey);
