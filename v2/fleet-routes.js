@@ -42,7 +42,7 @@ import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
 import { ROUTE_CITIES, ROUTE_PAIRS } from '/v2/route-data.js';
 
 const BERRY = 0xC628A5;
-const CYCLE_MS = 1000;          // Toby: "every ~1 second"
+const CYCLE_MS = 2000;          // Toby 2026-08-17: 2s to savour each trip ("might even go 3")
 const TOL_FRAC = 0.08, TOL_MIN = 400; // distance-match window (km)
 const SPIN_MS = 450;            // the flick — quick, like spinning a real globe
 let spin = null;                // active flick: {from, to, start, dur}
@@ -65,7 +65,9 @@ if (v1Canvas && figure) {
   controls.minDistance = 2;
   controls.maxDistance = 6;
   controls.enablePan = false;
-  camera.position.set(0, 0, 3);
+  // z=2.7, closer than V1's 3 (Toby 2026-08-17: globe edges near the
+  // frame) — arcs to 1.5R still clear the top at this distance.
+  camera.position.set(0, 0, 2.7);
 
   const globe = new THREE.Group();
   scene.add(globe);

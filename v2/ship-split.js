@@ -83,6 +83,29 @@ style.textContent = `
   /* 'Trillion' stays value-sized — it's the load-bearing suffix
      (Toby 2026-08-17); only 'Ton-km / year' rides small. */
   .section-fleet .fleet-unit-big { font-size: 24px; }
+  /* BIGGER GLOBE (Toby 2026-08-17): all growth VERTICAL — the three
+     ℹ︎ tooltips go, the slider rows squish, the Current Properties box
+     shrinks upward, and the reclaimed height goes to the globe canvas
+     (camera also steps closer in fleet-routes.js). Knobs: the 300px
+     canvas height and the squish margins below. */
+  .section-fleet .fleet-control-label .has-tooltip { display: none; }
+  .section-fleet .fleet-control-label { margin-bottom: 0; line-height: 1.1; }
+  .section-fleet .fleet-control-output { margin-top: 0; line-height: 1.15; }
+  .section-fleet .fleet-controls .fleet-control { margin-bottom: 6px; }
+  /* V1 splits the section 1fr/1fr — and 'auto' can't help: the
+     results column SPANS both rows, so the grid algorithm pushes its
+     height into row 1 regardless of content. Explicit rows instead:
+     top row pinned at 255px (the squished controls fit ~246), globe
+     row takes everything else; the canvas flexes to fill its figure.
+     Knobs: the 255px, and the squish margins above/below. */
+  .section-fleet { grid-template-rows: 272px 1fr; }
+  .section-fleet .fleet-controls-heading-container { margin: 0 0 4px; padding: 0; }
+  .section-fleet .fleet-controls-heading { margin: 0; line-height: 1.2; }
+  .section-fleet .fleet-control-output { line-height: 1; }
+  .section-fleet .fleet-control-slider { margin: 0; }
+  .section-fleet .fleet-controls .fleet-control { margin-bottom: 2px; gap: 2px; }
+  .section-fleet .fleet-graph-container { display: flex; flex-direction: column; min-height: 0; }
+  .section-fleet .fleet-routes-canvas { height: auto !important; flex: 1 1 0; min-height: 0; width: 100%; }
   /* Dynamics: Smart Tail + BLI checkboxes DOUBLED (Toby 2026-08-17)
      — same place, same text, twice the box. */
   .section-dynamic .dyn-toggle-row input[type="checkbox"] { width: 26px; height: 26px; }
