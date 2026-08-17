@@ -260,6 +260,16 @@ function makeRibbon(side, targetKey, targetLabel, nav, enterClass) {
   const rib = document.createElement('div');
   rib.className = `ship-ribbon rib-${side}`;
   rib.setAttribute('role', 'button');
+  // r21 #4: role="button" without focusability or Enter/Space was a
+  // keyboard dead end. Focusable + labelled + both activation keys.
+  rib.tabIndex = 0;
+  rib.setAttribute('aria-label', `Open ${targetLabel}`);
+  rib.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+      e.preventDefault();
+      rib.click();
+    }
+  });
   rib.title = `Open ${targetLabel}`;
   // Direction re-ruled (Toby, 2026-08-17, on sight): arrows gesture
   // DRAGGING THE NEW PAGE INTO THE SCREEN — the right ribbon pulls
@@ -453,7 +463,7 @@ function boot() {
   // visible on every press), so the location is snapshotted on
   // pointerdown — which fires before any routing.
   let preClick = null;
-  navShip()?.addEventListener('pointerdown', () => {
+  const snapshot = () => {
     const ship = $('[data-section="ship"]');
     const dyn = [...document.querySelectorAll('section')].find((s) => s.querySelector('.dyn-eas-chip'));
     preClick = {
@@ -461,6 +471,14 @@ function boot() {
       onStatics: !!(ship && getComputedStyle(ship).display !== 'none' && !ship.querySelector('.ship-chooser')),
       choosing: !!(ship && ship.querySelector('.ship-chooser')),
     };
+  };
+  navShip()?.addEventListener('pointerdown', snapshot);
+  // r21 #4: keyboard activation fires no pointerdown, so the snapshot
+  // never happened and Enter/Space on SHIP fell into the stored-mode
+  // bounce instead of returning to the chooser. keydown lands before
+  // the anchor's click, so the same snapshot works for both paths.
+  navShip()?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') snapshot();
   });
   navShip()?.addEventListener('click', () => {
     if (viaRibbon) { viaRibbon = false; preClick = null; return; }

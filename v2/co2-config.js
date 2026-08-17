@@ -58,9 +58,21 @@ export const TOTAL_CO2_MT = AIR_CO2_MT + MARINE_CO2_MT; // 1135 — the whole mo
 export const CREDIT_FRACTION = 0.8;      // share of displaced CO2 that earns carbon
                                          // revenue — the 20% nerf described above
 
-// Global fossil CO2 emissions — the denominator for the fleet results
-// "Global Total" line (Toby, 2026-08-17). Global Carbon Budget 2024:
-// fossil CO2 ~37.4 Gt/yr (fossil + cement, excluding land use — the
-// conservative/smaller denominator, consistent with the direct-
-// combustion-only stance above). Toby-editable.
-export const GLOBAL_FOSSIL_CO2_MT = 37400; // Mt CO2/yr
+// Denominator for the fleet results' global-share row (Toby,
+// 2026-08-17; corrected at r21).
+// WHAT:  global FOSSIL CO2 — fossil fuels + cement, excluding land-use
+//        change. Global Carbon Budget 2025 consolidates 2024 fossil
+//        CO2 at 37.8 Gt/yr (its 2025 projection is 38.1; total
+//        anthropogenic incl. land use is 42.4).
+// WHY:   fossil-only matches the direct-combustion-only stance of the
+//        displacement model above — we compare like with like.
+// R21 CORRECTIONS: (a) the row is labelled "Global Fossil CO₂ (2024)",
+//        not "Global Total" — the old label implied ALL global CO2
+//        while dividing by the fossil subset; (b) the kit's claim that
+//        the fossil figure was the "conservative" choice was
+//        backwards — a SMALLER denominator makes the displayed share
+//        LARGER. Fossil-only is the honest like-for-like basis, and it
+//        is stated as such rather than as conservatism.
+// REPLACE WHEN: the next Global Carbon Budget lands (update value AND
+//        the year in the row label together).
+export const GLOBAL_FOSSIL_CO2_MT = 37800; // Mt CO2/yr, GCB 2025 for year 2024

@@ -25,7 +25,32 @@
 import { PRESET_DYNAMICS } from '/calcv2/src/presetDynamics.js';
 
 const $ = (s) => document.querySelector(s);
-const RECT_FILL = 0.75, RATIO_TOL = 0.02, RATIO_MAX = 3;
+// r21 #1 FIX: box-fill ALONE cannot mean "rectilinear" — a perfectly
+// smooth circular cylinder has box-fill π/4 ≈ 0.785 and would have
+// tripped the old ≥0.75 test with no rectilinear geometry at all
+// (reviewer's counterexample, confirmed). Rectilinear now requires
+// BOTH: the bulk fills its box (≥0.75) AND *every* axis silhouette is
+// near-rectangular (≥0.80) — a box is a rectangle from all three
+// sides; a cylinder is a circle from one (0.785, so it escapes).
+// Measured: washing machine 0.972/0.972 flags · car 0.819/0.822 flags
+// (Toby's ruling that a 300 m car deserves a red) · cigar 0.568/0.783,
+// bottle 0.560/0.735, lenticular 0.464/0.752, Sunship 0.458/0.689 all
+// pass. DECLARED LIMIT: the cylinder's margin is 0.785 vs 0.80 (~2%),
+// and a deliberately squared-off smooth body (high-exponent
+// superellipsoid) can still trip it — it would also look box-like.
+const RECT_FILL = 0.75, RECT_SIL = 0.80;
+// r21 #2 FIX: the old test compared DERIVED extent RATIOS pairwise,
+// which false-positives on genuinely directional bodies — a 4:2:1 hull
+// yields ratios 2/4/2, and the first and third match below 3
+// (reviewer's counterexample, confirmed). The physical question is
+// axis ambiguity, so it now tests the EXTENTS themselves: two of the
+// three within ±2% (a square cross-section) AND overall slenderness
+// (longest ÷ shortest) below 3 — nothing long enough to point.
+// Verified: lenticular 1.99/1.99/0.86 → equal pair, slenderness 2.31
+// → FLAGS (owner-confirmed: it wants to spin) · cigar (5.00) and
+// bottle (3.50) escape on slenderness · Sunship has no equal pair
+// (0.811 vs 0.772 = 5%) · 4:2:1 now correctly passes.
+const EXT_TOL = 0.02, SLENDER_MIN = 3;
 const RECT_TEXT = 'Rectilinear Structural Scaling!';
 const DIR_TEXT = "Poor 'Inherent Directionality' Detected!";
 
@@ -39,17 +64,22 @@ const activeDyn = () => {
 const isRect = (d) => {
   if (!d || !d.raw || !Number.isFinite(d.raw.volumeRaw)) return false;
   const [x, y, z] = d.raw.extents;
-  return d.raw.volumeRaw / (x * y * z) >= RECT_FILL;
+  const f = d.raw.frontalRaw;
+  if (!f || ![f.X, f.Y, f.Z].every(Number.isFinite)) return false;
+  const boxFill = d.raw.volumeRaw / (x * y * z);
+  // Each axis silhouette ÷ the rectangle of the other two extents.
+  const minSil = Math.min(f.X / (y * z), f.Y / (x * z), f.Z / (x * y));
+  return boxFill >= RECT_FILL && minSil >= RECT_SIL;
 };
 const poorDir = (d, id) => {
   if (id === 'washingmachine') return true; // RIGGED (see header)
   if (!d || !d.raw) return false;
   const s = [...d.raw.extents].sort((a, b) => b - a);
-  const r = [s[0] / s[1], s[0] / s[2], s[1] / s[2]];
-  for (let i = 0; i < 3; i++) for (let j = i + 1; j < 3; j++) {
-    if (Math.abs(r[i] - r[j]) / r[j] <= RATIO_TOL && r[i] < RATIO_MAX && r[j] < RATIO_MAX) return true;
-  }
-  return false;
+  if (!(s[2] > 0)) return false;
+  const equalPair = Math.abs(s[0] - s[1]) / s[1] <= EXT_TOL
+    || Math.abs(s[1] - s[2]) / s[2] <= EXT_TOL
+    || Math.abs(s[0] - s[2]) / s[2] <= EXT_TOL;
+  return equalPair && s[0] / s[2] < SLENDER_MIN;
 };
 
 // ICON-ONLY (Toby refinement 2026-08-17): the same amber triangle the

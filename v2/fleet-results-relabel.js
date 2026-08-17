@@ -250,7 +250,10 @@ if (box) {
   const pctData = pctHeader.nextElementSibling;
   const gHeader = document.createElement('div');
   gHeader.className = 'fleet-results-data-header';
-  gHeader.textContent = 'Global Total:';
+  // r21 #3: label names the actual denominator + its year (was
+  // "Global Total:", which implied all global CO2 while dividing by
+  // the fossil subset).
+  gHeader.textContent = 'Global Fossil CO₂ (2024):';
   const gData = document.createElement('div');
   gData.className = 'fleet-results-data';
   const gVal = document.createElement('span');
