@@ -47,10 +47,11 @@ style.textContent = `
   .section-dynamic .dyn-results-row { flex-wrap: nowrap; display: flex; gap: 6px; align-items: end; }
   .section-dynamic .dyn-results-row > div { min-width: 0; flex: 1 1 0; }
   .section-dynamic .fleet-results-data-header {
-    font-size: 11px; letter-spacing: .02em; line-height: 1.25;
-    white-space: normal; min-height: 2.5em; display: flex; align-items: end;
+    font-size: 12px; letter-spacing: .02em; line-height: 1.3;
+    white-space: normal;
   }
-  .section-dynamic .fleet-results-data { font-size: 19px; white-space: nowrap; }
+  .section-dynamic .dyn-hdr-sub { font-size: 10px; color: #777; }
+  .section-dynamic .fleet-results-data { font-size: 22px; white-space: nowrap; }
   .section-dynamic .dyn-key-result { color: #c628a4; font-weight: 700; }
   .ship-chooser {
     position: absolute; inset: 0; z-index: 40; display: flex;

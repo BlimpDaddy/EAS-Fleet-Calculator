@@ -392,7 +392,20 @@ function statBlock(label) {
   block.className = 'dyn-stat';
   const h = document.createElement('div');
   h.className = 'fleet-results-data-header';
-  h.textContent = label;
+  // Two-line titles by construction (Toby, 2026-08-17): the
+  // parenthetical qualifier always sits on its own second line, so
+  // every block is narrow and the values can be large.
+  const parts = label.match(/^(.*?)\s*(\(.*\))$/);
+  if (parts) {
+    const l1 = document.createElement('span');
+    l1.textContent = parts[1];
+    const l2 = document.createElement('span');
+    l2.textContent = parts[2];
+    l2.className = 'dyn-hdr-sub';
+    h.append(l1, document.createElement('br'), l2);
+  } else {
+    h.textContent = label;
+  }
   const d = document.createElement('div');
   d.className = 'fleet-results-data';
   d.textContent = '—';
