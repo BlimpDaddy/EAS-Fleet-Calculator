@@ -81,15 +81,44 @@ export const ROUTE_PAIRS = [[63,64,805],[140,141,813],[22,28,824],[21,28,825],[6
  * pairs that previously did not exist at all. Merged and re-sorted by km
  * at runtime in fleet-routes.js.
  *
- * NOT canals. Suez/Panama are corridors of 6-8 waypoints and are the next
- * phase; Toby ruled 2026-08-18 that the Sunship may fly the canal route
- * ("over Suez, like a flying ship"), and the [a,b,km,[gates]] format below
- * already takes an N-waypoint chain, so they drop in as DATA, not a
- * rewrite.
+ * CORRIDORS (2026-08-18, Toby: "yes to both the suez and polar corridor").
+ * The format always took an N-waypoint chain, so this phase added DATA and
+ * a search, not a rewrite. Three hand-authored spines, every leg of each
+ * validated against this same earth.jpg before use:
+ *   SUEZ  (20 wpts) Malacca - S of Sri Lanka - Arabian Sea - Gulf of Aden
+ *         - Bab-el-Mandeb - Red Sea S/N - Gulf of Suez - SUEZ - Ismailia
+ *         - Port Said - Med E/C - Sicily Channel - Algeria - Gibraltar
+ *         - Portugal - Biscay - Ushant - Dover. The three canal legs are
+ *         92-173 km LAND runs, inside the 250 km rule: flying over the
+ *         canal IS the ruling, and the mask is not weakened anywhere.
+ *   POLAR (10 wpts) NW Pacific - Bering - Chukchi - Laptev - Kara -
+ *         Barents - North Cape - Norwegian Sea - N of Scotland - Dover.
+ *         Every Arctic leg measured 0 km of land because |lat| >= 57 was
+ *         already exempt (the v3 polar ruling) - the corridor only had to
+ *         solve getting UP there and back DOWN again.
+ *   GULF  Hormuz - Oman offing, joining the Suez spine at the Arabian
+ *         Sea. Added because NO Persian Gulf port could reach any gate at
+ *         all (Hormuz to Arabian Sea direct fails on 427 km of Oman).
  *
- * REGENERATING: same in-browser sweep as above, plus the gate search.
+ * SHORTEST STILL WINS across every method: plain great circle, 1 gate, 2
+ * gates, and each corridor (entered and left at its nearest spine point,
+ * with an optional single gate hop at either end for ports that cannot see
+ * a spine directly). A corridor is chosen ONLY when nothing shorter
+ * passes - which is why Busan-Rotterdam keeps its 12,162 km single Bering
+ * hop instead of the full polar spine, and why polar wins all of East Asia
+ * while Suez wins the Indian Ocean. Corridor detour cap 2.0x the direct
+ * great circle (gates stay at 1.45x): a real canal routing IS long
+ * relative to a line drawn through the continent.
+ *
+ * REGENERATING: same in-browser sweep as above, plus the gate and corridor
+ * search. PERFORMANCE: the search is exhaustive over all 51 gates only
+ * because every port-to-gate (173x51) and gate-to-gate (51x51) leg is
+ * PRECOMPUTED once, after which the combinatorics are pure table
+ * arithmetic. Testing legs inside the loops instead is what made the first
+ * attempt take minutes and hang the tab.
  * Verified at generation: 300/300 random gated routes independently
- * re-passed at double sample density; zero duplicates against ROUTE_PAIRS.
+ * re-passed at double sample density; zero duplicates against ROUTE_PAIRS;
+ * the longest 18-waypoint chains thread every declared waypoint at 0 km.
  *
  * GATES: [name, lat, lon]. GATED: [idxA, idxB, km, [gateIdx, ...]].
  * ------------------------------------------------------------------ */
