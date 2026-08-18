@@ -148,11 +148,34 @@ css.textContent = `
      Loads after dynamic-page.js, so equal-specificity rules here win
      its base styles AND its own 900px wrap rules. */
   /* Panels stack as three natural-height bands — the 1fr centre row
-     otherwise stretches the empty visualiser to fill the viewport. */
-  .section-dynamic { grid-template-rows: auto auto auto; }
+     otherwise stretches the empty visualiser to fill the viewport.
+     THE MISSING-CONTROLS BUG (Toby, phone round 8): auto rows are NOT
+     enough on their own. dynamic-page.js sets min-height: 0 on .dyn-panel,
+     which removes a grid item's content-based minimum — so when the
+     section's height is bounded (body is a grid and the section is
+     stretched into its row), the rows are free to shrink BELOW their
+     content instead of overflowing. Measured at 375x667: the controls
+     row needs 280px but its row collapsed to 175px, so Cd, Power Saving
+     and both checkboxes spilled past the panel and the visualiser panel
+     — a later sibling with its own background — painted straight over
+     them. Only their absolutely-positioned ESTIMATED marker and the
+     S-zone bar showed through, which is exactly what the screenshot
+     caught. Restoring the content floor makes the section grow and the
+     PAGE scroll, which is the right behaviour on a phone. */
+  .section-dynamic { grid-template-rows: auto auto auto; height: auto; align-self: start; }
+  .section-dynamic .dyn-panel { min-height: auto; }
   /* Controls: one per line, sliders full width; the two toggles share
-     one row so they don't burn two more lines. */
-  .dyn-controls-row { flex-direction: column; align-items: stretch; }
+     one row so they don't burn two more lines.
+     NOWRAP IS LOAD-BEARING (Toby, phone round 8): dynamic-page.js sets
+     flex-wrap: wrap at its own 900px breakpoint, which is right for a
+     ROW but catastrophic once we flip to a COLUMN — a wrapping column
+     flex breaks sideways into extra COLUMNS the instant its height is
+     bounded, and on a phone shorter than ~800px it is. Measured: the
+     four controls jumped to x=36/493/951/1404, so Airspeed stayed put
+     and Cd, Power Saving and both checkboxes left the screen entirely
+     (their absolutely-positioned ESTIMATED marker and S-zone bar were
+     all that bled back into view, over the visualiser panel). */
+  .dyn-controls-row { flex-direction: column; flex-wrap: nowrap; align-items: stretch; }
   .dyn-controls-row .fleet-control { min-width: 0; width: 100%; }
   .dyn-controls-row .fleet-control-slider { width: 100%; }
   .dyn-toggle-col {
