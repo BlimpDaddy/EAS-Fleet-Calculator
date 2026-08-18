@@ -237,8 +237,15 @@ style.textContent = `
   /* M6: the estimator marker + SILENT ±band on the Cd slider. The band is
      drawn, never worded (ruling 2026-08-16 — rationale in cdEstimator.js);
      the marker carries the one permitted word: ESTIMATED. */
+  /* The marker strip. Height was 12px because the ESTIMATED label sat on
+     its own line BELOW the tick, and that 12px is flow — it pushed the Cd
+     readout 18px lower than Airspeed's and 9px lower than S's (measured
+     2026-08-18, Toby: "the manual entry field is a bit lower than the
+     other numbers"). The label now sits ON the tick's line, just clear of
+     the band's high edge, so the strip needs only the tick's own height
+     and the readout comes back up level with S's. */
   .dyn-cd-band {
-    position: relative; height: 12px; margin-top: 2px;
+    position: relative; height: 3px; margin-top: 2px;
   }
   .dyn-cd-band .band {
     position: absolute; top: 0; height: 3px;
@@ -253,8 +260,11 @@ style.textContent = `
     transform: translateX(-50%);
     background: var(--color-accent-1, #c628a4);
   }
+  /* Anchored beside the band's HIGH edge, not centred on the marker: the
+     tick and the ±20% segment occupy the middle, and a centred label sat
+     on top of both. Vertically centred on the 3px band. */
   .dyn-cd-band .est-label {
-    position: absolute; top: 5px; transform: translateX(-50%);
+    position: absolute; top: -3px;
     color: var(--color-accent-1, #c628a4);
     font-size: 0.55em; letter-spacing: 0.08em; white-space: nowrap;
   }
@@ -424,16 +434,19 @@ cdCtl.slider.after(cdBand);
  * figure, so the readout becomes an input and the number can simply be
  * said.
  *
- * The ESTIMATED word moves OUT of the number and into its own tag, which
- * it should always have been: it is a claim about provenance, not part of
- * the value, and it could not have survived inside an editable field.
+ * The ESTIMATED word left the number entirely and did NOT get a tag of
+ * its own beside it (Toby, 2026-08-18: "we don't need a new 'estimated'
+ * now next to the type in Cd field — it already says estimated just above
+ * on the little line"). Correct: the marker strip under the slider has
+ * carried that word since M6, sitting on the very band it describes, and
+ * a second copy an inch away said nothing the first did not. The word
+ * could not have stayed INSIDE an editable field either way — a value and
+ * a claim about the value cannot share one text box.
+ *
  * Typing is exactly a drag as far as the state module is concerned —
  * setInput('cd') — so a typed value FIRMS the tracking sentinel and turns
- * the scenario CUSTOM by the same rule, and the tag disappears because it
- * is no longer true. */
-const cdEstTag = document.createElement('span');
-cdEstTag.className = 'dyn-cd-est-tag';
-cdEstTag.textContent = 'ESTIMATED';
+ * the scenario CUSTOM by the same rule, at which point the marker's own
+ * label stops applying to it. */
 const cdInput = document.createElement('input');
 cdInput.type = 'text';
 cdInput.className = 'fleet-control-output-value dyn-cd-input';
@@ -442,7 +455,7 @@ cdInput.autocomplete = 'off';
 cdInput.spellcheck = false;
 cdInput.setAttribute('aria-label', 'Drag coefficient — type an exact value');
 cdInput.title = 'Type an exact Cd and press Enter';
-cdCtl.valueSpan.replaceWith(cdEstTag, cdInput);
+cdCtl.valueSpan.replaceWith(cdInput);
 cdCtl.valueSpan = cdInput;             // paint() keeps writing through this handle
 // Evidence zones under the S slider (published 0–15 / bound 15–35 / beyond).
 const zoneBar = document.createElement('div');
@@ -716,6 +729,30 @@ function paint() {
   // the greyed hard limit IS the lesson: these are the Sunship's
   // designs). The E+A+S chord unlocks them for engineer use; the chip
   // self-identifies both the held chord and any unlocked configuration.
+  /* WHICH TAIL IS THIS? (Toby, 2026-08-18, on the Tubby Sunship: an
+   * uploaded near-copy of the Sunship gained almost nothing from the
+   * toggle — 0.179 -> 0.145 — while the preset goes 0.178 -> 0.0215.)
+   *
+   * Not a bug: two genuinely different models sit behind one checkbox.
+   * The Sunship gets its OWN fairing geometry, authored and measured, and
+   * the estimator scores that body. Everything else gets the §5.4
+   * REFERENCE ASSUMPTION — a flat 20% of the pressure term removed —
+   * because we have not built a tail for it. Applying the generic rule to
+   * the preset Sunship reproduces 0.1443, which is the number Toby saw,
+   * so the two shapes agree exactly; it is the MODELS that differ.
+   *
+   * The difference was invisible: provenance is off the page by the
+   * 2026-08-15 ruling, so the toggle looked identical either way. It now
+   * says which model it is on hover — the same device the Fleet page's
+   * CO2 basis uses (2026-08-17), and no on-page copy. The 20% figure
+   * itself is a separate question and a real one: the one tail we have
+   * ever measured removes 93% of pressure drag, not 20%. */
+  const tailModelTitle = sunship
+    ? 'Smart Tail DEPLOYED — the Sunship’s own fairing geometry, measured by the estimator'
+    : 'Smart Tail — REFERENCE ASSUMPTION (§5.4): 20% of pressure drag removed. '
+      + 'This is NOT a fairing built for this shape, and it is deliberately conservative — '
+      + 'the Sunship’s measured fairing removes about 93%.';
+
   const unlocked = easHeld();
   const toggleLocked = !sunship && !unlocked;
   tailToggle.box.disabled = toggleLocked;
@@ -723,7 +760,11 @@ function paint() {
   tailToggle.row.style.opacity = toggleLocked ? '0.4' : '';
   bliToggle.row.style.opacity = toggleLocked ? '0.4' : '';
   const rowTitle = toggleLocked ? 'Smart Tail and BLI are the Sunship’s configuration' : '';
-  tailToggle.row.title = rowTitle;
+  // The lock message wins while locked (it explains why the box will not
+  // move, which is the more urgent question); once unlocked the row says
+  // WHICH tail model is in force. One assignment — the first cut set the
+  // model text a few lines above and this line silently overwrote it.
+  tailToggle.row.title = toggleLocked ? rowTitle : tailModelTitle;
   bliToggle.row.title = rowTitle;
   easChip.style.display = unlocked || (!sunship && (state.tailOn || state.bliOn)) ? '' : 'none';
 
@@ -748,8 +789,6 @@ function paint() {
   // NEVER overwrite the field mid-edit: paint() runs on shape changes,
   // resizes and the fleet bridge, any of which can land while the user is
   // halfway through typing a number.
-  const tracking = state.cd === CD_TRACKS_ESTIMATE && cdSource === 'estimated';
-  cdEstTag.style.display = cdInForce != null && tracking ? '' : 'none';
   if (document.activeElement !== cdInput) {
     cdInput.value = cdInForce == null ? '—' : fmtCd(cdInForce);
     cdInput.disabled = cdInForce == null;   // nothing to edit with no ship
@@ -768,7 +807,26 @@ function paint() {
     bandSeg.style.left = trackPos(marker.lo, dial, g);
     bandSeg.style.width = trackSpan(marker.lo, marker.hi, dial, g);
     bandTick.style.left = trackPos(marker.value, dial, g);
-    bandLabel.style.left = trackPos(marker.value, dial, g);
+    // The label rides just past the band's HIGH edge so it never covers
+    // the band or the tick. If that would push it off the end of the
+    // track it flips to the LOW side instead — the ordinary label-flip.
+    // The estimate can reach at most ~2/3 of the dial (the dial's top is
+    // max(0.55, 1.5 x estimate)), so the flip is a guard against odd
+    // dials rather than a case the Sunship ever hits.
+    if (g) {
+      const GAP = 6;
+      const hiPx = g.x0 + trackFrac(marker.hi, dial) * g.span;
+      const loPx = g.x0 + trackFrac(marker.lo, dial) * g.span;
+      const w = bandLabel.offsetWidth;
+      const room = cdBand.getBoundingClientRect().width;
+      const flip = hiPx + GAP + w > room;
+      bandLabel.style.left = `${(flip ? Math.max(0, loPx - GAP - w) : hiPx + GAP).toFixed(2)}px`;
+    } else {
+      // No live geometry (painted while hidden) — the percentage fallback,
+      // which cannot do the flip and does not need to: it is replaced by a
+      // measured placement the moment the section is shown.
+      bandLabel.style.left = trackPos(marker.hi, dial, g);
+    }
   } else {
     cdBand.style.display = 'none';
   }

@@ -366,10 +366,108 @@ function loadObjText(name, text) {
     }
     const vsPane = $('[data-ship="selected-volumescalar"]');
     if (vsPane) vsPane.textContent = $('[data-shape="volume-scalar"]').textContent;
+    // ...and the Scale Reference chart, which V1 only ever repaints on a
+    // preset click. A later preset click calls V1's own loadFGShape and
+    // replaces this outline, so ownership hands back cleanly.
+    drawUploadSilhouette(m.hullPoints);
   });
 }
 window.__v2LoadObjText = loadObjText; // used by automated tests
 window.__v2Replica = replica;         // used by automated tests
+
+/* ------------------------------------------------------------------ *
+ * SCALE REFERENCE for uploads (Toby, 2026-08-18: the chart "does NOT
+ * change... it was stuck on the bottle which was my previous selection
+ * though i was using Tubby Sunship").
+ *
+ * V1 owns that chart and draws it from a fixed set of authored
+ * silhouettes in assets/charts/scale-ruler-chart/foreground_shapes.svg,
+ * selected by preset id. Its loadFGShape() only ever runs on a preset
+ * button click, so an upload left the previous preset's outline standing
+ * next to the man and the container ship — the one panel on the page
+ * whose entire job is "how big is YOUR ship" was showing someone else's.
+ *
+ * The SVG does carry a spare generic 'ship' outline, which would have
+ * been a one-line fix and the wrong one: swapping one shape the user did
+ * not upload for another shape the user did not upload. The uploaded
+ * geometry is right here, so the chart gets ITS silhouette.
+ *
+ * The outline is the CONVEX HULL's profile, not the mesh's. That is a
+ * real simplification — a concave waist reads as straight — but it is the
+ * same body VS and VE are computed from, so the picture and the numbers
+ * describe one object, and the hull silhouette is exactly the 2D hull of
+ * the projected hull vertices, which is cheap and exact rather than an
+ * approximation of an outline.
+ *
+ * Convention matched to V1's authored art, measured from it: each shape
+ * fills the 100x100 box on its LARGER dimension, is centred
+ * horizontally, and sits on the floor at y=100 (bottle 28.3x99 upright,
+ * cigar 99.1x19 flat — the art keeps each object's natural attitude, and
+ * so does this, by drawing the model in its own axes with Y up). The
+ * background man and container ship do the scaling; the foreground shape
+ * is always full-size.
+ */
+function hull2d(pts) {
+  const p = pts.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  if (p.length < 3) return p;
+  const cross = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const half = (src) => {
+    const out = [];
+    for (const q of src) {
+      while (out.length >= 2 && cross(out[out.length - 2], out[out.length - 1], q) <= 0) out.pop();
+      out.push(q);
+    }
+    out.pop();
+    return out;
+  };
+  return half(p).concat(half(p.slice().reverse()));
+}
+
+function uploadSilhouettePath(hullPoints) {
+  if (!Array.isArray(hullPoints) || hullPoints.length < 3) return null;
+  // Horizontal = whichever of X/Z the model is longer in; vertical = Y.
+  // Y-up is all but universal in .obj, and it keeps this outline agreeing
+  // with the 3D replica the user is looking at two panels away — the least
+  // surprising result, and the only one we can honestly infer.
+  const ext = (i) => {
+    let lo = Infinity, hi = -Infinity;
+    for (const v of hullPoints) { if (v[i] < lo) lo = v[i]; if (v[i] > hi) hi = v[i]; }
+    return [lo, hi];
+  };
+  const [x0, x1] = ext(0), [z0, z1] = ext(2);
+  const hAxis = (x1 - x0) >= (z1 - z0) ? 0 : 2;
+  const flat = hull2d(hullPoints.map((v) => [v[hAxis], v[1]]));
+  if (flat.length < 3) return null;
+  let hLo = Infinity, hHi = -Infinity, vLo = Infinity, vHi = -Infinity;
+  for (const [h, v] of flat) {
+    if (h < hLo) hLo = h; if (h > hHi) hHi = h;
+    if (v < vLo) vLo = v; if (v > vHi) vHi = v;
+  }
+  const span = Math.max(hHi - hLo, vHi - vLo);
+  if (!(span > 0)) return null;
+  const k = 100 / span;
+  const hMid = (hLo + hHi) / 2;
+  // SVG y grows DOWN and the model's grows up, hence 100 - (...).
+  const pt = ([h, v]) => `${(50 + (h - hMid) * k).toFixed(3)},${(100 - (v - vLo) * k).toFixed(3)}`;
+  return `M${flat.map(pt).join('L')}Z`;
+}
+
+function drawUploadSilhouette(hullPoints) {
+  const fg = $("[data-chart-sr='fg-group']");
+  if (!fg) return;
+  const d = uploadSilhouettePath(hullPoints);
+  if (!d) return;   // unmeasurable — leave whatever is there rather than blank the panel
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute('d', d);
+  // V1's own foreground styling, copied exactly so an upload does not read
+  // as a different KIND of thing from a preset.
+  path.setAttribute('fill', 'none');
+  path.setAttribute('stroke', '#FF9900');
+  path.setAttribute('stroke-width', '0.05rem');
+  path.dataset.chartSr = 'v2-upload';
+  fg.replaceChildren(path);
+}
+window.__v2UploadSilhouettePath = uploadSilhouettePath; // used by automated tests
 
 function facesToEdges(faces) {
   const seen = new Set();
