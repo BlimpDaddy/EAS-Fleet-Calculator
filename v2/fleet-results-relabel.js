@@ -4,7 +4,9 @@
  *   2 Work per {Shape}:    0.xxx Trillion / Ton-km / year
  *   3 Trips per {Shape}:   x.xx
  *   4 Average Ton-km:      x.x Million / per trip (reformatted to millions)
- *   5 Trip time:           x.xx days / per trip
+ *   5 Average Trip Time:   x.xx days / per trip  (renamed from "Trip time"
+ *                          2026-08-18 — the figure IS an average, and the
+ *                          Fleet page's other averages already say so)
  *   6 Potential CO₂ Displaced: xxx.xx Million / tonnes / year
  *   7 Industry Total:      xx.x %                 (was Total Emissions Eliminated)
  *   8 Global Total:        x.xx %                 (NEW — displaced ÷ world fossil CO₂)
@@ -85,7 +87,7 @@ if (box) {
   relabel(byText('Ton-km / year'), 'Work per <span class="v2-shapename">Sunship</span>:');
   relabel(byText('Trips per year'), 'Trips per <span class="v2-shapename">Sunship</span>: ');
   relabel(byText('Average Ton-km per trip'), 'Average Ton-km:');
-  relabel(byText('Average days per trip'), 'Trip time:');
+  relabel(byText('Average days per trip'), 'Average Trip Time:');
   relabel(byText('CO₂ avoided'), 'Potential CO₂ Displaced: ');
   // Owner naming 2026-08-17. The r21 reviewer's point stands (a label
   // must not imply a denominator it doesn't use), so the basis moves

@@ -36,7 +36,7 @@
 import {
   AIR_TRANSITION_TTR, AIR_CO2_MT, MARINE_WORK_TTR, MARINE_CO2_MT,
   TOTAL_CO2_MT, CREDIT_FRACTION,
-} from './co2-config.js';
+} from './co2-config.js?v=1.8';
 
 /**
  * Two-stage CO2 displacement: EAS freight work fills the long-haul air-freight
@@ -65,6 +65,22 @@ export function computeEconomics(i) {
   // figure reads as a bug, not an opportunity.
   const canFly = i.netLiftT > 0;
 
+  // UNPRICED FREIGHT (Toby, 2026-08-18): the page now boots with the rate
+  // slider on its zero stop, so Economics greets you blank like every other
+  // page — Ship at 0 m, Dynamics parked — and the pink EAS button (or any
+  // drag of the rate slider) is what produces the headline.
+  //
+  // Rate 0 is read as "not priced yet", NOT as "priced at zero", so EVERY
+  // money figure goes null and callers print "—". That includes the carbon
+  // credits, which don't depend on the rate at all: this is the same call
+  // Toby made for canFly on 2026-08-02 — a live revenue figure sitting
+  // beside a dashed total reads as a bug, not as extra information. The
+  // physical quantities (work performed, ships required, CO2 displaced) are
+  // NOT money and stay live throughout: the mission is real before anyone
+  // has named a price for it.
+  const isPriced = i.ratePerTkm > 0;
+  const quotable = canFly && isPriced;
+
   // Work one Sunship performs per year. Same formula as V1's tonKmPerYear
   // (netLift × speed × utilisation × hours-in-year).
   const tonKmPerShip = canFly ? i.netLiftT * i.airSpeedKmh * (i.utilisationPct / 100) * 8760 : 0;
@@ -73,7 +89,7 @@ export function computeEconomics(i) {
   // unrounded) rather than read from its display. null = the ship cannot fly.
   const requiredShips = tonKmPerShip > 0 ? (i.marketSizeTtkm * 1e12) / tonKmPerShip : null;
 
-  const freightRevenue = canFly ? i.marketSizeTtkm * 1e12 * i.ratePerTkm : null;
+  const freightRevenue = quotable ? i.marketSizeTtkm * 1e12 * i.ratePerTkm : null;
 
   // CO2 avoided: the two-stage displacement model (air freight first, then
   // marine — see computeDisplacement/co2-config.js; replaced V1's linear
@@ -82,11 +98,12 @@ export function computeEconomics(i) {
   // An IDLE fleet (fliable ship but zero airspeed/utilisation) avoids nothing:
   // 0, not null — the ship works, it just isn't flying yet.
   const co2AvoidedMt = !canFly ? null : tonKmPerShip > 0 ? computeDisplacement(i.marketSizeTtkm).totalCO2Mt : 0;
-  const carbonRevenue = co2AvoidedMt === null ? null : co2AvoidedMt * 1e6 * i.carbonPerT * CREDIT_FRACTION;
-  const totalRevenue = canFly ? freightRevenue + carbonRevenue : null;
+  const carbonRevenue = co2AvoidedMt === null || !isPriced
+    ? null : co2AvoidedMt * 1e6 * i.carbonPerT * CREDIT_FRACTION;
+  const totalRevenue = quotable ? freightRevenue + carbonRevenue : null;
 
-  const revenuePerShip = canFly ? tonKmPerShip * i.ratePerTkm : null;
-  const marginPerShip = canFly ? revenuePerShip - i.opexPerShip : null;
+  const revenuePerShip = quotable ? tonKmPerShip * i.ratePerTkm : null;
+  const marginPerShip = quotable ? revenuePerShip - i.opexPerShip : null;
 
   // REAL payback per ship: capex against margin, not revenue. null = never pays back
   // (ship can't fly, or opex eats the revenue) — callers print "—", never negatives.
@@ -94,7 +111,11 @@ export function computeEconomics(i) {
 
   // Fleet- and programme-level figures. Steady-state by design: they assume the full
   // fleet is built and operating (no ramp model — see the on-page note).
-  const fleetOpex = requiredShips !== null ? requiredShips * i.opexPerShip : null;
+  // Fleet opex is rate-INDEPENDENT and perfectly computable while unpriced —
+  // it is nulled anyway, deliberately. The whole Results panel is one
+  // financial statement; publishing its cost line while its revenue lines
+  // are blank invites exactly the misreading (a fleet that only costs).
+  const fleetOpex = quotable && requiredShips !== null ? requiredShips * i.opexPerShip : null;
   const fleetProfit = fleetOpex !== null ? totalRevenue - fleetOpex : null;
   const programmeCost = requiredShips !== null ? i.preCapex + requiredShips * i.capex : null;
   const breakevenYears =
@@ -132,6 +153,24 @@ export const logSlider = (min, max) => ({
   toView: (value) => (100 * Math.log(value / min)) / Math.log(max / min),
 });
 
+/**
+ * A log slider with a HARD ZERO STOP at its far-left endpoint (Toby,
+ * 2026-08-18, for the freight rate). A log map can never reach zero — its
+ * whole point is that it never does — so zero is not part of the curve: it
+ * is a detent one notch below `min`, exactly like the Airspeed slider's
+ * parked 0 and the Ship page's 0 m.
+ *
+ * View 0 means UNPRICED, and the very next increment is `min`. The jump
+ * from "no rate" to 0.5¢ is deliberate and honest: 0.5¢ already IS the
+ * lowest rate the model will quote, so there is nothing in between to
+ * represent. Callers must read view 0 as "the user hasn't answered yet",
+ * never as "the user chose zero" — computeEconomics does exactly that.
+ */
+export const logSliderZeroStop = (min, max) => ({
+  toValue: (view) => (view > 0 ? min * Math.pow(max / min, view / 100) : 0),
+  toView: (value) => (value > 0 ? (100 * Math.log(value / min)) / Math.log(max / min) : 0),
+});
+
 // All slider ranges, defaults (= the EAS scenario the pink button restores), preset
 // buttons and the summary link live in econ-config.js — a hand-editable file with no
 // logic in it, so Toby can tune presets without touching code. Re-exported here so
@@ -139,7 +178,7 @@ export const logSlider = (min, max) => ({
 export {
   RATE, CARBON, CAPEX, OPEX, PRECAPEX,
   RATE_PRESETS, CARBON_PRESETS, SUMMARY_LINK,
-} from './econ-config.js';
+} from './econ-config.js?v=1.11';
 
 
 // ---------------------------------------------------------------- formatting
@@ -155,8 +194,11 @@ export function fmtMoney(v) {
   return `${sign}$${Math.round(abs).toLocaleString('en-US')}`;
 }
 
-/** Rate shown in cents: "10.0¢" (sub-$1 territory is where all the anchors live). */
+/** Rate shown in cents: "10.0¢" (sub-$1 territory is where all the anchors live).
+ *  Zero is the slider's UNPRICED stop, not a price — it must never render as
+ *  "0.0¢", which would read as a decision the user hasn't made. */
 export function fmtRate(v) {
+  if (!(v > 0)) return '—';
   const cents = v * 100;
   return cents >= 100 ? `$${v.toFixed(2)}` : `${cents.toFixed(1)}¢`;
 }

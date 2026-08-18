@@ -38,7 +38,7 @@ import {
   SUNSHIP_SHAPE, CD_TRACKS_ESTIMATE, isSunship,
   initialState, isParked, setInput, setToggle, setShape, applyIdeal,
   resolveCd, compute, renderModel, cdDialRange, setTailedBody,
-} from './dynamic-state.js?v=1.10';
+} from './dynamic-state.js?v=1.11';
 
 // ---------------------------------------------------------------- shape inheritance
 // M6 stage 2: the ACTIVE shape comes from the page-1 channel
@@ -244,8 +244,13 @@ style.textContent = `
     position: absolute; top: 0; height: 3px;
     background: var(--color-accent-1, #c628a4); opacity: 0.3;
   }
+  /* The tick is 2px wide and its LEFT used to be set to the marker's
+     position, which put its centre a pixel to the right of the value it
+     marks. Centred on its own left offset now, like the label — so both
+     read against the same point. */
   .dyn-cd-band .tick {
     position: absolute; top: -2px; width: 2px; height: 7px;
+    transform: translateX(-50%);
     background: var(--color-accent-1, #c628a4);
   }
   .dyn-cd-band .est-label {
@@ -316,7 +321,19 @@ controlsHeading.textContent = 'DYNAMICS';
 const idealBtn = document.createElement('button');
 idealBtn.className = 'fleet-control-preset';
 idealBtn.dataset.v2 = 'dynamic-ideal';
-idealBtn.title = 'EAS IDEAL — 100 km/h, Cd 0.043, S 27%';
+/* Both ideal-button tooltips are DERIVED from EAS_IDEAL, never typed
+ * (2026-08-18). The hand-written pair had already gone stale twice over:
+ * they still advertised "Cd 0.043" after the authored value was retired,
+ * and they would have kept saying 100 km/h through the speed change. The
+ * Cd is deliberately absent from the wording now — with the tail deployed
+ * it is measured from geometry, so there is no constant to quote. */
+const idealTitle = (sunship) => {
+  const v = `${EAS_IDEAL.airspeedKmh} km/h`;
+  return sunship
+    ? `EAS IDEAL — ${v}, Smart Tail deployed, S ${Math.round(EAS_IDEAL.s * 100)}%`
+    : `EAS IDEAL — ${v} (Smart Tail and BLI are the Sunship’s designs)`;
+};
+idealBtn.title = idealTitle(true);
 const idealIcon = document.createElement('img');
 idealIcon.className = 'fleet-control-preset-icon';
 idealIcon.src = '/assets/logo_circles.svg';
@@ -517,6 +534,59 @@ if (fleetPresetBtn) fleetPresetBtn.addEventListener('click', () => setTimeout(()
 // feeds a computation (compute() always uses its own live call).
 let lastEstimate = null;
 
+/* WHERE THE THUMB ACTUALLY SITS (fix 2026-08-18, Toby: "the pink marker
+ * appears a little before the stopping point of the grey selector").
+ *
+ * The marker used to be placed at a flat fraction of the band's width,
+ * which silently assumed the thumb's CENTRE travels the full 0–100% of
+ * the track. It does not: a native range input insets the thumb by half
+ * its own width at BOTH ends, so the centre runs from t/2 to W − t/2 and
+ * the true position is t/2 + f·(W − t). The old formula therefore ran
+ * early on the left half and late on the right, meeting the truth only
+ * dead centre — and the Sunship's estimate sits near the BOTTOM of the
+ * dial (~0.022 on a 0.009–0.55 range, f ≈ 0.02), which is exactly where
+ * the error is at its worst and points the way Toby saw it.
+ *
+ * Everything the formula needs is MEASURED at paint, never assumed —
+ * two separate assumptions were wrong here at once:
+ *
+ *  1. The thumb width. No API exposes a UA shadow thumb
+ *     (getComputedStyle with ::-webkit-slider-thumb just echoes the host
+ *     element — checked), but the thumb is a circle and it is the tallest
+ *     thing in the control, and nothing sets an explicit height, so the
+ *     input's own intrinsic HEIGHT is its diameter. Measured live at 16 px.
+ *  2. That the marker strip and the slider share a horizontal box. They
+ *     do NOT: Chromium's UA sheet puts `margin: 2px` on a range input, so
+ *     the slider sits 2 px right of the strip that is supposed to
+ *     annotate it. That was a second, quieter contribution to the same
+ *     visible offset, and no amount of percentage arithmetic would have
+ *     found it.
+ *
+ * So the geometry is taken from the two live rects and the answer is
+ * plain pixels relative to the strip. The percentage fallback only runs
+ * when the rects are degenerate (paint while the section is hidden). */
+const THUMB_FALLBACK_PX = 16;
+const trackFrac = (x, dial) =>
+  Math.max(0, Math.min(1, (x - dial.min) / (dial.max - dial.min)));
+/** The slider's live track geometry, expressed in the marker strip's own
+ *  coordinates: `x0` = where the thumb's centre sits at the dial's
+ *  bottom, `span` = how far that centre travels. */
+function trackGeometry() {
+  const s = cdCtl.slider.getBoundingClientRect();
+  const b = cdBand.getBoundingClientRect();
+  if (!(s.width > 0) || !(b.width > 0)) return null;   // hidden — no geometry to read
+  const t = s.height >= 10 && s.height <= 28 ? s.height : THUMB_FALLBACK_PX;
+  return { x0: s.left - b.left + t / 2, span: s.width - t };
+}
+const trackPos = (x, dial, g) => {
+  const f = trackFrac(x, dial);
+  return g ? `${(g.x0 + f * g.span).toFixed(2)}px` : `${(f * 100).toFixed(4)}%`;
+};
+const trackSpan = (lo, hi, dial, g) => {
+  const d = Math.max(0, trackFrac(hi, dial) - trackFrac(lo, dial));
+  return g ? `${(d * g.span).toFixed(2)}px` : `${(d * 100).toFixed(4)}%`;
+};
+
 function paint() {
   // State → engine (UI-level parked gate; estimator dormant too) →
   // ruled display model → DOM. Geometry + estimator seam carry the
@@ -567,9 +637,7 @@ function paint() {
   const sunship = isSunship(activeShape);
   idealBtn.disabled = false;
   idealBtn.style.opacity = '';
-  idealBtn.title = sunship
-    ? 'EAS IDEAL — 100 km/h, Cd 0.043, S 27%'
-    : 'EAS IDEAL — 100 km/h (Smart Tail and BLI are the Sunship’s designs)';
+  idealBtn.title = idealTitle(sunship);
 
   // System toggles: Sunship-only in public (Toby ruling 2026-08-16 —
   // the greyed hard limit IS the lesson: these are the Sunship's
@@ -614,12 +682,13 @@ function paint() {
       ? { value: lastEstimate.cdEstimate, lo: lastEstimate.band[0], hi: lastEstimate.band[1] }
       : null);
   if (marker) {
-    const pct = (x) => `${Math.max(0, Math.min(100, ((x - dial.min) / (dial.max - dial.min)) * 100))}%`;
+    // display FIRST: a hidden strip has no rect, and trackGeometry needs one.
     cdBand.style.display = '';
-    bandSeg.style.left = pct(marker.lo);
-    bandSeg.style.width = `calc(${pct(marker.hi)} - ${pct(marker.lo)})`;
-    bandTick.style.left = pct(marker.value);
-    bandLabel.style.left = pct(marker.value);
+    const g = trackGeometry();
+    bandSeg.style.left = trackPos(marker.lo, dial, g);
+    bandSeg.style.width = trackSpan(marker.lo, marker.hi, dial, g);
+    bandTick.style.left = trackPos(marker.value, dial, g);
+    bandLabel.style.left = trackPos(marker.value, dial, g);
   } else {
     cdBand.style.display = 'none';
   }
@@ -670,6 +739,29 @@ function paint() {
   syncFleetAirspeed(state.airspeedKmh);
 }
 
+/* The marker is now placed in PIXELS off a live measurement, which is
+ * what makes it land on the thumb — but pixels do not survive a layout
+ * change on their own the way the old percentages did (they were wrong at
+ * every width, just consistently wrong). Any reflow that moves the slider
+ * therefore has to re-place it: a resize, and the phone breakpoint
+ * crossing that comes with it. Coalesced to one repaint per burst so a
+ * drag of the window edge cannot storm the engine.
+ *
+ * setTimeout, NOT requestAnimationFrame: rAF does not run in a tab that
+ * is not compositing (measured here — a resize left the marker 3.9 px out
+ * and the callback never fired), and a backgrounded tab resized by a
+ * window-manager change is exactly that case. The delay is long enough
+ * to let the ribbon's own .18s width transition settle, so the repaint
+ * measures the layout that the user will actually be looking at. */
+{
+  let queued = false;
+  window.addEventListener('resize', () => {
+    if (queued) return;
+    queued = true;
+    setTimeout(() => { queued = false; paint(); }, 220);
+  });
+}
+
 speedCtl.slider.addEventListener('input', () => { state = setInput(state, 'airspeedKmh', Number(speedCtl.slider.value)); paint(); });
 cdCtl.slider.addEventListener('input', () => { state = setInput(state, 'cd', Number(cdCtl.slider.value)); paint(); });
 sCtl.slider.addEventListener('input', () => { state = setInput(state, 's', Number(sCtl.slider.value)); paint(); });
@@ -677,10 +769,13 @@ tailToggle.box.addEventListener('change', () => { state = setToggle(state, 'tail
 bliToggle.box.addEventListener('change', () => { state = setToggle(state, 'bliOn', bliToggle.box.checked); paint(); });
 idealBtn.addEventListener('click', () => {
   // Sunship: the full authored configuration (unchanged). Any other
-  // shape: SPEED ONLY — 100 km/h through the normal input pathway
-  // (ruling 2026-08-17; applyIdeal still throws off-Sunship, unused
-  // here by design — the state seal is untouched).
-  state = isSunship(activeShape) ? applyIdeal(state) : setInput(state, 'airspeedKmh', 100);
+  // shape: SPEED ONLY — the ideal cruise speed through the normal input
+  // pathway (ruling 2026-08-17; applyIdeal still throws off-Sunship,
+  // unused here by design — the state seal is untouched). Read from
+  // EAS_IDEAL, not typed: the literal 100 here silently outlived the
+  // 2026-08-18 speed change until it was caught in the same sweep.
+  state = isSunship(activeShape) ? applyIdeal(state)
+    : setInput(state, 'airspeedKmh', EAS_IDEAL.airspeedKmh);
   paint();
 });
 

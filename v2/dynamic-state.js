@@ -77,7 +77,7 @@ export const SUNSHIP_SECTIONAL = Object.freeze({
 });
 
 /* EAS IDEAL — the one pink button (Display Rulings v1.0, 2026-08-13).
- * 100 km/h, Smart Tail deployed, S 27%. SUNSHIP-GATED by PRESET IDENTITY
+ * 120 km/h, Smart Tail deployed, S 27%. SUNSHIP-GATED by PRESET IDENTITY
  * (M6 amendment #6, r8 #3 + Toby ruling 2026-08-16) — greyed elsewhere,
  * never leaks. Cd is no longer part of the posture: see below. */
 /* Cd tracking sentinel (M6): "Cd follows the estimator for the current
@@ -89,7 +89,15 @@ export const SUNSHIP_SECTIONAL = Object.freeze({
 export const CD_TRACKS_ESTIMATE = 'estimate';
 
 export const EAS_IDEAL = Object.freeze({
-  airspeedKmh: 100,
+  /* 100 -> 120 km/h (Toby, 2026-08-18). The cruise speed was held at 100
+   * because drag scales with v^2 and the authored Cd 0.043 made 120 km/h
+   * cost ~44% more power than the fuel budget wanted to carry. Measuring
+   * the deployed fairing at ~0.0217 halved the coefficient, which buys
+   * back far more than the speed increase spends — so the number Toby
+   * always wanted is affordable now and goes back in. This is a knob on
+   * the ideal POSTURE only; the slider still runs 0-140 and the physics
+   * behind it did not move. */
+  airspeedKmh: 120,
   /* AUTHORED Cd RETIRED 2026-08-18 (Toby: "that was just a guess... happy
    * to remove it"). 0.043 was hand-entered, and the estimator was
    * deliberately bypassed for the one configuration the whole project
@@ -182,21 +190,45 @@ function arrivalPosture(shape) {
   return { tailOn, bliOn, cd, scenario: sun ? EAS_IDEAL.scenario : 'CUSTOM' };
 }
 
-/** The page's load state: zero of its own variable, the shape's public
- *  arrival posture (rulings 2026-08-13 / 2026-08-16). */
+/** The page's LOAD state: zero of its own variable, and — since Toby's
+ *  ruling of 2026-08-18 — zero of the Sunship's technology too.
+ *
+ *  THE BOOT POSTURE IS BARE (both toggles OFF), which is a deliberate
+ *  reversal of the load half of the 2026-08-16 "reveal is REMOVAL"
+ *  ruling. Removal taught the lesson backwards: arriving at the finished
+ *  ship and switching pieces off asks a visitor to imagine the ship
+ *  getting worse, and nobody volunteers for that. Arriving BARE — an
+ *  honest 300 m envelope, drag-limited, its warnings lit — and then
+ *  pressing the pink button (or ticking a box) makes the same physics
+ *  land as a reveal instead of a concession. That is the whole point of
+ *  the page: aerostatics and aerodynamics are DECOUPLED, and the Smart
+ *  Tail is what couples them.
+ *
+ *  SCOPE: this is the LOAD posture only. arrivalPosture() still governs
+ *  SHAPE CHANGES, where the 2026-08-16 ruling stands untouched — coming
+ *  back to the Sunship from another shape restores its own technology,
+ *  and the toggles remain locked OFF on every non-Sunship body. The two
+ *  events are genuinely different: one is a visitor's first sight of the
+ *  ship, the other is a return to a ship they have already met.
+ *
+ *  Nothing about the physics moves. While parked the engine and the
+ *  estimator are both dormant, so the only visible difference at load is
+ *  two unticked boxes; the warnings arrive with the first movement. */
 export function initialState(shape = SUNSHIP_SHAPE) {
-  const p = arrivalPosture(shape);
+  const boot = freshCd(shape, false);          // BARE — tail off at load
   return {
     airspeedKmh: 0,              // PARKED
     shape,
-    cd: p.cd.cd,
-    s: EAS_IDEAL.s,
-    tailOn: p.tailOn,
-    bliOn: p.bliOn,
+    cd: boot.cd,
+    s: EAS_IDEAL.s,              // the S SELECTION survives; BLI off forces 0 in force
+    tailOn: false,
+    bliOn: false,
     tailStash: null,             // remembered tail-ON Cd selection while OFF
-    scenario: p.scenario,
-    cdSource: p.cd.cdSource, sSource: EAS_IDEAL.sSource,
-    cdLabel: p.cd.cdLabel, sLabel: EAS_IDEAL.sLabel,
+    // Bare is not the authored posture, so it may not wear the authored
+    // scenario name — VISION is what applyIdeal grants.
+    scenario: 'CUSTOM',
+    cdSource: boot.cdSource, sSource: EAS_IDEAL.sSource,
+    cdLabel: boot.cdLabel, sLabel: EAS_IDEAL.sLabel,
   };
 }
 

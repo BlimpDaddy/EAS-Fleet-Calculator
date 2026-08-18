@@ -199,11 +199,32 @@ css.textContent = `
      half-width column they'd overflow the phone. */
   .section-dynamic .fleet-results-data { font-size: 22px; }
 
-  /* Ribbons: slimmer so they don't eat a narrow screen. */
-  .ship-ribbon { width: 26px; }
-  [data-section="ship"] .ship-ribbon.rib-right { width: 30px; }
-  .section-dynamic { padding-left: 30px; }
-  [data-section="ship"] { padding-right: 34px; }
+  /* Ribbons: slimmer so they don't eat a narrow screen.
+     THE OVERLAP BUG (Toby, 2026-08-18: "the flashing swipe bar goes over
+     the left hand numbers/checkboxes a little"). This block THOUGHT it
+     had shrunk the ribbon to 26px and reserved 30px for it. It hadn't:
+     ship-split.js carries an UNSCOPED desktop rule --
+     .section-dynamic .ship-ribbon.rib-left { width: 44px } -- three
+     classes, so a bare .ship-ribbon here (one class) never had a vote,
+     media query or not. The ribbon stayed 44 px wide behind a 30 px
+     reservation, and the 14 px difference is precisely what was landing
+     on the Smart Tail checkbox (measured: content at x=31, ribbon to
+     x=44). Same defect class as the missing-globe bug of 2026-08-18 —
+     an unscoped rule outranking the phone layout — which is why the
+     standing rule is to SCOPE DESKTOP OVERRIDES TO THEIR BREAKPOINT.
+     The fix matches the winning selector instead of fighting it, and
+     pins :hover to the resting width as well: phones have no hover, but
+     a tap can latch one, and a latched hover used to widen the ribbon
+     straight over the controls it had just cleared. */
+  .ship-ribbon,
+  .section-dynamic .ship-ribbon.rib-left,
+  .section-dynamic .ship-ribbon.rib-left:hover { width: 26px; }
+  [data-section="ship"] .ship-ribbon.rib-right,
+  [data-section="ship"] .ship-ribbon.rib-right:hover { width: 30px; }
+  /* Reservations now clear the REAL width with a genuine gap, so the
+     ribbon can never touch the first control at any width or state. */
+  .section-dynamic { padding-left: 34px; }
+  [data-section="ship"] { padding-right: 38px; }
 }
 
 /* 5. Tap bubble for our own title-carrying warnings. */

@@ -68,6 +68,28 @@ const ESTIMATOR = { estimateCd, applyGenericTail, proxyRecord: SUNSHIP_SECTIONAL
 /** The live bare-hull estimate at a speed — the value tail-off snaps to. */
 const bareEstimateAt = (v) => estimateCd(SUNSHIP_SECTIONAL, SUNSHIP_GEOMETRY, v).cdEstimate;
 
+/**
+ * THE SUNSHIP IN ITS EAS POSTURE — both systems on, S 27%.
+ *
+ * Until 2026-08-18 this was simply initialState(): the page loaded with
+ * the Smart Tail and BLI already ON, so "the load state" and "the ideal
+ * ship" were the same object and fixtures used them interchangeably. The
+ * boot posture is now BARE (Toby's ruling — the reveal is the pink
+ * button, not its removal), which splits the two apart, and every fixture
+ * that meant "the finished ship" has to say so.
+ *
+ * Deliberately applyIdeal() rather than two setToggle calls: it is the
+ * exact path a user takes, so these fixtures keep testing the shipped
+ * behaviour instead of a reconstruction of it. Callers that pin a speed
+ * still set their own — applyIdeal's 120 km/h is overridden by the
+ * setInput that follows, which is why the pinned figures below did not
+ * move with the speed change.
+ */
+const easState = () => applyIdeal(initialState());
+/** The same ship, PARKED — for the fixtures that pin parked behaviour on a
+ *  fully-equipped Sunship rather than on the bare boot posture. */
+const easParked = () => setInput(easState(), 'airspeedKmh', 0);
+
 console.log('\n== r6: parked load calls the engine ZERO times (and the estimator, M6) ==');
 {
   const { engine, calls } = countingEngine();
@@ -82,14 +104,28 @@ console.log('\n== r6: parked load calls the engine ZERO times (and the estimator
   check('parked render is all dashes', rm.parked && rm.rows.every(([, v]) => v === '—'));
   check('parked render carries no warnings', rm.warnings.length === 0);
   check('parked render has no marker (page cache is separate)', rm.marker === null);
-  check('load state is ideal posture (Cd 0.043 / S 27% / both ON)',
-    s0.cd === EAS_IDEAL.cd && s0.s === EAS_IDEAL.s && s0.tailOn && s0.bliOn);
+  // BOOT POSTURE RE-RULED 2026-08-18 (Toby): the page now arrives BARE.
+  // The S SELECTION still loads at the ideal 27% — it is simply not in
+  // force until BLI is switched on — and Cd tracks the estimator, whose
+  // tail-off meaning is the bare hull. Both toggles OFF, scenario CUSTOM:
+  // an un-tailed ship has not earned the VISION name.
+  check('page loads BARE — both systems off (2026-08-18 ruling)',
+    s0.tailOn === false && s0.bliOn === false);
+  check('load state keeps the ideal S SELECTION and tracks the estimator',
+    s0.cd === CD_TRACKS_ESTIMATE && s0.s === EAS_IDEAL.s);
+  check('bare load is not the authored scenario', s0.scenario === 'CUSTOM');
+  check('load Cd label names the BARE hull, not a tail',
+    /bare hull/i.test(s0.cdLabel), s0.cdLabel);
+  check('pressing EAS from the load state reaches the ideal posture',
+    (() => { const i = applyIdeal(s0);
+      return i.tailOn && i.bliOn && i.scenario === 'VISION'
+        && i.airspeedKmh === EAS_IDEAL.airspeedKmh; })());
 }
 
 console.log('\n== r6: 0→100 yields exact engine contract values ==');
 {
   const { engine, calls } = countingEngine();
-  const moving = setInput(initialState(), 'airspeedKmh', 100);
+  const moving = setInput(easState(), 'airspeedKmh', 100);
   const contract = compute(moving, engine, undefined, ESTIMATOR);
   check('engine called exactly once', calls() === 1);
   // The ruled ideal cell, RE-PINNED 2026-08-18 for the propulsion-chain
@@ -154,7 +190,7 @@ console.log('\n== r6: parked selections persist (changed WHILE parked) ==');
 {
   const { engine, calls } = countingEngine();
   const { est, calls: estCalls } = countingEstimator();
-  let st = initialState();                             // parked
+  let st = easParked();                                // parked, fully equipped
   st = setInput(st, 's', 0.10);                        // adjust S while parked
   st = setInput(st, 'cd', 0.08);                       // adjust Cd while parked
   check('still zero engine calls after parked edits', calls() === 0);
@@ -211,7 +247,7 @@ console.log('\n== r6: ORANGE/RED = correct warning (minimal words, Toby 2026-08-
 console.log('\n== M4/M5 toggles under M6 semantics (0.26 RETIRED, r10 snap-editable) ==');
 {
   const { engine } = countingEngine();
-  const moving = setInput(initialState(), 'airspeedKmh', 100);
+  const moving = setInput(easState(), 'airspeedKmh', 100);
   const bare100 = bareEstimateAt(100);
   const tailOff = compute(setToggle(moving, 'tailOn', false), engine, undefined, ESTIMATOR);
   // GRADUATION 2026-08-16 (r15–r19 sealed): the bare Sunship classifies
@@ -254,13 +290,13 @@ console.log('\n== M4/M5 toggles under M6 semantics (0.26 RETIRED, r10 snap-edita
     `${naked.powerMW.toFixed(1)} MW / ${naked.refTripFuelSystemT.toFixed(0)} t`);
   // Toggles are selections too: changed while parked, they persist (r6).
   const { engine: e2, calls: c2 } = countingEngine();
-  const parkedToggle = setToggle(initialState(), 'bliOn', false);
+  const parkedToggle = setToggle(easParked(), 'bliOn', false);
   check('toggle while parked calls engine zero times', compute(parkedToggle, e2, undefined, ESTIMATOR) === null && c2() === 0);
   const firstMove = compute(setInput(parkedToggle, 'airspeedKmh', 100), e2, undefined, ESTIMATOR);
   check('parked toggle carries into first movement', firstMove.selectedS === 0);
   // Tail OFF while parked: the snap is PENDING (dormant estimator — no
   // number exists yet) and resolves on the first movement (r6 carry rule).
-  const parkedTailOff = setToggle(initialState(), 'tailOn', false);
+  const parkedTailOff = setToggle(easParked(), 'tailOn', false);
   check('parked tail-off: Cd tracks the estimate (pending, no value yet)',
     parkedTailOff.cd === CD_TRACKS_ESTIMATE
     && resolveCd(parkedTailOff, null).cd === null);
@@ -272,7 +308,7 @@ console.log('\n== M4/M5 toggles under M6 semantics (0.26 RETIRED, r10 snap-edita
 console.log('\n== r7 send-back #1: Ideal restores the COMPLETE ruled configuration ==');
 {
   const { engine } = countingEngine();
-  const moving = setInput(initialState(), 'airspeedKmh', 100);
+  const moving = setInput(easState(), 'airspeedKmh', 100);
   for (const [name, wrecked] of [
     ['tail-off → Ideal', setToggle(moving, 'tailOn', false)],
     ['BLI-off → Ideal', setToggle(moving, 'bliOn', false)],
@@ -281,12 +317,55 @@ console.log('\n== r7 send-back #1: Ideal restores the COMPLETE ruled configurati
     const ideal = applyIdeal(wrecked);
     const contract = compute(ideal, engine, undefined, ESTIMATOR);
     check(`${name}: both toggles back ON`, ideal.tailOn && ideal.bliOn);
+    // COMPLETE means the SPEED too. These pins moved 2026-08-18 with the
+    // ideal cruise speed 100 → 120 km/h: the block starts the ship at 100
+    // and the button has to overwrite that, so a fixture pinned at 100
+    // would have passed while silently proving the opposite of its name.
+    check(`${name}: speed restored to the ideal ${EAS_IDEAL.airspeedKmh} km/h`,
+      ideal.airspeedKmh === EAS_IDEAL.airspeedKmh, String(ideal.airspeedKmh));
     check(`${name}: engine receives the DEPLOYED-fairing estimate, not the bare hull`,
-      near(contract.selectedCd, 0.0217, 0.01), String(contract.selectedCd));
-    check(`${name}: the 218 t state exactly`, contract.refTripFuelSystemT.toFixed(0) === '218');
+      near(contract.selectedCd, 0.02145, 0.01), String(contract.selectedCd));
+    check(`${name}: the 311 t state exactly (120 km/h ideal)`,
+      contract.refTripFuelSystemT.toFixed(0) === '311', String(contract.refTripFuelSystemT));
   }
   check('Ideal clears the tail stash (no stale restore target)',
     applyIdeal(setToggle(moving, 'tailOn', false)).tailStash === null);
+}
+
+console.log('\n== THE IDEAL CELL as shipped — 120 km/h, deployed fairing (2026-08-18) ==');
+{
+  // The figures a visitor actually meets after pressing the pink button.
+  // Pinned here as ONE block so the headline can never drift unnoticed:
+  // every other fixture sets its own speed, which is right for isolating
+  // behaviour and useless for guarding the shipped numbers.
+  //
+  // The speed rise costs real fuel — 43.6 t LH2 at 100 km/h becomes 62.1 t
+  // at 120 — and it is affordable only because the measured fairing halved
+  // the coefficient first. Against the pre-tail production cell (87.5 t /
+  // 437 t at 100 km/h) the ship is still far better off while flying 20%
+  // faster, which is the whole argument for making the change.
+  const { engine } = countingEngine();
+  const c = compute(easState(), engine, undefined, ESTIMATOR);
+  check('ideal cruise is 120 km/h', easState().airspeedKmh === 120);
+  check('ideal Cd ~ 0.0215 (deployed fairing, estimated at 120 km/h)',
+    near(c.selectedCd, 0.021452, 0.001), String(c.selectedCd));
+  check('ideal propulsive power ~ 12.92 MW', near(c.powerMW, 12.917, 0.001), String(c.powerMW));
+  check('ideal electrical demand ~ 16.56 MW (propulsive / 0.78)',
+    near(c.electricalMW, 16.561, 0.001), String(c.electricalMW));
+  check('ideal 9,000 km LH2 ~ 62.1 t', near(c.refTripFuelT, 62.109, 0.001), String(c.refTripFuelT));
+  check('ideal fuel system ~ 311 t', near(c.refTripFuelSystemT, 310.546, 0.001), String(c.refTripFuelSystemT));
+  check('ideal Cd_v ~ 0.0213 on ENVELOPE volume', near(c.cdVolumetric, 0.021330, 0.001), String(c.cdVolumetric));
+  check('ideal is GREEN and silent at 120 km/h',
+    c.aerodynamicStatus === 'GREEN' && c.floorStatus === 'OK'
+    && c.fuelMassStatus === 'GREEN' && c.warnings.length === 0,
+    c.warnings.join('; '));
+  // The reveal, at the shipped speed: bare hull vs deployed fairing.
+  const bare = compute(setToggle(easState(), 'tailOn', false), engine, undefined, ESTIMATOR);
+  check('bare hull at 120 km/h is ORANGE aero + RED fuel (the honest un-tailed ship)',
+    bare.aerodynamicStatus === 'ORANGE' && bare.fuelMassStatus === 'RED');
+  check('the reveal at 120 km/h is still ~8x',
+    bare.selectedCd / c.selectedCd > 7 && bare.selectedCd / c.selectedCd < 9,
+    `${(bare.selectedCd / c.selectedCd).toFixed(2)}x`);
 }
 
 console.log('\n== r7 send-back #2: snapped/forced values carry truthful provenance ==');
@@ -294,7 +373,7 @@ console.log('\n== r7 send-back #2: snapped/forced values carry truthful provenan
   const { engine } = countingEngine();
   // Wander to USER, then toggle each system off — the value in force must
   // never travel under the user's (or the Ideal's) label.
-  const userState = setInput(setInput(setInput(initialState(), 'airspeedKmh', 100), 'cd', 0.10), 's', 0.20);
+  const userState = setInput(setInput(setInput(easState(), 'airspeedKmh', 100), 'cd', 0.10), 's', 0.20);
   const tailOff = compute(setToggle(userState, 'tailOn', false), engine, undefined, ESTIMATOR);
   check('tail OFF: cdSource estimated (M6 — the bare hull is the estimator\'s)', tailOff.cdSource === 'estimated');
   check('tail OFF: cdLabel leads with ESTIMATED, names the estimator',
@@ -315,7 +394,7 @@ console.log('\n== r7 send-back #2: snapped/forced values carry truthful provenan
 console.log('\n== r7 #6: one derivation for values-in-force ==');
 {
   const { engine } = countingEngine();
-  const moving = setInput(initialState(), 'airspeedKmh', 100);
+  const moving = setInput(easState(), 'airspeedKmh', 100);
   const e100 = estimateCd(SUNSHIP_SECTIONAL, SUNSHIP_GEOMETRY, 100);
   for (const st of [moving, setToggle(moving, 'tailOn', false), setToggle(moving, 'bliOn', false)]) {
     // The Sunship's tail-ON estimate is the DEPLOYED body's, so feed
@@ -330,7 +409,7 @@ console.log('\n== r7 #6: one derivation for values-in-force ==');
 console.log('\n== M6: the estimator on the page — marker, band, dial, firming ==');
 {
   const { engine } = countingEngine();
-  const moving = setInput(initialState(), 'airspeedKmh', 100);
+  const moving = setInput(easState(), 'airspeedKmh', 100);
   const contract = compute(moving, engine, undefined, ESTIMATOR);
   // The contract echo IS the frozen API object for this geometry+speed.
   check('contract.estimate present with status ok', contract.estimate && contract.estimate.status === 'ok');
@@ -517,7 +596,7 @@ console.log('\n== no-ship gate (page-2 split ruling 2026-08-17) ==');
 console.log('\n== comparison metrics rows (contract amendment 2026-08-16) ==');
 {
   const { engine } = countingEngine();
-  const c = compute(setInput(initialState(), 'airspeedKmh', 100), engine, undefined, ESTIMATOR);
+  const c = compute(setInput(easState(), 'airspeedKmh', 100), engine, undefined, ESTIMATOR);
   const rm = renderModel(c);
   const row = (label) => rm.rows.find(([l]) => l === label)?.[1];
   check('Drag area row displays the CONTRACT dragAreaM2 (page computes nothing)',
@@ -538,7 +617,7 @@ console.log('\n== comparison metrics rows (contract amendment 2026-08-16) ==');
   // Tail OFF: a stripped record is about legacy BARE records. With the
   // fairing deployed the seam always supplies the envelope's volume, so
   // there is no "missing volume" state to test there.
-  const noVol = compute(setToggle(setInput(initialState(), 'airspeedKmh', 100), 'tailOn', false), engine,
+  const noVol = compute(setToggle(setInput(easState(), 'airspeedKmh', 100), 'tailOn', false), engine,
     (() => { const g = { ...SUNSHIP_GEOMETRY, warnings: [] }; delete g.volume; delete g.volumeSource; return g; })(),
     ESTIMATOR);
   check('geometry without volume: Cd_v row dashes, never invented',

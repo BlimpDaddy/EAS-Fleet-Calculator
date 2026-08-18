@@ -19,11 +19,11 @@
  */
 
 import {
-  computeEconomics, logSlider,
+  computeEconomics, logSlider, logSliderZeroStop,
   RATE, CARBON, CAPEX, OPEX, PRECAPEX, RATE_PRESETS, CARBON_PRESETS, SUMMARY_LINK,
   fmtMoney, fmtRate, fmtPayback, parseDisplay,
   computeDisplacement, CREDIT_FRACTION,
-} from './economics.js';
+} from './economics.js?v=1.11';
 import { TOTAL_CO2_MT } from './co2-config.js?v=1.8';
 
 const $ = (sel) => document.querySelector(sel);
@@ -112,7 +112,13 @@ nav.append(sep, econLink);
 
 // ---------------------------------------------------------------- build page
 
-const rateMap = logSlider(RATE.min, RATE.max);
+// Freight rate is the page's PRIMARY question, so its slider carries the
+// zero stop and the page boots on it (Toby, 2026-08-18) — Economics now
+// greets you blank, like Ship at 0 m and Dynamics parked at 0 km/h, and
+// the pink EAS button or a drag of this slider is what fills the Results
+// panel in. Capex/pre-capex are secondary assumptions and keep plain log
+// maps: an unpriced BUILD COST is not a question the page is asking.
+const rateMap = logSliderZeroStop(RATE.min, RATE.max);
 const capexMap = logSlider(CAPEX.min, CAPEX.max);
 
 function control(labelText, unitText, { min, max, step, value }) {
@@ -208,7 +214,10 @@ idealIcon.alt = 'EAS ideal economics';
 idealBtn.appendChild(idealIcon);
 headingContainer.append(controlsHeading, idealBtn);
 
-const rateCtl = control('Freight Rate', '/ Ton-km', { min: 0, max: 100, step: 'any', value: rateMap.toView(RATE.default) });
+// Boots on the ZERO STOP (view 0), not on RATE.default — the default is
+// what the pink EAS button restores, which is the whole point: arriving
+// blank makes pressing it a reveal instead of a no-op.
+const rateCtl = control('Freight Rate', '/ Ton-km', { min: 0, max: 100, step: 'any', value: 0 });
 presetRow(rateCtl, RATE_PRESETS, (v) => { rateCtl.slider.value = rateMap.toView(v); });
 
 const carbonCtl = control('Carbon Price', '/ Tonne CO₂', { min: CARBON.min, max: CARBON.max, step: 1, value: CARBON.default });

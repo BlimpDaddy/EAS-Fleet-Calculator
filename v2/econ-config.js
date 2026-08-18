@@ -16,9 +16,15 @@
 // EAS button on the Economics page restores — defaults ARE the EAS scenario.
 
 export const RATE = {                 // Freight rate, $ per tonne-km
-  min: 0.005,                         //   0.5¢
+  min: 0.005,                         //   0.5¢  (the lowest PRICED rate)
   max: 2.0,                           //   $2.00
   default: 0.25,                      //   25¢ — solid undercut of ~40¢ air freight
+  // The slider ALSO has a hard zero stop at its far left, one notch below
+  // min: "freight not priced yet". That is where the page BOOTS (Toby,
+  // 2026-08-18), so Economics greets you the way every other page does —
+  // Ship at 0 m, Dynamics parked at 0 km/h — with the headline blank until
+  // you either press the pink EAS button or move the slider yourself.
+  // Unpriced is not "priced at zero": every money figure reads "—".
 };
 
 export const CARBON = {               // Carbon price, $ per tonne CO2
