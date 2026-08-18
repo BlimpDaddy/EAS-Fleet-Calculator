@@ -338,6 +338,41 @@ export function calibratePressure(x, cls = 'pinned', reD = undefined) {
  * @returns {{ proxy:number, scores:object|null, quality:object|null,
  *             axis:string, ms:number }}  proxy is NaN when unreadable
  */
+/**
+ * MECHANISM CLASSIFIER, extracted 2026-08-18 — behaviour identical, it
+ * simply now has ONE implementation instead of being inlined.
+ *
+ * WHY THE EXTRACTION: lab/tail-lab.mjs was calling calibratePressure()
+ * with no class, so it silently priced everything on the PINNED line
+ * while production classified the same Sunship as ROUNDED — 0.438 in
+ * the lab against 0.179 shipped, and nothing caught it because there
+ * was no shared entry point to disagree with. Any tool scoring a
+ * profile must be able to reach the same four triggers the engine uses.
+ *
+ * @param {{A:Float64Array|number[], L:number, cell:number}} m
+ *        a measureSections()-shaped record (the tail lab builds these
+ *        from bare radius profiles, which is legitimate — the scorer
+ *        consumes only A(x))
+ * @param {{softFore:number, softAft:number, softAftRaw:number}} scores
+ * @returns {{cls:'pinned'|'rounded', triggers:object}}
+ */
+export function classifySections(m, scores) {
+  const aMax = Math.max(...m.A);
+  let last = m.A.length - 1;
+  while (last > 0 && m.A[last] <= 1e-4 * aMax) last--;
+  const terminalBaseFrac = aMax > 0 ? m.A[last] / aMax : 1;
+  const rawRatio = scores.softAft > 1e-9 ? scores.softAftRaw / scores.softAft : 1;
+  const shoulder = shoulderAngleScore(m);
+  const triggers = {
+    softFore: scores.softFore, softAft: scores.softAft,
+    terminalBaseFrac, rawRatio, shoulder,
+  };
+  const cls = (scores.softFore > scores.softAft || terminalBaseFrac > CLASSIFIER_TAU
+    || rawRatio > CLASSIFIER_REEXPANSION || shoulder > SHOULDER_ANGLE_MAX)
+    ? 'pinned' : 'rounded';
+  return { cls, triggers };
+}
+
 export function measureSectionalProxy(verts, faces, { axis = '+Z' } = {}) {
   const t0 = performance.now();
   try {
@@ -352,19 +387,7 @@ export function measureSectionalProxy(verts, faces, { axis = '+Z' } = {}) {
     // the record so the per-speed step never re-measures.
     let cls = null, triggers = null;
     if (Number.isFinite(proxy)) {
-      const aMax = Math.max(...m.A);
-      let last = m.A.length - 1;
-      while (last > 0 && m.A[last] <= 1e-4 * aMax) last--;
-      const terminalBaseFrac = aMax > 0 ? m.A[last] / aMax : 1;
-      const rawRatio = scores.softAft > 1e-9 ? scores.softAftRaw / scores.softAft : 1;
-      const shoulder = shoulderAngleScore(m);
-      triggers = {
-        softFore: scores.softFore, softAft: scores.softAft,
-        terminalBaseFrac, rawRatio, shoulder,
-      };
-      cls = (scores.softFore > scores.softAft || terminalBaseFrac > CLASSIFIER_TAU
-        || rawRatio > CLASSIFIER_REEXPANSION || shoulder > SHOULDER_ANGLE_MAX)
-        ? 'pinned' : 'rounded';
+      ({ cls, triggers } = classifySections(m, scores));
     }
     return { proxy, cls, triggers, scores, quality: m.quality, axis, ms: performance.now() - t0 };
   } catch {
