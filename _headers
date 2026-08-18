@@ -1,0 +1,46 @@
+# Cloudflare Pages response headers.
+#
+# WHY THIS FILE EXISTS (2026-08-18, found on the live domain minutes after
+# a release, by comparing what the browser had cached against what the
+# server was sending):
+#
+# Pages serves JS with `max-age=14400` — four hours. On release night that
+# gave returning visitors new HTML with stale MODULES, and the fix was to
+# put a ?v= stamp on every /v2/ adapter import. The /calcv2/ ENGINE never
+# got the same treatment, and the engine is the half that does the physics.
+#
+# It stayed invisible until a release changed engine BEHAVIOUR. This one
+# did. Measured live: a returning browser was holding a 24,580-byte
+# dynamicsCore.js with no PROPULSION_CHAIN_EFF and no liftVolumeM3, while
+# the server sent the 30,956-byte version with both. New adapters, old
+# physics — the DYNAMICS page read 58.4 t of LH2 instead of 74.9 t. The
+# error was exactly 1/0.78, the propulsion-chain efficiency the cached
+# engine had never heard of, and it was wrong in the FLATTERING direction,
+# which is the worst way for a number on this site to be wrong.
+#
+# WHY A HEADER AND NOT MORE ?v= STAMPS. Stamping the five engine imports
+# in dynamic-page.js was the first attempt and it is not sufficient — it is
+# actively worse. The engine's modules import EACH OTHER with bare relative
+# paths (cdEstimator.js does `import { ittcCf } from './dynamicsCore.js'`),
+# and a relative import does not inherit its parent's query string. So a
+# stamped entry point loads dynamicsCore.js?v=N while cdEstimator loads the
+# unstamped, possibly-stale dynamicsCore.js — TWO instances of one module,
+# one of them old, with no way to tell from the outside. Stamping every
+# internal import instead would mean editing the canonical CalcV2 source
+# the gate holds byte-identical, to solve a delivery problem in the browser.
+#
+# A header fixes every module, including transitive ones, at once and for
+# good. must-revalidate with max-age=0 means the browser still caches the
+# bytes and still gets a cheap 304 when nothing changed — this costs a
+# conditional request, not a re-download.
+#
+# The /v2/ adapters keep their ?v= stamps. Belt and braces, and those
+# stamps also document which release last touched each module.
+
+/calcv2/*
+  Cache-Control: public, max-age=0, must-revalidate
+
+# The adapters are stamped, but a stale one is just as fatal as a stale
+# engine and the stamps have been forgotten before. Same treatment.
+/v2/*
+  Cache-Control: public, max-age=0, must-revalidate
