@@ -174,8 +174,9 @@ export const ROUTE_PAIRS = [[63,64,805],[140,141,813],[22,28,824],[21,28,825],[6
  * Kuwait–Rotterdam shipping is ~11,000 km, so the ratio is honest rather
  * than an artifact. Hence a PER-CORRIDOR cap: GULF_DETOUR_CAP 3.2, safe
  * only because the scope guard confines it to routes through the three
- * new waypoints. FLAGGED FOR RULING — Toby approved 2.0 → 2.3 believing
- * that was the blocker; the number the Gulf actually needs is 3.2.
+ * new waypoints. RULED — Toby approved 2.0 → 2.3 believing that was the
+ * blocker; shown it was not, he approved 3.2 for the Gulf specifically
+ * (2026-08-19). The GLOBAL corridor cap stays at 2.3.
  * 249 routes added — Kuwait City +46, Umm Qasr +45, Dammam +38, Doha
  * +36, Abu Dhabi +33, Jebel Ali +30, Bandar Abbas +28 — reaching
  * Rotterdam, Antwerp, Amsterdam, London, Liverpool, Glasgow, Dublin.

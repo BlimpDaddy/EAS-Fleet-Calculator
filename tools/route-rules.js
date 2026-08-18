@@ -54,9 +54,10 @@ export const CORRIDOR_DETOUR_CAP = 2.3;
  * Safe to raise ONLY because corridorSearch's scope guard confines this
  * to routes through the three new Gulf waypoints; a global 3.2 would
  * re-open exactly the Miami-Anchorage class of nonsense.
- * FLAGGED FOR RULING: Toby approved 2.0 -> 2.3 believing that was the
- * blocker. It was not (see the correction above), and the number the
- * Gulf actually needs is 3.2. */
+ * RULED: Toby approved 2.0 -> 2.3 believing that was the blocker. It was
+ * not (see the correction above), and when shown that the Gulf actually
+ * needs 3.2 he approved that too (2026-08-19). The GLOBAL corridor cap
+ * stays at 2.3 — only the Gulf gets 3.2, and only behind the guard. */
 export const GULF_DETOUR_CAP = 3.2;
 
 const R_EARTH = 6371;
