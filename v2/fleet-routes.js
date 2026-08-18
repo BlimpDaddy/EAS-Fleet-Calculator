@@ -70,6 +70,33 @@ if (v1Canvas && figure) {
   const caption = figure.querySelector('.fleet-graph-caption');
   if (caption) caption.textContent = 'Example Routes';
 
+  /* TRIP-DISTANCE SLIDER TOP: 12,000 -> 13,000 km (Toby 2026-08-18, after
+   * the route ceiling went to 14,900). V1's bundle maps this control as
+   * km = 1000 + 110 * view over a default 0-100 range, so 100 was 12,000.
+   * The MAPPING is the bundle's and is untouched; only the input's own
+   * max/step are widened here, which is why the top lands on exactly
+   * 13,000 (view 12000/110) and each notch is a round 100 km (step
+   * 100/110) — finer than V1's 110 km and on whole hundreds, verified
+   * reading "13000" at the top with no float dust. WISH_MAX in the picker
+   * is deliberately NOT raised: simulated at the new top the mean still
+   * lands on 12,997 either way, so the debt steering already covers it.
+   *
+   * MEASURED GOTCHA: the bundle's own control render runs AFTER this
+   * module and CLEARS the step attribute (it leaves max alone, which is
+   * why max stuck on the first attempt while the slider still topped out
+   * at 12,990 = view 109 under the default step of 1). Re-asserted a
+   * macrotask later — the same ownership pattern dynamic-page.js already
+   * uses to re-declare airspeed after the bundle's preset button. */
+  const distSlider = document.querySelector('[data-fleet="averagedistance"]');
+  if (distSlider) {
+    const widen = () => {
+      distSlider.max = String(12000 / 110);
+      distSlider.step = String(100 / 110);
+    };
+    widen();
+    setTimeout(widen, 0);
+  }
+
   // Pause button (Toby 2026-08-17) — same look as the SHAPE page's ⏸
   // (V1's .shape-viewer-button class reused so the styling is
   // literally the same button). Pausing holds the current trip;
