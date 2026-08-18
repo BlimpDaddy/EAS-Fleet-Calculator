@@ -378,7 +378,7 @@ window.__v2Replica = replica;         // used by automated tests
 /* ------------------------------------------------------------------ *
  * SCALE REFERENCE for uploads (Toby, 2026-08-18: the chart "does NOT
  * change... it was stuck on the bottle which was my previous selection
- * though i was using Tubby Sunship").
+ * though i was using" an uploaded hull of his own).
  *
  * V1 owns that chart and draws it from a fixed set of authored
  * silhouettes in assets/charts/scale-ruler-chart/foreground_shapes.svg,

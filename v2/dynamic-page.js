@@ -729,9 +729,11 @@ function paint() {
   // the greyed hard limit IS the lesson: these are the Sunship's
   // designs). The E+A+S chord unlocks them for engineer use; the chip
   // self-identifies both the held chord and any unlocked configuration.
-  /* WHICH TAIL IS THIS? (Toby, 2026-08-18, on the Tubby Sunship: an
-   * uploaded near-copy of the Sunship gained almost nothing from the
-   * toggle — 0.179 -> 0.145 — while the preset goes 0.178 -> 0.0215.)
+  /* WHICH TAIL IS THIS? (Toby, 2026-08-18, reporting it against an
+   * UNRELEASED hull variant: an uploaded near-copy of the Sunship gained
+   * almost nothing from the toggle — 0.179 -> 0.145 — while the preset
+   * goes 0.178 -> 0.0215. The variant is deliberately unnamed here; this
+   * repo is public and it is not.)
    *
    * Not a bug: two genuinely different models sit behind one checkbox.
    * The Sunship gets its OWN fairing geometry, authored and measured, and
