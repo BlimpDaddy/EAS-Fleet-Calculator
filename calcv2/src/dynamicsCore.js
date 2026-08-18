@@ -96,9 +96,15 @@ export const S_ZONE_BOUND_MAX = 0.35;
  * FUEL CHAIN — 2026-08-12
  * WHAT:  fuel-cell efficiency 0.60 x hydrogen LHV 33.33 kWh/kg
  *        -> e_eff = 19.998 kWh/kg of LH2, applied ONCE, downstream of S.
- * WHY:   the system boundary (spec s3.2, review r1 #9): S covers everything
- *        between ideal aerodynamic power and electrical demand; the fuel
- *        chain sits outside it. Nothing may be applied twice.
+ * WHY:   the system boundary (spec s3.2, review r1 #9), AMENDED 2026-08-18:
+ *        S is now PURELY the BLI / wake-recovery credit its slider zones
+ *        always described. It no longer claims to span "everything between
+ *        aerodynamic power and electrical demand" — that wording implied a
+ *        net-of-losses term while the calibration fed it a gross credit,
+ *        and the powertrain losses in that gap were silently worth 100%.
+ *        PROPULSION_CHAIN_EFF now holds them explicitly. Nothing may be
+ *        applied twice: aero -> [S] -> propulsive -> [chain] -> electrical
+ *        -> [fuel cell] -> LH2, each factor appearing exactly once.
  * PROVENANCE: ENGINEERING INPUT (Appendix 2a; published LHV constant).
  * LIMITATION: no charge/boil-off/reserve margins in Release 1.
  * REPLACE WHEN: powertrain engineering supplies real chain figures.
@@ -106,6 +112,38 @@ export const S_ZONE_BOUND_MAX = 0.35;
 export const FUEL_CELL_EFF = 0.60;
 export const H2_LHV_KWH_KG = 33.33;
 export const E_EFF_J_PER_KG = FUEL_CELL_EFF * H2_LHV_KWH_KG * 3.6e6; // 71,992,800 J/kg
+
+/**
+ * PROPULSION CHAIN EFFICIENCY — 2026-08-18 (owner ruling; external review
+ * finding, builder-confirmed)
+ * WHAT:  electrical demand -> useful propulsive power (D x v). Inverter x
+ *        motor x propulsor, as ONE declared factor. Sits BETWEEN S and the
+ *        fuel chain: propulsive = (1-S) x D x v, electrical = propulsive /
+ *        PROPULSION_CHAIN_EFF, and only then the 60% fuel cell.
+ * WHY:   THE DEFECT THIS FIXES. Until now electrical demand WAS (1-S)Dv,
+ *        which silently asserted a 100%-efficient motor, inverter and
+ *        propulsor. The 60% fuel-cell figure does NOT cover this — it
+ *        converts hydrogen to electricity, a different link entirely, and
+ *        the old S comment said so ("the fuel chain sits outside it").
+ *        Splitting the two also repairs an epistemic mismatch: S's
+ *        definition claimed to span aero power to electrical demand (i.e.
+ *        net of losses) while its slider ZONES were pure wake-recovery
+ *        credit ("within published BLI results"). A user setting 27% from
+ *        the BLI literature was therefore also, invisibly, claiming a
+ *        perfect powertrain. S is now purely the BLI/wake term the zones
+ *        always described, and its [0,1) validation is CORRECT rather
+ *        than a limitation — a pure credit cannot be negative.
+ * PROVENANCE: REFERENCE ASSUMPTION. Representative modern figures — motor
+ *        ~97%, inverter ~98%, propulsor ~82% -> ~0.78. NOT a measured
+ *        Sunship value, and deliberately not optimistic.
+ * LIMITATION: a purpose-designed slow-turning large-diameter propulsor
+ *        could beat it; duct and BLI installation losses could make it
+ *        worse. One scalar cannot express an operating-point-dependent
+ *        chain.
+ * REPLACE WHEN: powertrain engineering supplies real chain figures — at
+ *        which point this becomes an ENGINEERING INPUT by dated ruling.
+ */
+export const PROPULSION_CHAIN_EFF = 0.78;
 
 /**
  * TANKAGE MASS FACTOR — 2026-08-12 (renamed from "storage efficiency", r1)
@@ -350,10 +388,15 @@ export function computeDynamics(geometry, cfg) {
   const v = airspeedKmh / 3.6;                       // m/s
   const dragN = 0.5 * RHO_KG_M3 * cd * A * v * v;    // freezeframe force
   const powerNoCreditW = dragN * v;                  // = 0.5 rho Cd A v^3 exactly
-  const powerW = (1 - s) * powerNoCreditW;           // flat S — no anchor exists
+  const powerW = (1 - s) * powerNoCreditW;           // PROPULSIVE power, flat S
+  // 2026-08-18: the chain is now explicit. powerW is what the ship needs AT
+  // THE PROPULSOR; electricalW is what the busbar must deliver to produce
+  // it. Fuel derives from ELECTRICAL, never from propulsive — that
+  // conflation is the defect PROPULSION_CHAIN_EFF exists to fix.
+  const electricalW = powerW / PROPULSION_CHAIN_EFF;
 
   const secondsPer1000km = 1e6 / v;
-  const energyPer1000kmJ = powerW * secondsPer1000km;
+  const energyPer1000kmJ = electricalW * secondsPer1000km;
   const fuelPer1000kmKg = energyPer1000kmJ / E_EFF_J_PER_KG;
 
   const refTripFuelT = (fuelPer1000kmKg * (REF_TRIP_KM / 1000)) / 1000;
@@ -437,6 +480,14 @@ export function computeDynamics(geometry, cfg) {
     dragN,
     powerNoCreditMW: powerNoCreditW / 1e6,
     powerMW: powerW / 1e6,
+    // NEW 2026-08-18: the busbar figure. powerMW is propulsive (unchanged,
+    // so every existing caller and label stays truthful); electricalMW is
+    // what the powertrain must actually deliver, and is what fuel derives
+    // from. The DYNAMIC page currently displays powerMW under "Propulsion
+    // power" — still correct — but electricalMW is the number that sizes
+    // the powertrain, and is a candidate for the display (owner ruling).
+    electricalMW: electricalW / 1e6,
+    propulsionChainEff: PROPULSION_CHAIN_EFF,
     energyPer1000kmMWh: energyPer1000kmJ / 3.6e9,
     fuelPer1000kmT: fuelPer1000kmKg / 1000,
     // reference-trip screen values (labelled: the ONLY distance in DYNAMIC)

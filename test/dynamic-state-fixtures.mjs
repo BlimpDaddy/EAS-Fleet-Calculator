@@ -75,10 +75,16 @@ console.log('\n== r6: 0→100 yields exact engine contract values ==');
   const moving = setInput(initialState(), 'airspeedKmh', 100);
   const contract = compute(moving, engine, undefined, ESTIMATOR);
   check('engine called exactly once', calls() === 1);
-  // The ruled ideal cell, pinned: 68.2 t LH2 / 341 t system, GREEN, silent.
-  check('ideal 10,000 km LH2 ~ 68.2 t', near(contract.refTripFuelT, 68.2, 0.001), String(contract.refTripFuelT));
-  check('ideal fuel system ~ 341 t', near(contract.refTripFuelSystemT, 341.0, 0.001), String(contract.refTripFuelSystemT));
-  check('propulsion power ~ 15.16 MW', near(contract.powerMW, 15.158, 0.001), String(contract.powerMW));
+  // The ruled ideal cell, RE-PINNED 2026-08-18 for the propulsion-chain
+  // split: 87.5 t LH2 / 437 t system, GREEN, silent. PROPULSIVE power is
+  // unchanged at 15.16 MW — the fix touches nothing aerodynamic; what moved
+  // is electrical demand (15.158 / 0.78 = 19.43 MW) and everything fuel.
+  // Label corrected at the same time: the reference trip has been 9,000 km
+  // since 2026-08-17, so "10,000 km" here was stale.
+  check('ideal 9,000 km LH2 ~ 87.5 t', near(contract.refTripFuelT, 87.460, 0.001), String(contract.refTripFuelT));
+  check('ideal fuel system ~ 437 t', near(contract.refTripFuelSystemT, 437.301, 0.001), String(contract.refTripFuelSystemT));
+  check('propulsion power ~ 15.16 MW (propulsive — unchanged by the chain split)', near(contract.powerMW, 15.158, 0.001), String(contract.powerMW));
+  check('electrical demand ~ 19.43 MW (propulsive / 0.78)', near(contract.electricalMW, 19.434, 0.001), String(contract.electricalMW));
   check('all statuses GREEN/OK', contract.aerodynamicStatus === 'GREEN'
     && contract.floorStatus === 'OK' && contract.fuelMassStatus === 'GREEN');
   check('contract carries zero warnings (estimate echo matches — no mismatch flag)',
@@ -96,10 +102,10 @@ console.log('\n== r6: 0→100 yields exact engine contract values ==');
   // stays a §3.6 contract field for FLEET).
   check('rate row is CUT from the display (contract field survives)',
     !rm.rows.some(([k]) => /1,000 km/.test(k)) && Number.isFinite(contract.fuelPer1000kmT));
-  check('LH2 weight row is the reference-trip LH2 (68.2 t)',
+  check('LH2 weight row is the reference-trip LH2 (87.5 t)',
     row['LH2 weight (9,000 km)'] === `${contract.refTripFuelT.toFixed(1)} t`);
-  check('LH2 + Storage row is the tankage-system total (341 t)',
-    row['LH2 + Storage (9,000 km)'] === '341 t');
+  check('LH2 + Storage row is the tankage-system total (437 t)',
+    row['LH2 + Storage (9,000 km)'] === '437 t');
   check('energy row is CUT (it is power in other units)',
     !rm.rows.some(([k]) => /energy/i.test(k)));
   check('frontal area echoes contract', row['Frontal area'] === '40,522 m²');
@@ -201,8 +207,8 @@ console.log('\n== M4/M5 toggles under M6 semantics (0.26 RETIRED, r10 snap-edita
   check('tail OFF Cd is ESTIMATED, not authored, not user', tailOff.cdSource === 'estimated');
   check('the reveal is ~4x (bare estimate / 0.043 in [3.5, 5.5], r19-sealed)',
     tailOff.selectedCd / EAS_IDEAL.cd > 3.5 && tailOff.selectedCd / EAS_IDEAL.cd < 5.5);
-  check('tail OFF numbers: ~62.9 MW / ~1,416 t, aero ORANGE + fuel RED (the graduated reveal — the honest bare hull is bad, not catastrophic)',
-    near(tailOff.powerMW, 62.9, 0.005) && near(tailOff.refTripFuelSystemT, 1416, 0.005)
+  check('tail OFF numbers: ~62.9 MW / ~1,815 t, aero ORANGE + fuel RED (the graduated reveal — the honest bare hull is bad, not catastrophic)',
+    near(tailOff.powerMW, 62.9, 0.005) && near(tailOff.refTripFuelSystemT, 1815, 0.005)
     && tailOff.aerodynamicStatus === 'ORANGE' && tailOff.fuelMassStatus === 'RED',
     `${tailOff.powerMW.toFixed(1)} MW / ${tailOff.refTripFuelSystemT.toFixed(0)} t / ${tailOff.aerodynamicStatus}`);
   const bliOff = compute(setToggle(moving, 'bliOn', false), engine, undefined, ESTIMATOR);
@@ -218,9 +224,9 @@ console.log('\n== M4/M5 toggles under M6 semantics (0.26 RETIRED, r10 snap-edita
     restored.selectedCd === moving.cd && restored.cdSource === 'authored');
   // Both OFF at speed: the naked-body worst case computes, flagged not hidden.
   const naked = compute(setToggle(setToggle(moving, 'tailOn', false), 'bliOn', false), engine, undefined, ESTIMATOR);
-  check('both OFF = bare estimate, no credit (~86.2 MW / ~1,940 t, graduated)',
+  check('both OFF = bare estimate, no credit (~86.2 MW / ~2,487 t, graduated)',
     naked.selectedCd === bare100 && naked.selectedS === 0
-    && near(naked.powerMW, 86.2, 0.005) && near(naked.refTripFuelSystemT, 1940, 0.005),
+    && near(naked.powerMW, 86.2, 0.005) && near(naked.refTripFuelSystemT, 2487, 0.005),
     `${naked.powerMW.toFixed(1)} MW / ${naked.refTripFuelSystemT.toFixed(0)} t`);
   // Toggles are selections too: changed while parked, they persist (r6).
   const { engine: e2, calls: c2 } = countingEngine();
@@ -252,7 +258,7 @@ console.log('\n== r7 send-back #1: Ideal restores the COMPLETE ruled configurati
     const contract = compute(ideal, engine, undefined, ESTIMATOR);
     check(`${name}: both toggles back ON`, ideal.tailOn && ideal.bliOn);
     check(`${name}: engine receives Cd 0.043, not the bare estimate`, contract.selectedCd === EAS_IDEAL.cd);
-    check(`${name}: the 341 t state exactly`, contract.refTripFuelSystemT.toFixed(0) === '341');
+    check(`${name}: the 437 t state exactly`, contract.refTripFuelSystemT.toFixed(0) === '437');
   }
   check('Ideal clears the tail stash (no stale restore target)',
     applyIdeal(setToggle(moving, 'tailOn', false)).tailStash === null);
@@ -449,8 +455,8 @@ console.log('\n== M6 STAGE 2: per-shape inheritance (r8 #4 reset, gated systems,
     home.tailOn && home.bliOn && home.cd === EAS_IDEAL.cd
     && home.cdSource === 'authored' && home.scenario === 'VISION');
   const cHome = compute(setInput(home, 'airspeedKmh', 100), engine, undefined, ESTIMATOR);
-  check('Sunship ideal numbers intact after the round trip (341 t)',
-    cHome.refTripFuelSystemT.toFixed(0) === '341');
+  check('Sunship ideal numbers intact after the round trip (437 t)',
+    cHome.refTripFuelSystemT.toFixed(0) === '437');
 
   // Length inheritance: same shape at another length — record scaling
   // is engine algebra; a user Cd survives (length is not a shape change).

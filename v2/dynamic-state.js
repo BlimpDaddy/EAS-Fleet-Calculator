@@ -77,9 +77,14 @@ export const SUNSHIP_SECTIONAL = Object.freeze({
 });
 
 /* EAS IDEAL — the one pink button (Display Rulings v1.0, 2026-08-13).
- * Cd 0.043 / S 27% at 100 km/h → 75.8 t LH2 / 379 t fuel system, GREEN
- * and silent. SUNSHIP-AUTHORED (M6 amendment #6, r8 #3 + Toby ruling
- * 2026-08-16): gated by PRESET IDENTITY, greyed elsewhere, never leaks. */
+ * Cd 0.043 / S 27% at 100 km/h → 87.5 t LH2 / 437 t fuel system, GREEN
+ * and silent (9,000 km reference trip). Figures updated 2026-08-18 for
+ * the PROPULSION_CHAIN_EFF split — the comment had also been carrying
+ * the superseded 10,000 km masses (75.8 / 379) since the 2026-08-17
+ * distance ruling. Propulsive power is unchanged at 15.2 MW; electrical
+ * demand is 19.4 MW. SUNSHIP-AUTHORED (M6 amendment #6, r8 #3 + Toby
+ * ruling 2026-08-16): gated by PRESET IDENTITY, greyed elsewhere,
+ * never leaks. */
 export const EAS_IDEAL = Object.freeze({
   airspeedKmh: 100, cd: 0.043, s: 0.27,
   scenario: 'VISION',
