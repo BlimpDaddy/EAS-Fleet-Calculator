@@ -28,18 +28,21 @@
  * (better than V1's fraction-trim, which needed a fixed route).
  * Cycling pauses while the Fleet page is hidden.
  *
- * REGENERATING route-data.js: run the mask sweep in the browser
- * console against /assets/charts/average-distance-chart/earth.jpg —
- * ocean = blue channel > red+20; 200 samples/arc; skip 3% each end;
- * reject any land run > 2 samples; haversine distances. (The
- * generation script lives in the session record 2026-08-17.)
+ * REGENERATING route-data.js: the generator is COMMITTED —
+ * tools/route-rules.js (the pure rules) + tools/route-gen-v6.js (the
+ * search). Run it from this page's console; see those files' headers.
+ * This note used to describe the rules in prose and say the script
+ * "lives in the session record", and the prose went stale: it still
+ * claimed the RETIRED v1 rule ("reject any land run > 2 samples")
+ * years after the kilometre-based 250 km rule replaced it on
+ * 2026-08-17. A rule nobody can run is a rule nobody can check.
  */
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { Line2 } from 'three/addons/lines/Line2.js';
 import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
-import { ROUTE_CITIES, ROUTE_PAIRS as ROUTE_DIRECT, ROUTE_GATES, ROUTE_GATED } from '/v2/route-data.js?v=1.9.2';
+import { ROUTE_CITIES, ROUTE_PAIRS as ROUTE_DIRECT, ROUTE_GATES, ROUTE_GATED } from '/v2/route-data.js?v=1.15';
 
 /* SEA GATES (v4, 2026-08-18): the direct pairs and the gated ones are one
  * pool, re-sorted by km because nextPair() reads ROUTE_PAIRS[0] and
