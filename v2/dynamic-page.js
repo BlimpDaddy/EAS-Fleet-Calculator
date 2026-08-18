@@ -761,7 +761,7 @@ function paint() {
    * itself is a separate question and a real one: the one tail we have
    * ever measured removes 93% of pressure drag, not 20%. */
   const tailModelTitle = sunship
-    ? 'Smart Tail DEPLOYED — the Sunship’s own fairing geometry, measured by the estimator'
+    ? 'Smart Tail DEPLOYED — Cd MODELLED from an axisymmetric equal-area surrogate of hull + fairing, not from the Sunship’s own surface. Magnitude under external review (r20).'
     : 'Smart Tail — REFERENCE ASSUMPTION (§5.4): 20% of pressure drag removed. '
       + 'This is NOT a fairing built for this shape, and it is deliberately conservative — '
       + 'the Sunship’s measured fairing removes about 93%.';
