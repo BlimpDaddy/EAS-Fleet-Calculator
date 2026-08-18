@@ -69,7 +69,7 @@ const ESTIMATOR = { estimateCd, applyGenericTail, proxyRecord: SUNSHIP_SECTIONAL
 const bareEstimateAt = (v) => estimateCd(SUNSHIP_SECTIONAL, SUNSHIP_GEOMETRY, v).cdEstimate;
 
 /**
- * THE SUNSHIP IN ITS EAS POSTURE — both systems on, S 27%.
+ * THE SUNSHIP IN ITS EAS POSTURE — both systems on, 120 km/h, S 12%.
  *
  * Until 2026-08-18 this was simply initialState(): the page loaded with
  * the Smart Tail and BLI already ON, so "the load state" and "the ideal
@@ -105,7 +105,7 @@ console.log('\n== r6: parked load calls the engine ZERO times (and the estimator
   check('parked render carries no warnings', rm.warnings.length === 0);
   check('parked render has no marker (page cache is separate)', rm.marker === null);
   // BOOT POSTURE RE-RULED 2026-08-18 (Toby): the page now arrives BARE.
-  // The S SELECTION still loads at the ideal 27% — it is simply not in
+  // The S SELECTION still loads at the ideal 12% — it is simply not in
   // force until BLI is switched on — and Cd tracks the estimator, whose
   // tail-off meaning is the bare hull. Both toggles OFF, scenario CUSTOM:
   // an un-tailed ship has not earned the VISION name.
@@ -134,10 +134,10 @@ console.log('\n== r6: 0→100 yields exact engine contract values ==');
   // is electrical demand (15.158 / 0.78 = 19.43 MW) and everything fuel.
   // Label corrected at the same time: the reference trip has been 9,000 km
   // since 2026-08-17, so "10,000 km" here was stale.
-  check('ideal 9,000 km LH2 ~ 43.6 t (deployed fairing)', near(contract.refTripFuelT, 43.569, 0.001), String(contract.refTripFuelT));
-  check('ideal fuel system ~ 218 t (deployed fairing)', near(contract.refTripFuelSystemT, 217.845, 0.001), String(contract.refTripFuelSystemT));
-  check('propulsion power ~ 7.55 MW (propulsive, deployed fairing)', near(contract.powerMW, 7.551, 0.001), String(contract.powerMW));
-  check('electrical demand ~ 9.68 MW (propulsive / 0.78)', near(contract.electricalMW, 9.681, 0.001), String(contract.electricalMW));
+  check('ideal 9,000 km LH2 ~ 52.5 t (deployed fairing, S 12%)', near(contract.refTripFuelT, 52.522, 0.001), String(contract.refTripFuelT));
+  check('ideal fuel system ~ 263 t (deployed fairing, S 12%)', near(contract.refTripFuelSystemT, 262.608, 0.001), String(contract.refTripFuelSystemT));
+  check('propulsion power ~ 9.10 MW (propulsive, deployed fairing, S 12%)', near(contract.powerMW, 9.103, 0.001), String(contract.powerMW));
+  check('electrical demand ~ 11.67 MW (propulsive / 0.78)', near(contract.electricalMW, 11.670, 0.001), String(contract.electricalMW));
   check('all statuses GREEN/OK', contract.aerodynamicStatus === 'GREEN'
     && contract.floorStatus === 'OK' && contract.fuelMassStatus === 'GREEN');
   check('contract carries zero warnings (estimate echo matches — no mismatch flag)',
@@ -148,17 +148,17 @@ console.log('\n== r6: 0→100 yields exact engine contract values ==');
   check('GREEN = silence (warnings-only ruling)', rm.warnings.length === 0);
   check('one power figure, labelled Propulsion power', 'Propulsion power' in row && !rm.rows.some(([k]) => /no credit/i.test(k)));
   check('power row formats contract.powerMW', row['Propulsion power'] === `${contract.powerMW.toFixed(1)} MW`);
-  check('bare tag is the S SETTING (−27%)', rm.powerTag === '(−27%)', rm.powerTag);
+  check('bare tag is the S SETTING (−12%)', rm.powerTag === '(−12%)', rm.powerTag);
   // Fuel pair (Toby 2026-08-15 + 2026-08-16): LH2 weight · LH2 + Storage,
   // the reference distance labelled in the headers; energy row CUT; the
   // /1,000 km rate row CUT (repeat of the 10,000 km figure — the rate
   // stays a §3.6 contract field for FLEET).
   check('rate row is CUT from the display (contract field survives)',
     !rm.rows.some(([k]) => /1,000 km/.test(k)) && Number.isFinite(contract.fuelPer1000kmT));
-  check('LH2 weight row is the reference-trip LH2 (43.6 t)',
+  check('LH2 weight row is the reference-trip LH2 (52.5 t)',
     row['LH2 weight (9,000 km)'] === `${contract.refTripFuelT.toFixed(1)} t`);
-  check('LH2 + Storage row is the tankage-system total (218 t)',
-    row['LH2 + Storage (9,000 km)'] === '218 t');
+  check('LH2 + Storage row is the tankage-system total (263 t)',
+    row['LH2 + Storage (9,000 km)'] === '263 t');
   check('energy row is CUT (it is power in other units)',
     !rm.rows.some(([k]) => /energy/i.test(k)));
   check('frontal area echoes contract (deployed body)', row['Frontal area'] === '40,056 m²');
@@ -267,8 +267,8 @@ console.log('\n== M4/M5 toggles under M6 semantics (0.26 RETIRED, r10 snap-edita
   check('the reveal is ~8x (bare estimate / deployed-fairing estimate)',
     tailOff.selectedCd / tailOnRef.selectedCd > 7 && tailOff.selectedCd / tailOnRef.selectedCd < 9,
     `${(tailOff.selectedCd / tailOnRef.selectedCd).toFixed(2)}x`);
-  check('tail OFF numbers: ~62.9 MW / ~1,815 t, aero ORANGE + fuel RED (the graduated reveal — the honest bare hull is bad, not catastrophic)',
-    near(tailOff.powerMW, 62.9, 0.005) && near(tailOff.refTripFuelSystemT, 1815, 0.005)
+  check('tail OFF numbers: ~75.9 MW / ~2,188 t, aero ORANGE + fuel RED (the graduated reveal — the honest bare hull is bad, not catastrophic)',
+    near(tailOff.powerMW, 75.9, 0.005) && near(tailOff.refTripFuelSystemT, 2188, 0.005)
     && tailOff.aerodynamicStatus === 'ORANGE' && tailOff.fuelMassStatus === 'RED',
     `${tailOff.powerMW.toFixed(1)} MW / ${tailOff.refTripFuelSystemT.toFixed(0)} t / ${tailOff.aerodynamicStatus}`);
   const bliOff = compute(setToggle(moving, 'bliOn', false), engine, undefined, ESTIMATOR);
@@ -325,35 +325,47 @@ console.log('\n== r7 send-back #1: Ideal restores the COMPLETE ruled configurati
       ideal.airspeedKmh === EAS_IDEAL.airspeedKmh, String(ideal.airspeedKmh));
     check(`${name}: engine receives the DEPLOYED-fairing estimate, not the bare hull`,
       near(contract.selectedCd, 0.02145, 0.01), String(contract.selectedCd));
-    check(`${name}: the 311 t state exactly (120 km/h ideal)`,
-      contract.refTripFuelSystemT.toFixed(0) === '311', String(contract.refTripFuelSystemT));
+    check(`${name}: the 374 t state exactly (120 km/h, S 12% ideal)`,
+      contract.refTripFuelSystemT.toFixed(0) === '374', String(contract.refTripFuelSystemT));
   }
   check('Ideal clears the tail stash (no stale restore target)',
     applyIdeal(setToggle(moving, 'tailOn', false)).tailStash === null);
 }
 
-console.log('\n== THE IDEAL CELL as shipped — 120 km/h, deployed fairing (2026-08-18) ==');
+console.log('\n== THE IDEAL CELL as shipped — 120 km/h, S 12%, deployed fairing (2026-08-18) ==');
 {
   // The figures a visitor actually meets after pressing the pink button.
   // Pinned here as ONE block so the headline can never drift unnoticed:
   // every other fixture sets its own speed, which is right for isolating
   // behaviour and useless for guarding the shipped numbers.
   //
-  // The speed rise costs real fuel — 43.6 t LH2 at 100 km/h becomes 62.1 t
-  // at 120 — and it is affordable only because the measured fairing halved
-  // the coefficient first. Against the pre-tail production cell (87.5 t /
-  // 437 t at 100 km/h) the ship is still far better off while flying 20%
-  // faster, which is the whole argument for making the change.
+  // WHAT THIS CELL COST AND BOUGHT, against the pre-tail production cell
+  // (100 km/h, authored Cd 0.043, S 27%: 15.16 MW / 87.5 t / 437 t):
+  //   power  15.16 -> 15.57 MW   essentially unchanged
+  //   speed    100 -> 120 km/h   20% faster
+  //   fuel     437 -> 374 t      14% lighter
+  //   Cd     authored -> MEASURED from the deployed fairing
+  //   S        27% -> 12%        out of EAS's own recovery-credit bound
+  //                              and INSIDE published BLI results
+  // The same power, faster, lighter, and resting on materially less that
+  // a reviewer can refuse. All of it is paid for by measuring the fairing.
   const { engine } = countingEngine();
   const c = compute(easState(), engine, undefined, ESTIMATOR);
   check('ideal cruise is 120 km/h', easState().airspeedKmh === 120);
+  check('ideal S is 12% — inside the published-BLI zone (0–15%), not the EAS bound',
+    EAS_IDEAL.s === 0.12 && EAS_IDEAL.s <= 0.15, String(EAS_IDEAL.s));
   check('ideal Cd ~ 0.0215 (deployed fairing, estimated at 120 km/h)',
     near(c.selectedCd, 0.021452, 0.001), String(c.selectedCd));
-  check('ideal propulsive power ~ 12.92 MW', near(c.powerMW, 12.917, 0.001), String(c.powerMW));
-  check('ideal electrical demand ~ 16.56 MW (propulsive / 0.78)',
-    near(c.electricalMW, 16.561, 0.001), String(c.electricalMW));
-  check('ideal 9,000 km LH2 ~ 62.1 t', near(c.refTripFuelT, 62.109, 0.001), String(c.refTripFuelT));
-  check('ideal fuel system ~ 311 t', near(c.refTripFuelSystemT, 310.546, 0.001), String(c.refTripFuelSystemT));
+  check('ideal propulsive power ~ 15.57 MW', near(c.powerMW, 15.572, 0.001), String(c.powerMW));
+  check('ideal electrical demand ~ 19.96 MW (propulsive / 0.78)',
+    near(c.electricalMW, 19.964, 0.001), String(c.electricalMW));
+  check('ideal 9,000 km LH2 ~ 74.9 t', near(c.refTripFuelT, 74.871, 0.001), String(c.refTripFuelT));
+  check('ideal fuel system ~ 374 t', near(c.refTripFuelSystemT, 374.357, 0.001), String(c.refTripFuelSystemT));
+  // The comparison that justifies the whole posture: the OLD production
+  // cell needed 15.158 MW at 100 km/h. This one is within 3% of it.
+  check('ideal power is within 3% of the old 100 km/h production cell (15.16 MW)',
+    Math.abs(c.powerMW - 15.158) / 15.158 < 0.03,
+    `${c.powerMW.toFixed(3)} vs 15.158`);
   check('ideal Cd_v ~ 0.0213 on ENVELOPE volume', near(c.cdVolumetric, 0.021330, 0.001), String(c.cdVolumetric));
   check('ideal is GREEN and silent at 120 km/h',
     c.aerodynamicStatus === 'GREEN' && c.floorStatus === 'OK'
@@ -481,7 +493,7 @@ console.log('\n== M6: the estimator on the page — marker, band, dial, firming 
   // able to estimate its Cd) — only the Cd falls back, so power differs
   // from the estimated case.
   check('compute without an estimator: contract.estimate null, numbers intact',
-    noEst.estimate === null && near(noEst.powerMW, 14.984, 0.001), String(noEst.powerMW));
+    noEst.estimate === null && near(noEst.powerMW, 18.063, 0.001), String(noEst.powerMW));
   check('renderModel without an estimate: marker null', renderModel(noEst).marker === null);
 }
 
@@ -569,8 +581,8 @@ console.log('\n== M6 STAGE 2: per-shape inheritance (r8 #4 reset, gated systems,
     home.tailOn && home.bliOn && home.cd === EAS_IDEAL.cd
     && home.cdSource === 'estimated' && home.scenario === 'VISION');
   const cHome = compute(setInput(home, 'airspeedKmh', 100), engine, undefined, ESTIMATOR);
-  check('Sunship ideal numbers intact after the round trip (218 t)',
-    cHome.refTripFuelSystemT.toFixed(0) === '218');
+  check('Sunship ideal numbers intact after the round trip (263 t)',
+    cHome.refTripFuelSystemT.toFixed(0) === '263');
 
   // Length inheritance: same shape at another length — record scaling
   // is engine algebra; a user Cd survives (length is not a shape change).

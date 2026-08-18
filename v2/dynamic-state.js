@@ -77,7 +77,7 @@ export const SUNSHIP_SECTIONAL = Object.freeze({
 });
 
 /* EAS IDEAL — the one pink button (Display Rulings v1.0, 2026-08-13).
- * 120 km/h, Smart Tail deployed, S 27%. SUNSHIP-GATED by PRESET IDENTITY
+ * 120 km/h, Smart Tail deployed, S 12%. SUNSHIP-GATED by PRESET IDENTITY
  * (M6 amendment #6, r8 #3 + Toby ruling 2026-08-16) — greyed elsewhere,
  * never leaks. Cd is no longer part of the posture: see below. */
 /* Cd tracking sentinel (M6): "Cd follows the estimator for the current
@@ -109,11 +109,33 @@ export const EAS_IDEAL = Object.freeze({
    * roughly halves it.
    * S stays authored: BLI is a separate system (ducted thrust, inlets),
    * outside geometry entirely, and nothing here validates it. */
-  cd: CD_TRACKS_ESTIMATE, s: 0.27,
+  cd: CD_TRACKS_ESTIMATE,
+  /* S 27% -> 12% (Toby, 2026-08-18, same sitting as the speed rise).
+   *
+   * It reads as a retreat and is the opposite. The zone bar under the S
+   * slider has always said what the evidence is: 0-15% sits WITHIN
+   * PUBLISHED BLI RESULTS, 15-35% only within EAS's own recovery-credit
+   * bound, beyond 35% is design exploration. The ideal posture used to
+   * claim 27% — defensible, but resting on our bound rather than on
+   * anyone's measurements. 12% moves the flagship configuration inside
+   * the published band, so the single most-quoted cell on the site stops
+   * depending on the one number a skeptic could most easily refuse.
+   *
+   * It is affordable for the same reason the speed rise was: the measured
+   * fairing freed up far more than either change spends. At 120 km/h with
+   * S 12% the ship needs 15.57 MW propulsive — against 15.16 MW for the
+   * OLD production cell at 100 km/h on the authored Cd 0.043 and S 27%.
+   * Essentially the same power, 20% faster, on 374 t of fuel system
+   * instead of 437 t, with the credit now inside published results.
+   *
+   * Still AUTHORED, and still the weakest link in the chain: nothing in
+   * this repo validates S. Lowering it shrinks the exposure; it does not
+   * remove it. */
+  s: 0.12,
   scenario: 'VISION',
   cdSource: 'estimated', sSource: 'authored',
   cdLabel: 'ESTIMATED — deployed Smart Tail geometry (derived 2026-08-18)',
-  sLabel: 'EAS IDEAL (ruled 2026-08-13)',
+  sLabel: 'EAS IDEAL — S 12%, within published BLI results (ruled 2026-08-18)',
 });
 
 export const SUNSHIP_SHAPE = Object.freeze({ kind: 'preset', id: 'sunship', name: 'SUNSHIP' });

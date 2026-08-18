@@ -38,7 +38,7 @@ import {
   SUNSHIP_SHAPE, CD_TRACKS_ESTIMATE, isSunship,
   initialState, isParked, setInput, setToggle, setShape, applyIdeal,
   resolveCd, compute, renderModel, cdDialRange, setTailedBody,
-} from './dynamic-state.js?v=1.11';
+} from './dynamic-state.js?v=1.12';
 
 // ---------------------------------------------------------------- shape inheritance
 // M6 stage 2: the ACTIVE shape comes from the page-1 channel
@@ -258,6 +258,30 @@ style.textContent = `
     color: var(--color-accent-1, #c628a4);
     font-size: 0.55em; letter-spacing: 0.08em; white-space: nowrap;
   }
+  /* The TYPEABLE Cd readout. Styled to read as text, not as a form field —
+     it sits in a row with two plain readouts and must not shout — but it
+     carries a dotted underline so the affordance is discoverable, which
+     goes solid on focus. Sized in ch so it fits 0.0215 at any font scale. */
+  .dyn-cd-input {
+    width: 6.5ch; text-align: right;
+    background: transparent; color: inherit; font: inherit;
+    border: none; border-bottom: 1px dotted var(--color-secondary, #888);
+    padding: 0; margin: 0; border-radius: 0;
+    -moz-appearance: textfield;
+  }
+  .dyn-cd-input:focus {
+    outline: none;
+    border-bottom-color: var(--color-accent-1, #c628a4);
+  }
+  .dyn-cd-input:disabled { border-bottom-color: transparent; opacity: 1; }
+  /* ESTIMATED as its own tag rather than a word inside the number — see
+     the note where it is built. Small and grey so the FIGURE still reads
+     as the figure. */
+  .dyn-cd-est-tag {
+    font-size: 0.62em; letter-spacing: 0.08em;
+    color: var(--color-accent-1, #c628a4);
+    margin-right: 0.45em; vertical-align: middle;
+  }
   /* Inert toggles (M3 shell): visible state, no interaction until M4/M5. */
   .dyn-toggle-row {
     display: flex; align-items: center; gap: 0.5em;
@@ -386,6 +410,40 @@ bandLabel.className = 'est-label';
 bandLabel.textContent = 'ESTIMATED';
 cdBand.append(bandSeg, bandTick, bandLabel);
 cdCtl.slider.after(cdBand);
+
+/* ---- Cd is TYPEABLE (Toby, 2026-08-18: "very precise changes and a bit
+ * tricky to use") ----
+ *
+ * Cd is the only control here whose interesting range is narrower than
+ * the slider can resolve. Airspeed spans 0-140 in whole km/h and S spans
+ * 0-75 in whole percent, so a drag reaches any value either of them can
+ * hold. The Cd dial spans 0.009-0.55 across roughly 240 px, which makes
+ * one pixel worth about 0.0023 — the difference between the Sunship's
+ * 0.0215 and a value 10% away from it is a single pixel of travel. The
+ * dial is a good instrument for exploring and a bad one for stating a
+ * figure, so the readout becomes an input and the number can simply be
+ * said.
+ *
+ * The ESTIMATED word moves OUT of the number and into its own tag, which
+ * it should always have been: it is a claim about provenance, not part of
+ * the value, and it could not have survived inside an editable field.
+ * Typing is exactly a drag as far as the state module is concerned —
+ * setInput('cd') — so a typed value FIRMS the tracking sentinel and turns
+ * the scenario CUSTOM by the same rule, and the tag disappears because it
+ * is no longer true. */
+const cdEstTag = document.createElement('span');
+cdEstTag.className = 'dyn-cd-est-tag';
+cdEstTag.textContent = 'ESTIMATED';
+const cdInput = document.createElement('input');
+cdInput.type = 'text';
+cdInput.className = 'fleet-control-output-value dyn-cd-input';
+cdInput.inputMode = 'decimal';         // numeric keypad on phones
+cdInput.autocomplete = 'off';
+cdInput.spellcheck = false;
+cdInput.setAttribute('aria-label', 'Drag coefficient — type an exact value');
+cdInput.title = 'Type an exact Cd and press Enter';
+cdCtl.valueSpan.replaceWith(cdEstTag, cdInput);
+cdCtl.valueSpan = cdInput;             // paint() keeps writing through this handle
 // Evidence zones under the S slider (published 0–15 / bound 15–35 / beyond).
 const zoneBar = document.createElement('div');
 zoneBar.className = 'dyn-s-zones';
@@ -565,6 +623,21 @@ let lastEstimate = null;
  * So the geometry is taken from the two live rects and the answer is
  * plain pixels relative to the strip. The percentage fallback only runs
  * when the rects are degenerate (paint while the section is hidden). */
+/* Cd display precision. Three decimals was right while every value came
+ * off a 0.001 slider; now that a figure can be TYPED, three places would
+ * silently swallow the distinction the typing exists to express — and it
+ * already rounded the Sunship's own 0.02145 to "0.021", a number we have
+ * never quoted anywhere. Four places, with the fourth shown only when it
+ * carries information, so ordinary values look exactly as they did. */
+function fmtCd(v) {
+  const four = v.toFixed(4);
+  return four.endsWith('0') ? four.slice(0, -1) : four;
+}
+
+/** The Cd dial in force, republished by each paint so the typed-entry
+ *  handler clamps against the same range the slider is showing. */
+let lastDial = { min: 0.009, max: 0.55 };
+
 const THUMB_FALLBACK_PX = 16;
 const trackFrac = (x, dial) =>
   Math.max(0, Math.min(1, (x - dial.min) / (dial.max - dial.min)));
@@ -658,6 +731,7 @@ function paint() {
   const dial = cdDialRange(contract, lastEstimate);
   cdCtl.slider.min = dial.min;
   cdCtl.slider.max = dial.max;
+  lastDial = dial;   // the typed-entry handler clamps to the live dial
 
   speedCtl.slider.value = state.airspeedKmh;
   if (cdInForce != null) cdCtl.slider.value = cdInForce;
@@ -667,13 +741,19 @@ function paint() {
   tailToggle.box.checked = state.tailOn;
   bliToggle.box.checked = state.bliOn;
   speedCtl.valueSpan.textContent = String(state.airspeedKmh);
-  // Estimate-tracking Cd leads with the word ESTIMATED and firms only
-  // when the user drags (M6 amendment #2). Pending = tail off while
+  // Estimate-tracking Cd wears the ESTIMATED tag and firms only when the
+  // user drags OR TYPES (M6 amendment #2). Pending = tail off while
   // parked before any estimate exists: the snap resolves on first
   // movement (r6: parked selections carry, never reset).
-  cdCtl.valueSpan.textContent = cdInForce == null ? '—'
-    : (state.cd === CD_TRACKS_ESTIMATE && cdSource === 'estimated'
-      ? `ESTIMATED ${cdInForce.toFixed(3)}` : cdInForce.toFixed(3));
+  // NEVER overwrite the field mid-edit: paint() runs on shape changes,
+  // resizes and the fleet bridge, any of which can land while the user is
+  // halfway through typing a number.
+  const tracking = state.cd === CD_TRACKS_ESTIMATE && cdSource === 'estimated';
+  cdEstTag.style.display = cdInForce != null && tracking ? '' : 'none';
+  if (document.activeElement !== cdInput) {
+    cdInput.value = cdInForce == null ? '—' : fmtCd(cdInForce);
+    cdInput.disabled = cdInForce == null;   // nothing to edit with no ship
+  }
   sCtl.valueSpan.textContent = `${Math.round(sInForce * 100)}%`;
 
   // The marker + silent band (live when running; cached while parked).
@@ -764,6 +844,57 @@ function paint() {
 
 speedCtl.slider.addEventListener('input', () => { state = setInput(state, 'airspeedKmh', Number(speedCtl.slider.value)); paint(); });
 cdCtl.slider.addEventListener('input', () => { state = setInput(state, 'cd', Number(cdCtl.slider.value)); paint(); });
+
+/* Typed Cd. Commit on Enter or blur, abandon on Escape — the three verbs
+ * every editable number in a form has, so nothing has to be explained.
+ *
+ * A typed value is CLAMPED to the live dial rather than rejected. The
+ * dial's own range is a claim (bottom = the contract's friction floor, so
+ * anything under it is physically impossible for this body; top = the
+ * 0.55 sphere allowance), and clamping states that claim by moving the
+ * number in front of the user, which is more informative than refusing
+ * the keystroke and says it without any copy. Anything that is not a
+ * positive number at all — blank, a word, a minus sign — is simply
+ * abandoned, and the repaint restores the value in force.
+ *
+ * Deliberately setInput('cd'), the identical path a drag takes: typing
+ * must firm the tracking sentinel and turn the scenario CUSTOM by exactly
+ * the same rule, or the page would have two provenance stories for the
+ * same act. */
+let abandoningCdEdit = false;
+function commitTypedCd() {
+  if (abandoningCdEdit) { abandoningCdEdit = false; paint(); return; }
+  const v = parseFloat(cdInput.value.replace(/[^\d.eE+-]/g, ''));
+  if (Number.isFinite(v) && v > 0) {
+    const clamped = Math.min(lastDial.max, Math.max(lastDial.min, v));
+    state = setInput(state, 'cd', clamped);
+  }
+  paint();   // valid or not, the field is re-rendered from the value in force
+}
+cdInput.addEventListener('change', commitTypedCd);
+cdInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); cdInput.blur(); }
+  else if (e.key === 'Escape') {
+    e.preventDefault();
+    // Escape must ABANDON, and blurring a modified field fires `change`,
+    // which would commit the very edit being cancelled. A flag suppresses
+    // that one commit and lets the repaint restore the value in force.
+    //
+    // The first cut instead put the old TEXT back before blurring, which
+    // reads as more direct and is subtly wrong: the remembered string is
+    // only refreshed by paints that happen while the field is unfocused,
+    // so after any edit committed mid-focus it is stale, and Escape would
+    // "restore" a number the ship no longer has. Never cache a rendering
+    // of state when you can re-render from the state itself.
+    abandoningCdEdit = true;
+    cdInput.blur();
+    paint();
+  }
+});
+// Selecting the whole value on focus means typing a new one REPLACES it
+// rather than appending to it — the field is 6 characters wide and the
+// value is always fully overwritten in practice.
+cdInput.addEventListener('focus', () => cdInput.select());
 sCtl.slider.addEventListener('input', () => { state = setInput(state, 's', Number(sCtl.slider.value)); paint(); });
 tailToggle.box.addEventListener('change', () => { state = setToggle(state, 'tailOn', tailToggle.box.checked); paint(); });
 bliToggle.box.addEventListener('change', () => { state = setToggle(state, 'bliOn', bliToggle.box.checked); paint(); });
