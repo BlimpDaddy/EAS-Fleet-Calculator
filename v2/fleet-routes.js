@@ -62,6 +62,14 @@ if (v1Canvas && figure) {
   canvas.className = 'fleet-distance-canvas fleet-routes-canvas'; // inherit V1's sizing CSS
   figure.appendChild(canvas);
 
+  // CAPTION (Toby 2026-08-18): the figure stopped being a distance readout
+  // the moment it became a route tour — it shows real city pairs now, and
+  // the slider directly above it already carries the words "Average Trip
+  // Distance". Retitled here rather than in the bundle (V1 untouched); the
+  // SLIDER keeps its own label, which is the one that still means distance.
+  const caption = figure.querySelector('.fleet-graph-caption');
+  if (caption) caption.textContent = 'Example Routes';
+
   // Pause button (Toby 2026-08-17) — same look as the SHAPE page's ⏸
   // (V1's .shape-viewer-button class reused so the styling is
   // literally the same button). Pausing holds the current trip;
@@ -182,11 +190,23 @@ if (v1Canvas && figure) {
         }
       }
       ground.push(b.clone());
-      // Lift: 1.02R at the ends rising to 1.5R at mid-route, the same arc
-      // height V1's Bezier reaches, so gated and direct routes read alike.
+      /* ARC HEIGHT (Toby 2026-08-18: "extending too high from the surface").
+       * A quadratic Bezier NEVER REACHES ITS CONTROL POINT, so V1's 1.5R
+       * midpoint is not the height its arcs actually fly: measured, they
+       * apex at 1.258R for a short hop, falling to 1.02R (hugging the ball)
+       * once the endpoints pass ~120 deg apart. Lifting a gated route to a
+       * literal 1.5R therefore drew it 1.19x-1.47x too tall — worst exactly
+       * where the gated routes live, the long ones. The closed form below
+       * reproduces V1's own apex from the ENDPOINT separation, so a gated
+       * route now stands exactly as tall as a direct route between the same
+       * two ports, which is the consistency that was wanted all along.
+       *   apex = 0.75 + 0.5*1.02*cos(theta/2), floored at the 1.02 surface
+       * (matches the measured Bezier to 3dp; see the numeric sweep). */
+      const sep = Math.acos(Math.min(1, Math.max(-1, a.clone().normalize().dot(b.clone().normalize()))));
+      const apex = Math.max(1.02, 0.75 + 0.5 * 1.02 * Math.cos(sep / 2));
       pts = ground.map((v, i) => {
         const t = i / (ground.length - 1);
-        return v.clone().normalize().multiplyScalar(1.02 + (1.5 - 1.02) * Math.sin(Math.PI * t));
+        return v.clone().normalize().multiplyScalar(1.02 + (apex - 1.02) * Math.sin(Math.PI * t));
       });
     } else {
       const mid = a.clone().add(b).normalize().multiplyScalar(1.5);

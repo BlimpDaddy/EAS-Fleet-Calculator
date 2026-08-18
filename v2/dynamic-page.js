@@ -183,6 +183,9 @@ style.textContent = `
     align-items: stretch;
   }
   .dyn-stat { min-width: 110px; }
+  /* "No Size" is a message, not a measurement — muted so it never reads
+     as a computed result (and so the berry key result does not shout it). */
+  .dyn-stat .fleet-results-data.dyn-nosize { color: var(--color-secondary); opacity: 0.75; }
   .dyn-stat .fleet-results-data-header { margin: 0; }
   .dyn-stat .fleet-results-data { margin: 0; }
   /* The bare (−x%) tag rides the power value, pink — the number IS the S
@@ -493,7 +496,17 @@ function paint() {
   // estimator stay DORMANT exactly like parked. Selections made while
   // dashed persist into the first real computation — never reset.
   const geometry = activeGeometry();
-  const contract = geometry === null ? null
+  // NO SIZE (Toby 2026-08-18): parked and no-ship both produce a null
+  // contract, so the state module — which only ever sees the contract —
+  // cannot tell them apart and dashes both. It dashes CORRECTLY for
+  // parked (a ship exists, it just is not moving), but a user who opens
+  // DYNAMICS first has no ship at all and a row of dashes does not say
+  // so; they read it as broken. The page DOES know the difference
+  // (geometry === null IS the no-ship gate), so the distinction is drawn
+  // here, in the DOM layer, leaving dynamic-state.js and its sealed
+  // fixtures untouched — parked still dashes exactly as ruled.
+  const noShip = geometry === null;
+  const contract = noShip ? null
     : compute(state, computeDynamics, geometry, estimatorSeam());
   if (contract && contract.estimate) lastEstimate = contract.estimate;
   const rm = renderModel(contract);
@@ -591,7 +604,10 @@ function paint() {
       tag.textContent = rm.powerTag;
       cell.appendChild(tag);
     } else {
-      cell.textContent = value;
+      // No ship yet: say so instead of dashing. (noShip implies parked,
+      // so the power branch above can never be the one that runs here.)
+      cell.textContent = noShip ? 'No Size' : value;
+      cell.classList.toggle('dyn-nosize', noShip);
     }
   }
   // Compact form (Toby ruling 2026-08-17): warnings render as ⚠ icons
