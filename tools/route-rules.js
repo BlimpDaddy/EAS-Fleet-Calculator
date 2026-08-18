@@ -34,12 +34,30 @@ export const DIRECT_SKIP_FRAC = 0.03;
 export const PORT_GRACE_KM = 350;
 export const PORT_GRACE_MAX_FRAC = 0.40;
 export const GATE_DETOUR_CAP = 1.45;
-/* Raised 2.0 -> 2.3 (Toby 2026-08-19). The Persian Gulf is the case that
- * forced it: Kuwait City and Umm Qasr had ZERO long-haul routes because
- * escaping the Gulf means Hormuz, then the length of the Arabian Sea,
- * before a route to Europe has even started heading north-west — a real
- * canal-and-strait routing IS long against a line drawn through Iran. */
+/* Raised 2.0 -> 2.3 (Toby 2026-08-19), for the Persian Gulf: escaping it
+ * means Hormuz, then the length of the Arabian Sea, before a route to
+ * Europe has even started heading north-west — a real strait routing IS
+ * long against a line drawn through Iran.
+ * HONEST CORRECTION (measured the same day): the cap was NOT what was
+ * blocking Kuwait City and Umm Qasr. Raised on its own it added exactly
+ * ZERO routes — those two ports could not reach Hormuz at all, on 477 km
+ * and 504 km of land, because the texture leaves the northern Gulf
+ * unpainted. Waypoints fixed that (see route-gen-v7.js); the cap only
+ * decides whether the resulting long way round is then ACCEPTED. Kept
+ * because it is defensible on its own terms, not because it was the fix. */
 export const CORRIDOR_DETOUR_CAP = 2.3;
+/* PER-CORRIDOR OVERRIDE. Escaping a near-landlocked sea costs more than
+ * any single global cap can express: Kuwait City -> Rotterdam is 4,346 km
+ * direct (straight over Iraq, Turkey and Germany) against 13,153 km by
+ * the only water route there is — a 3.03x detour. Real Kuwait-Rotterdam
+ * shipping is ~11,000 km, so the ratio is honest, not an artifact.
+ * Safe to raise ONLY because corridorSearch's scope guard confines this
+ * to routes through the three new Gulf waypoints; a global 3.2 would
+ * re-open exactly the Miami-Anchorage class of nonsense.
+ * FLAGGED FOR RULING: Toby approved 2.0 -> 2.3 believing that was the
+ * blocker. It was not (see the correction above), and the number the
+ * Gulf actually needs is 3.2. */
+export const GULF_DETOUR_CAP = 3.2;
 
 const R_EARTH = 6371;
 const rad = (d) => (d * Math.PI) / 180;
@@ -124,4 +142,86 @@ export function chainPasses(points, sampler) {
       sampler, i === 1, i === points.length - 1)) return false;
   }
   return true;
+}
+
+/**
+ * THE CORRIDOR SEARCH, shared by every spine.
+ *
+ * A port enters the spine at whichever waypoint it can actually reach,
+ * travels along it, and leaves at whichever waypoint is nearest its
+ * destination — shortest total wins. Extracted here (2026-08-19) so the
+ * Bosphorus and Gulf generators cannot drift apart the way the prose
+ * descriptions of the rules did.
+ *
+ * `requireAnyOf` is the SCOPE GUARD and it is not optional decoration.
+ * Spines share waypoints — the Bosphorus and Gulf spines both run down
+ * the Med and out through Gibraltar — so without it a spine becomes a
+ * general-purpose router for every pair that happens to have no route
+ * yet, at whatever cap it was given. That is not hypothetical: the first
+ * Bosphorus run emitted Miami–Anchorage via the English Channel. A route
+ * must traverse the waypoint that DEFINES the corridor, or it is not a
+ * route through that corridor.
+ *
+ * It takes a SET, not one waypoint. The first cut took a single index and
+ * was demonstrably wrong: re-running the Bosphorus spine through it
+ * reproduced 109 of the known-good 118, because nine routes enter at
+ * Aegean S and never touch Marmara. A corridor is defined by its
+ * exclusive waypoints collectively, not by any one of them.
+ *
+ * @param {object[]} cities   [name, lat, lon]
+ * @param {object[]} gates    [name, lat, lon]
+ * @param {number[]} spine    gate indices, in order along the corridor
+ * @param {function} sampler  (lat, lon) -> true when ocean
+ * @param {Set<string>} existing  "a,b" keys that already have a route
+ * @param {number[]} requireAnyOf  the corridor's EXCLUSIVE waypoints; a
+ *        route must traverse at least one
+ * @param {number} cap        detour cap, multiple of the direct great circle
+ */
+export function corridorSearch(cities, gates, spine, sampler, existing, requireAnyOf, cap) {
+  const defining = new Set(requireAnyOf);
+  const key = (a, b) => (a < b ? `${a},${b}` : `${b},${a}`);
+  // Port -> spine-waypoint legs, precomputed once. Testing legs inside the
+  // pair loops instead is what made an earlier attempt hang the tab.
+  const reach = new Map();
+  for (let c = 0; c < cities.length; c++) {
+    const [, la, lo] = cities[c];
+    for (const g of spine) {
+      const [, gla, glo] = gates[g];
+      if (legPasses(la, lo, gla, glo, sampler, true, false)) {
+        reach.set(`${c}:${g}`, haversine(la, lo, gla, glo));
+      }
+    }
+  }
+  const cum = [0];
+  for (let i = 1; i < spine.length; i++) {
+    const a = gates[spine[i - 1]], b = gates[spine[i]];
+    cum.push(cum[i - 1] + haversine(a[1], a[2], b[1], b[2]));
+  }
+  const out = [];
+  for (let a = 0; a < cities.length; a++) {
+    for (let b = a + 1; b < cities.length; b++) {
+      if (existing.has(key(a, b))) continue;
+      const direct = haversine(cities[a][1], cities[a][2], cities[b][1], cities[b][2]);
+      let best = null;
+      for (let i = 0; i < spine.length; i++) {
+        const inKm = reach.get(`${a}:${spine[i]}`);
+        if (inKm === undefined) continue;
+        for (let j = 0; j < spine.length; j++) {
+          if (i === j) continue;
+          const outKm = reach.get(`${b}:${spine[j]}`);
+          if (outKm === undefined) continue;
+          const total = inKm + Math.abs(cum[j] - cum[i]) + outKm;
+          if (total > direct * cap || total < 800 || total > 14900) continue;
+          const lo = Math.min(i, j), hi = Math.max(i, j);
+          const chain = spine.slice(lo, hi + 1);
+          if (!chain.some((g) => defining.has(g))) continue;   // THE SCOPE GUARD
+          if (!best || total < best.km) {
+            best = { km: total, chain: i <= j ? chain : [...chain].reverse() };
+          }
+        }
+      }
+      if (best) out.push([a, b, Math.round(best.km), best.chain]);
+    }
+  }
+  return out.sort((x, y) => x[2] - y[2]);
 }
