@@ -16,12 +16,29 @@ import { computeDynamics } from '../calcv2/src/dynamicsCore.js';
 import { estimateCd, applyGenericTail, GENERIC_TAIL_PRESSURE_FRACTION } from '../calcv2/src/cdEstimator.js';
 import { scaleGeometryRecord } from '../calcv2/src/dynamicsGeometry.js';
 import { PRESET_DYNAMICS } from '../calcv2/src/presetDynamics.js';
+import { SUNSHIP_TAILED } from '../calcv2/src/sunshipTailed.js';
 import {
   SUNSHIP_GEOMETRY, SUNSHIP_SECTIONAL, EAS_IDEAL, CD_TRACKS_ESTIMATE,
   SUNSHIP_SHAPE, isSunship,
   initialState, isParked, setInput, setToggle, setShape, applyIdeal,
-  resolveCd, effectiveControls, compute, renderModel, cdDialRange,
+  resolveCd, effectiveControls, compute, renderModel, cdDialRange, setTailedBody,
 } from '../v2/dynamic-state.js';
+
+/* The DEPLOYED-TAIL seam, wired exactly as the page wires it. Mixed by
+ * design: aero figures for the flow, ENVELOPE figures for buoyancy. */
+setTailedBody({
+  geometry: (envelopeLengthM) => {
+    const aero = scaleGeometryRecord(SUNSHIP_TAILED.raw, SUNSHIP_TAILED.defaultAxis[1],
+      envelopeLengthM / SUNSHIP_TAILED.envelopeFraction);
+    const envelope = scaleGeometryRecord(PRESET_DYNAMICS.sunship.raw, 'Z', envelopeLengthM);
+    return { ...aero, liftLengthM: envelopeLengthM, liftVolumeM3: envelope.volume };
+  },
+  proxyRecord: () => {
+    const p = SUNSHIP_TAILED.proxies[SUNSHIP_TAILED.defaultAxis];
+    return { proxy: p.proxy, cls: p.cls ?? null, triggers: p.triggers ?? null,
+      axis: SUNSHIP_TAILED.defaultAxis, quality: { oddFraction: p.oddFraction ?? 0 } };
+  },
+});
 
 let passed = 0, failed = 0;
 function check(name, ok, detail = '') {
@@ -81,10 +98,10 @@ console.log('\n== r6: 0→100 yields exact engine contract values ==');
   // is electrical demand (15.158 / 0.78 = 19.43 MW) and everything fuel.
   // Label corrected at the same time: the reference trip has been 9,000 km
   // since 2026-08-17, so "10,000 km" here was stale.
-  check('ideal 9,000 km LH2 ~ 87.5 t', near(contract.refTripFuelT, 87.460, 0.001), String(contract.refTripFuelT));
-  check('ideal fuel system ~ 437 t', near(contract.refTripFuelSystemT, 437.301, 0.001), String(contract.refTripFuelSystemT));
-  check('propulsion power ~ 15.16 MW (propulsive — unchanged by the chain split)', near(contract.powerMW, 15.158, 0.001), String(contract.powerMW));
-  check('electrical demand ~ 19.43 MW (propulsive / 0.78)', near(contract.electricalMW, 19.434, 0.001), String(contract.electricalMW));
+  check('ideal 9,000 km LH2 ~ 43.6 t (deployed fairing)', near(contract.refTripFuelT, 43.569, 0.001), String(contract.refTripFuelT));
+  check('ideal fuel system ~ 218 t (deployed fairing)', near(contract.refTripFuelSystemT, 217.845, 0.001), String(contract.refTripFuelSystemT));
+  check('propulsion power ~ 7.55 MW (propulsive, deployed fairing)', near(contract.powerMW, 7.551, 0.001), String(contract.powerMW));
+  check('electrical demand ~ 9.68 MW (propulsive / 0.78)', near(contract.electricalMW, 9.681, 0.001), String(contract.electricalMW));
   check('all statuses GREEN/OK', contract.aerodynamicStatus === 'GREEN'
     && contract.floorStatus === 'OK' && contract.fuelMassStatus === 'GREEN');
   check('contract carries zero warnings (estimate echo matches — no mismatch flag)',
@@ -102,15 +119,15 @@ console.log('\n== r6: 0→100 yields exact engine contract values ==');
   // stays a §3.6 contract field for FLEET).
   check('rate row is CUT from the display (contract field survives)',
     !rm.rows.some(([k]) => /1,000 km/.test(k)) && Number.isFinite(contract.fuelPer1000kmT));
-  check('LH2 weight row is the reference-trip LH2 (87.5 t)',
+  check('LH2 weight row is the reference-trip LH2 (43.6 t)',
     row['LH2 weight (9,000 km)'] === `${contract.refTripFuelT.toFixed(1)} t`);
-  check('LH2 + Storage row is the tankage-system total (437 t)',
-    row['LH2 + Storage (9,000 km)'] === '437 t');
+  check('LH2 + Storage row is the tankage-system total (218 t)',
+    row['LH2 + Storage (9,000 km)'] === '218 t');
   check('energy row is CUT (it is power in other units)',
     !rm.rows.some(([k]) => /energy/i.test(k)));
-  check('frontal area echoes contract', row['Frontal area'] === '40,522 m²');
+  check('frontal area echoes contract (deployed body)', row['Frontal area'] === '40,056 m²');
   check('wetted area echoes contract.wettedAreaM2 (M6 #4, r7 #5 discharged)',
-    row['Wetted area'] === '206,795 m²' && contract.wettedAreaM2 === 206795);
+    row['Wetted area'] === '253,919 m²' && Math.round(contract.wettedAreaM2) === 253919);
   check('wettedSource travels in the contract', contract.wettedSource === 'mesh');
   // Provenance is OFF the page (Toby ruling 2026-08-15) but stays the
   // contract's engineer-facing truth — assert at the contract level.
@@ -155,9 +172,10 @@ console.log('\n== r6: Ideal idempotent + authored provenance ==');
   const twice = applyIdeal(once);
   check('applyIdeal is idempotent', JSON.stringify(once) === JSON.stringify(twice));
   const contract = compute(once, engine, undefined, ESTIMATOR);
-  check('ideal is authored, never user (r5 M3 note)',
-    contract.cdSource === 'authored' && contract.sSource === 'authored');
-  check('ideal provenance label names the ruling', contract.provenance.cdLabel.includes('EAS IDEAL'));
+  check('ideal Cd is ESTIMATED from geometry, never authored or user (2026-08-18)',
+    contract.cdSource === 'estimated' && contract.sSource === 'authored');
+  check('ideal provenance label names the derived geometry',
+    contract.provenance.cdLabel.includes('Smart Tail geometry'), contract.provenance.cdLabel);
   check('ideal scenario self-identifies', contract.scenario === 'VISION');
 }
 
@@ -199,21 +217,27 @@ console.log('\n== M4/M5 toggles under M6 semantics (0.26 RETIRED, r10 snap-edita
   // GRADUATION 2026-08-16 (r15–r19 sealed): the bare Sunship classifies
   // ROUNDED (aft-dominated) and prices on the high-Re crisis line —
   // ~0.178, replacing the retired subcritical-anchor ~0.438. The
-  // reveal becomes ~4× (the owner's preferred story; the authored
-  // 0.043 claim itself is unchanged).
+  // reveal becomes ~4x against the then-authored 0.043. SUPERSEDED
+  // 2026-08-18: 0.043 is retired and the tail-on side is now the measured
+  // deployed fairing, so the reveal is ~8x and both sides are estimates.
   check('tail OFF snaps Cd to the live bare-hull ESTIMATE (~0.178, graduated)',
     tailOff.selectedCd === bare100 && near(tailOff.selectedCd, 0.1785, 0.002), String(tailOff.selectedCd));
   check('tail OFF does not touch S', tailOff.selectedS === moving.s);
   check('tail OFF Cd is ESTIMATED, not authored, not user', tailOff.cdSource === 'estimated');
-  check('the reveal is ~4x (bare estimate / 0.043 in [3.5, 5.5], r19-sealed)',
-    tailOff.selectedCd / EAS_IDEAL.cd > 3.5 && tailOff.selectedCd / EAS_IDEAL.cd < 5.5);
+  // 2026-08-18: the reveal is now estimate-vs-estimate — bare hull against
+  // the DEPLOYED fairing, both measured. It grew from ~4x to ~8x because the
+  // retired 0.043 guess was conservative; the real fairing roughly halves it.
+  const tailOnRef = compute(moving, engine, undefined, ESTIMATOR);
+  check('the reveal is ~8x (bare estimate / deployed-fairing estimate)',
+    tailOff.selectedCd / tailOnRef.selectedCd > 7 && tailOff.selectedCd / tailOnRef.selectedCd < 9,
+    `${(tailOff.selectedCd / tailOnRef.selectedCd).toFixed(2)}x`);
   check('tail OFF numbers: ~62.9 MW / ~1,815 t, aero ORANGE + fuel RED (the graduated reveal — the honest bare hull is bad, not catastrophic)',
     near(tailOff.powerMW, 62.9, 0.005) && near(tailOff.refTripFuelSystemT, 1815, 0.005)
     && tailOff.aerodynamicStatus === 'ORANGE' && tailOff.fuelMassStatus === 'RED',
     `${tailOff.powerMW.toFixed(1)} MW / ${tailOff.refTripFuelSystemT.toFixed(0)} t / ${tailOff.aerodynamicStatus}`);
   const bliOff = compute(setToggle(moving, 'bliOn', false), engine, undefined, ESTIMATOR);
   check('BLI OFF forces S = 0 without touching Cd',
-    bliOff.selectedS === 0 && bliOff.selectedCd === moving.cd);
+    bliOff.selectedS === 0 && bliOff.selectedCd === tailOnRef.selectedCd);
   check('BLI OFF power = exactly the no-credit cubic',
     bliOff.powerMW === bliOff.powerNoCreditMW);
   // Reveal-by-removal round trip: selections survive the excursion (r10:
@@ -221,7 +245,7 @@ console.log('\n== M4/M5 toggles under M6 semantics (0.26 RETIRED, r10 snap-edita
   const roundTrip = setToggle(setToggle(moving, 'tailOn', false), 'tailOn', true);
   const restored = compute(roundTrip, engine, undefined, ESTIMATOR);
   check('re-enabling the tail restores the pre-toggle Cd exactly',
-    restored.selectedCd === moving.cd && restored.cdSource === 'authored');
+    restored.selectedCd === tailOnRef.selectedCd && restored.cdSource === 'estimated');
   // Both OFF at speed: the naked-body worst case computes, flagged not hidden.
   const naked = compute(setToggle(setToggle(moving, 'tailOn', false), 'bliOn', false), engine, undefined, ESTIMATOR);
   check('both OFF = bare estimate, no credit (~86.2 MW / ~2,487 t, graduated)',
@@ -257,8 +281,9 @@ console.log('\n== r7 send-back #1: Ideal restores the COMPLETE ruled configurati
     const ideal = applyIdeal(wrecked);
     const contract = compute(ideal, engine, undefined, ESTIMATOR);
     check(`${name}: both toggles back ON`, ideal.tailOn && ideal.bliOn);
-    check(`${name}: engine receives Cd 0.043, not the bare estimate`, contract.selectedCd === EAS_IDEAL.cd);
-    check(`${name}: the 437 t state exactly`, contract.refTripFuelSystemT.toFixed(0) === '437');
+    check(`${name}: engine receives the DEPLOYED-fairing estimate, not the bare hull`,
+      near(contract.selectedCd, 0.0217, 0.01), String(contract.selectedCd));
+    check(`${name}: the 218 t state exactly`, contract.refTripFuelSystemT.toFixed(0) === '218');
   }
   check('Ideal clears the tail stash (no stale restore target)',
     applyIdeal(setToggle(moving, 'tailOn', false)).tailStash === null);
@@ -293,8 +318,10 @@ console.log('\n== r7 #6: one derivation for values-in-force ==');
   const moving = setInput(initialState(), 'airspeedKmh', 100);
   const e100 = estimateCd(SUNSHIP_SECTIONAL, SUNSHIP_GEOMETRY, 100);
   for (const st of [moving, setToggle(moving, 'tailOn', false), setToggle(moving, 'bliOn', false)]) {
-    const eff = effectiveControls(st, e100);
+    // The Sunship's tail-ON estimate is the DEPLOYED body's, so feed
+    // effectiveControls the same estimate compute() resolves against.
     const c = compute(st, engine, undefined, ESTIMATOR);
+    const eff = effectiveControls(st, st.tailOn ? c.estimate : e100, st.tailOn ? c.estimate : null);
     check(`effectiveControls matches engine input (tail ${st.tailOn ? 'on' : 'off'}, BLI ${st.bliOn ? 'on' : 'off'})`,
       c.selectedCd === eff.cd && c.selectedS === eff.s);
   }
@@ -307,8 +334,8 @@ console.log('\n== M6: the estimator on the page — marker, band, dial, firming 
   const contract = compute(moving, engine, undefined, ESTIMATOR);
   // The contract echo IS the frozen API object for this geometry+speed.
   check('contract.estimate present with status ok', contract.estimate && contract.estimate.status === 'ok');
-  check('contract.estimate is the graduated bare-hull ~0.178 with ±20% band exactly',
-    near(contract.estimate.cdEstimate, 0.1785, 0.002)
+  check('contract.estimate is the DEPLOYED-fairing estimate ~0.0217 with ±20% band exactly',
+    near(contract.estimate.cdEstimate, 0.0217, 0.01)
     && contract.estimate.band[0] === contract.estimate.cdEstimate * 0.8
     && contract.estimate.band[1] === contract.estimate.cdEstimate * 1.2);
   // renderModel surfaces it as the marker (value + band edges, no words).
@@ -321,8 +348,10 @@ console.log('\n== M6: the estimator on the page — marker, band, dial, firming 
   // The §5.3 per-shape dial rule: bottom = contract friction floor; top =
   // max(0.40, 1.5 × estimate) — the ±20% band always fits on the dial.
   const dial = cdDialRange(contract, contract.estimate);
-  check('dial bottom is the friction floor ceiled to the 0.001 grid (Sunship: 0.009)',
-    dial.min === 0.009 && dial.min >= contract.frictionCd);
+  // 0.010 not 0.009 since 2026-08-18: with the fairing deployed the body
+  // is 516 m with 254,000 m2 of skin, so its friction floor is 0.00976.
+  check('dial bottom is the friction floor ceiled to the 0.001 grid (deployed: 0.010)',
+    dial.min === 0.010 && dial.min >= contract.frictionCd);
   // Graduation: 1.5 × 0.178 ≈ 0.268 < the dial's 0.40 FLOOR — the
   // Floor raised 0.40 → 0.55 (Toby's sphere catch 2026-08-17): the
   // honest high-Re sphere reads ~0.19, but the dial must ALWAYS let a
@@ -358,16 +387,22 @@ console.log('\n== M6: the estimator on the page — marker, band, dial, firming 
     proxyRecord: SUNSHIP_SECTIONAL,
   };
   const fallback = compute(setToggle(moving, 'tailOn', false), engine, undefined, brokenEstimator);
-  check('unavailable estimator: tail-off falls back to the stashed selection',
-    fallback.selectedCd === moving.cd);
+  // moving.cd is the TRACKING SENTINEL, so with the estimator unavailable
+  // and no stash there is nothing to resolve to — the §5.5 non-wedging
+  // fallback supplies a number and labels itself as one, never as a claim.
+  check('unavailable estimator: falls back to a number, labelled a fallback',
+    fallback.selectedCd === 0.043 && fallback.cdSource === 'authored');
   check('fallback never wears the ESTIMATED label',
     !fallback.provenance.cdLabel.startsWith('ESTIMATED'), fallback.provenance.cdLabel);
   check('unavailable estimate still echoed in the contract (engineer truth)',
     fallback.estimate.status === 'unavailable');
   // No estimator wired (pre-M6 caller): everything works, estimate null.
   const noEst = compute(moving, engine);
+  // The BODY is still the deployed one (geometry does not depend on being
+  // able to estimate its Cd) — only the Cd falls back, so power differs
+  // from the estimated case.
   check('compute without an estimator: contract.estimate null, numbers intact',
-    noEst.estimate === null && near(noEst.powerMW, 15.158, 0.001));
+    noEst.estimate === null && near(noEst.powerMW, 14.984, 0.001), String(noEst.powerMW));
   check('renderModel without an estimate: marker null', renderModel(noEst).marker === null);
 }
 
@@ -451,12 +486,12 @@ console.log('\n== M6 STAGE 2: per-shape inheritance (r8 #4 reset, gated systems,
 
   // Switching BACK to the Sunship restores the full public posture.
   const home = setShape(st, SUNSHIP_SHAPE);
-  check('return to Sunship: both systems ON, authored 0.043, VISION',
+  check('return to Sunship: both systems ON, Cd tracks the deployed geometry, VISION',
     home.tailOn && home.bliOn && home.cd === EAS_IDEAL.cd
-    && home.cdSource === 'authored' && home.scenario === 'VISION');
+    && home.cdSource === 'estimated' && home.scenario === 'VISION');
   const cHome = compute(setInput(home, 'airspeedKmh', 100), engine, undefined, ESTIMATOR);
-  check('Sunship ideal numbers intact after the round trip (437 t)',
-    cHome.refTripFuelSystemT.toFixed(0) === '437');
+  check('Sunship ideal numbers intact after the round trip (218 t)',
+    cHome.refTripFuelSystemT.toFixed(0) === '218');
 
   // Length inheritance: same shape at another length — record scaling
   // is engine algebra; a user Cd survives (length is not a shape change).
@@ -491,13 +526,19 @@ console.log('\n== comparison metrics rows (contract amendment 2026-08-16) ==');
   check('Cd_v row displays the CONTRACT cdVolumetric at 3 dp',
     row('Cd (V^⅔ basis)') === c.cdVolumetric.toFixed(3),
     `row ${row('Cd (V^⅔ basis)')} vs contract ${c.cdVolumetric}`);
-  check('Sunship ideal Cd_v ≈ frontal Cd (near-sphere: V^⅔ ≈ A)',
-    Math.abs(c.cdVolumetric - 0.0436) < 0.001, `got ${c.cdVolumetric}`);
+  // Cd_v is priced on ENVELOPE volume (owner ruling 2026-08-18) — a
+  // fairing full of ambient air must never improve drag-per-carried-volume.
+  check('Sunship ideal Cd_v ~ 0.0215 on ENVELOPE volume, not the enclosing body',
+    Math.abs(c.cdVolumetric - 0.02155) < 0.001, `got ${c.cdVolumetric}`);
+  check('Cd_v uses the buoyant volume', near(c.volumeM3, 8085778, 1e-6), String(c.volumeM3));
   const parked = renderModel(null);
   check('parked: both comparison rows dash like everything else',
     parked.rows.find(([l]) => l === 'Drag area (Cd·A)')[1] === '—'
     && parked.rows.find(([l]) => l === 'Cd (V^⅔ basis)')[1] === '—');
-  const noVol = compute(setInput(initialState(), 'airspeedKmh', 100), engine,
+  // Tail OFF: a stripped record is about legacy BARE records. With the
+  // fairing deployed the seam always supplies the envelope's volume, so
+  // there is no "missing volume" state to test there.
+  const noVol = compute(setToggle(setInput(initialState(), 'airspeedKmh', 100), 'tailOn', false), engine,
     (() => { const g = { ...SUNSHIP_GEOMETRY, warnings: [] }; delete g.volume; delete g.volumeSource; return g; })(),
     ESTIMATOR);
   check('geometry without volume: Cd_v row dashes, never invented',

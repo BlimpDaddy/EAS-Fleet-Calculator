@@ -32,12 +32,13 @@ import { computeDynamics } from '/calcv2/src/dynamicsCore.js';
 import { estimateCd, applyGenericTail } from '/calcv2/src/cdEstimator.js';
 import { scaleGeometryRecord } from '/calcv2/src/dynamicsGeometry.js';
 import { PRESET_DYNAMICS } from '/calcv2/src/presetDynamics.js';
+import { SUNSHIP_TAILED } from '/calcv2/src/sunshipTailed.js';
 import {
   EAS_IDEAL, SPEED_MIN, SPEED_MAX, S_MAX,
   SUNSHIP_SHAPE, CD_TRACKS_ESTIMATE, isSunship,
   initialState, isParked, setInput, setToggle, setShape, applyIdeal,
-  resolveCd, compute, renderModel, cdDialRange,
-} from './dynamic-state.js?v=1.8';
+  resolveCd, compute, renderModel, cdDialRange, setTailedBody,
+} from './dynamic-state.js?v=1.10';
 
 // ---------------------------------------------------------------- shape inheritance
 // M6 stage 2: the ACTIVE shape comes from the page-1 channel
@@ -80,6 +81,35 @@ function readLengthM() {
 }
 
 const activeAxis = () => activeDynamics.defaultAxis ?? UPLOAD_DEFAULT_AXIS; // signed, e.g. '-Z'
+/* THE DEPLOYED-TAIL SEAM. The state module owns WHICH body applies (it
+ * holds the tail logic); the page owns HOW to build it. The record it
+ * returns is deliberately mixed, and that is the whole point:
+ *   lengthM / wettedArea  -> the DEPLOYED body (516 m at a 300 m
+ *                            envelope) — what the flow sees, so friction
+ *                            gets the right Reynolds number
+ *   liftLengthM / liftVolumeM3 -> the ENVELOPE — what actually lifts, so
+ *                            gross lift, structure, payload bands and
+ *                            Cd_v are never computed from a fairing full
+ *                            of ambient air.
+ * Getting this wrong is not subtle: feeding the aero length to the
+ * buoyancy side inflates (L/300)^3 by 5.09x and claims 28,495 t of lift. */
+setTailedBody({
+  geometry: (envelopeLengthM) => {
+    const deployedM = envelopeLengthM / SUNSHIP_TAILED.envelopeFraction;
+    const aero = scaleGeometryRecord(SUNSHIP_TAILED.raw, SUNSHIP_TAILED.defaultAxis[1], deployedM);
+    const envelope = scaleGeometryRecord(PRESET_DYNAMICS.sunship.raw, 'Z', envelopeLengthM);
+    return { ...aero, liftLengthM: envelopeLengthM, liftVolumeM3: envelope.volume };
+  },
+  proxyRecord: () => {
+    const ax = SUNSHIP_TAILED.defaultAxis;
+    const p = SUNSHIP_TAILED.proxies[ax];
+    return {
+      proxy: p.proxy, cls: p.cls ?? null, triggers: p.triggers ?? null,
+      axis: ax, quality: { oddFraction: p.oddFraction ?? 0 },
+    };
+  },
+});
+
 const activeGeometry = () => {
   const lengthM = readLengthM();
   if (lengthM === null) return null; // teaching state — no ship exists yet
@@ -519,8 +549,10 @@ function paint() {
   // STAYS EDITABLE — estimator proposes, slider disposes; only the BLI
   // slider still greys (S = 0 forced, spec §7.1 unchanged).
   const bareEst = contract ? contract.estimate : lastEstimate;
-  const tailedEst = state.tailOn && !isSunship(activeShape) && bareEst
-    ? applyGenericTail(bareEst) : null;
+  // Deployed fairing: bareEst is already the estimate OF THE TAILED BODY,
+  // because compute() swapped the geometry. No generic 20% assumption.
+  const tailedEst = !state.tailOn || !bareEst ? null
+    : (isSunship(activeShape) ? bareEst : applyGenericTail(bareEst));
   const { cd: cdInForce, cdSource } = resolveCd(state, bareEst, tailedEst);
   const sInForce = state.bliOn ? state.s : 0;
 
@@ -597,6 +629,13 @@ function paint() {
     // once crashed paint and killed the module — taking the nav
     // interception with it. Unknown labels now skip loudly instead.
     if (!cell) { console.warn('dynamic-page: no cell for row label', label); continue; }
+    // The muted class is toggled for EVERY cell on EVERY paint, before the
+    // branch. Bug fixed 2026-08-18 (Toby: "propulsion power is grey now"):
+    // it used to live only in the else-branch, so the Propulsion power cell
+    // — which takes the other branch once the ship is moving — acquired
+    // .dyn-nosize during the no-ship state and never lost it. A state class
+    // set in one branch and cleared in another is always this bug.
+    cell.classList.toggle('dyn-nosize', noShip);
     if (label === 'Propulsion power' && !rm.parked) {
       cell.textContent = value;
       const tag = document.createElement('span');
@@ -607,7 +646,6 @@ function paint() {
       // No ship yet: say so instead of dashing. (noShip implies parked,
       // so the power branch above can never be the one that runs here.)
       cell.textContent = noShip ? 'No Size' : value;
-      cell.classList.toggle('dyn-nosize', noShip);
     }
   }
   // Compact form (Toby ruling 2026-08-17): warnings render as ⚠ icons

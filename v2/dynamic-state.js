@@ -77,19 +77,34 @@ export const SUNSHIP_SECTIONAL = Object.freeze({
 });
 
 /* EAS IDEAL — the one pink button (Display Rulings v1.0, 2026-08-13).
- * Cd 0.043 / S 27% at 100 km/h → 87.5 t LH2 / 437 t fuel system, GREEN
- * and silent (9,000 km reference trip). Figures updated 2026-08-18 for
- * the PROPULSION_CHAIN_EFF split — the comment had also been carrying
- * the superseded 10,000 km masses (75.8 / 379) since the 2026-08-17
- * distance ruling. Propulsive power is unchanged at 15.2 MW; electrical
- * demand is 19.4 MW. SUNSHIP-AUTHORED (M6 amendment #6, r8 #3 + Toby
- * ruling 2026-08-16): gated by PRESET IDENTITY, greyed elsewhere,
- * never leaks. */
+ * 100 km/h, Smart Tail deployed, S 27%. SUNSHIP-GATED by PRESET IDENTITY
+ * (M6 amendment #6, r8 #3 + Toby ruling 2026-08-16) — greyed elsewhere,
+ * never leaks. Cd is no longer part of the posture: see below. */
+/* Cd tracking sentinel (M6): "Cd follows the estimator for the current
+ * configuration" — the bare hull with the tail OFF, and with it ON either
+ * the DEPLOYED FAIRING's own geometry (Sunship, 2026-08-18) or the §5.4
+ * generic-tail estimate (other shapes). Resolves at compute time; FIRMS
+ * to a number the moment the user drags. Declared above EAS_IDEAL because
+ * the ideal posture now references it. */
+export const CD_TRACKS_ESTIMATE = 'estimate';
+
 export const EAS_IDEAL = Object.freeze({
-  airspeedKmh: 100, cd: 0.043, s: 0.27,
+  airspeedKmh: 100,
+  /* AUTHORED Cd RETIRED 2026-08-18 (Toby: "that was just a guess... happy
+   * to remove it"). 0.043 was hand-entered, and the estimator was
+   * deliberately bypassed for the one configuration the whole project
+   * rests on — the last aerodynamic constant in the Sunship's chain that
+   * nothing measured. It is now DERIVED: with the Smart Tail deployed the
+   * ship IS a different body, the estimator measures that body, and it
+   * returns ~0.0217 at a 300 m envelope and 100 km/h. The retired guess
+   * turned out to be CONSERVATIVE, not optimistic — the measured fairing
+   * roughly halves it.
+   * S stays authored: BLI is a separate system (ducted thrust, inlets),
+   * outside geometry entirely, and nothing here validates it. */
+  cd: CD_TRACKS_ESTIMATE, s: 0.27,
   scenario: 'VISION',
-  cdSource: 'authored', sSource: 'authored',
-  cdLabel: 'EAS IDEAL (ruled 2026-08-13)',
+  cdSource: 'estimated', sSource: 'authored',
+  cdLabel: 'ESTIMATED — deployed Smart Tail geometry (derived 2026-08-18)',
   sLabel: 'EAS IDEAL (ruled 2026-08-13)',
 });
 
@@ -97,14 +112,33 @@ export const SUNSHIP_SHAPE = Object.freeze({ kind: 'preset', id: 'sunship', name
 
 export const isSunship = (shape) => !!shape && shape.kind === 'preset' && shape.id === 'sunship';
 
-/* Cd tracking sentinel (M6): "Cd follows the estimator for the current
- * configuration" — bare hull when the tail is OFF, the generic-tail
- * estimate when the tail is ON on a non-Sunship shape. Resolves at
- * compute/paint time; FIRMS to a number when the user drags. */
-export const CD_TRACKS_ESTIMATE = 'estimate';
-
 const ESTIMATED_BARE_LABEL = 'ESTIMATED — bare hull, sectional estimator (M6, 2026-08-16)';
 const ESTIMATED_GENERIC_TAIL_LABEL = 'ESTIMATED — generic Smart Tail, 20% of pressure removed (REFERENCE ASSUMPTION §5.4)';
+/* The Sunship's tail is not a generic 20%-of-pressure assumption — it is
+ * an authored geometry the estimator measures directly (2026-08-18). */
+const ESTIMATED_SUNSHIP_TAIL_LABEL = 'ESTIMATED — deployed Smart Tail geometry, sectional estimator (2026-08-18)';
+
+/* LAST-RESORT Cd, and nothing more (2026-08-18). §5.5 says the page may
+ * never wedge on the estimator's absence, so a caller wiring no estimator
+ * AND holding no stashed selection still needs a number for the engine.
+ * That role used to be played by the authored EAS_IDEAL.cd; with the
+ * authored value retired the constant survives ONLY here, labelled a
+ * fallback rather than a claim. It is not the Sunship's Cd — the
+ * Sunship's Cd is whatever its declared geometry scores. */
+const CD_FALLBACK_NO_ESTIMATOR = 0.043;
+const CD_FALLBACK_LABEL = 'FALLBACK — no estimator wired (§5.5 non-wedging default, not a claim)';
+
+/* THE DEPLOYED-TAIL BODY, injected — same doctrine as the engine and the
+ * estimator: this module imports no measurement code, it is handed a
+ * seam. Null means "no tailed geometry available" and the Sunship simply
+ * behaves as its bare hull, which is the §5.5 never-wedge rule applied to
+ * geometry. The seam supplies BOTH bodies' figures, because the engine
+ * now needs aero and lift quantities separately:
+ *   geometry(envelopeLengthM) -> a record whose lengthM/wettedArea are the
+ *     DEPLOYED body and whose liftLengthM/liftVolumeM3 are the ENVELOPE
+ *   proxyRecord()             -> the deployed body's sectional proxy */
+let TAILED_BODY = null;
+export function setTailedBody(seam) { TAILED_BODY = seam; }
 
 /* Slider ranges (spec §2; parked amendment extends speed to 0). */
 export const SPEED_MIN = 0, SPEED_MAX = 140;
@@ -276,11 +310,16 @@ export function resolveCd(state, bareEst = null, tailedEst = null) {
   if (state.cd !== CD_TRACKS_ESTIMATE) {
     return { cd: state.cd, cdSource: state.cdSource, cdLabel: state.cdLabel };
   }
-  if (state.tailOn && isSunship(state.shape)) {
-    return { cd: EAS_IDEAL.cd, cdSource: EAS_IDEAL.cdSource, cdLabel: EAS_IDEAL.cdLabel };
-  }
+  // 2026-08-18: the Sunship's AUTHORED-Cd bypass is GONE. It short-
+  // circuited here and returned 0.043 whenever the tail was on, which is
+  // exactly why the estimator never saw the flagship configuration. The
+  // deployed fairing is now a real geometry, so the ordinary estimated
+  // path below produces the Sunship's Cd from measured shape like every
+  // other body.
   const target = state.tailOn ? tailedEst : bareEst;
-  const label = state.tailOn ? ESTIMATED_GENERIC_TAIL_LABEL : ESTIMATED_BARE_LABEL;
+  const label = state.tailOn
+    ? (isSunship(state.shape) ? ESTIMATED_SUNSHIP_TAIL_LABEL : ESTIMATED_GENERIC_TAIL_LABEL)
+    : ESTIMATED_BARE_LABEL;
   if (target && target.status === 'ok' && Number.isFinite(target.cdEstimate)) {
     return { cd: target.cdEstimate, cdSource: 'estimated', cdLabel: label };
   }
@@ -320,15 +359,28 @@ const configurationId = (state) =>
  * @param {{estimateCd: function, applyGenericTail: function,
  *          proxyRecord: object}|null} [estimator]
  */
-export function compute(state, computeDynamics, geometry = SUNSHIP_GEOMETRY, estimator = null) {
+export function compute(state, computeDynamics, geometry = SUNSHIP_GEOMETRY, estimator = null, tailedBody = TAILED_BODY) {
   if (isParked(state)) return null;
+  /* SMART TAIL = A GEOMETRY STATE (Toby ruling 2026-08-18). The tail
+   * retracts, so the Sunship genuinely has two bodies and the toggle picks
+   * between them. Resolved HERE, in the module that owns the tail logic,
+   * rather than by each caller — a caller-side split is precisely what let
+   * tail-lab.mjs drift from the engine for two days. Callers keep passing
+   * the BARE geometry and bare proxy; this swaps in the deployed body when
+   * it applies, and the seam attaches the ENVELOPE's lift figures so
+   * buoyancy is never computed from the fairing. */
+  const deployed = state.tailOn && isSunship(state.shape) && !!tailedBody;
+  const geo = deployed ? tailedBody.geometry(geometry.lengthM) : geometry;
+  const proxyRec = deployed && estimator ? tailedBody.proxyRecord()
+    : (estimator ? estimator.proxyRecord : null);
   const bareEst = estimator
-    ? estimator.estimateCd(estimator.proxyRecord, geometry, state.airspeedKmh)
+    ? estimator.estimateCd(proxyRec, geo, state.airspeedKmh)
     : null;
-  const needTailed = state.tailOn && !isSunship(state.shape);
-  const tailedEst = needTailed && estimator && bareEst
-    ? estimator.applyGenericTail(bareEst)
-    : null;
+  // When the fairing is deployed the caller's geometry IS the tailed body,
+  // so bareEst already is the tailed estimate. Other shapes have only their
+  // bare geometry and keep the §5.4 generic-tail model.
+  const tailedEst = !(state.tailOn && estimator && bareEst) ? null
+    : (isSunship(state.shape) ? bareEst : estimator.applyGenericTail(bareEst));
   const resolution = resolveCd(state, bareEst, tailedEst);
   if (resolution.cd == null) {
     // Tracking Cd with no estimator wired (pre-M6 caller): fall back so
@@ -336,11 +388,11 @@ export function compute(state, computeDynamics, geometry = SUNSHIP_GEOMETRY, est
     // the estimator's absence (§5.5).
     Object.assign(resolution, state.tailStash && state.tailStash.cd !== CD_TRACKS_ESTIMATE
       ? state.tailStash
-      : { cd: EAS_IDEAL.cd, cdSource: EAS_IDEAL.cdSource, cdLabel: EAS_IDEAL.cdLabel });
+      : { cd: CD_FALLBACK_NO_ESTIMATOR, cdSource: 'authored', cdLabel: CD_FALLBACK_LABEL });
   }
   const { cd: cdUsed, cdSource, cdLabel } = resolution;
   const sUsed = state.bliOn ? state.s : 0;
-  return computeDynamics(geometry, {
+  return computeDynamics(geo, {
     airspeedKmh: state.airspeedKmh,
     cd: cdUsed,
     s: sUsed,

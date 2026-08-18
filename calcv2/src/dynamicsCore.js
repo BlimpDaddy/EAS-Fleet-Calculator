@@ -296,6 +296,29 @@ export function computeDynamics(geometry, cfg) {
   if (!fin(A) || !(A > 0) || !fin(wetted) || !(wetted > 0) || !fin(L) || !(L > 0)) {
     throw new Error('computeDynamics: geometry record needs finite positive frontal/wetted/length');
   }
+  /* AERO LENGTH vs LIFT LENGTH — 2026-08-18, added for the deployable
+   * Smart Tail, and the fix for a real 5x error caught in build.
+   * WHAT:  a body whose aerodynamic extent differs from its BUOYANT extent
+   *        may declare liftLengthM / liftVolumeM3. Absent (every record
+   *        that has ever existed) they fall back to lengthM / volume, so
+   *        behaviour is bit-identical for every existing caller.
+   * WHY:   the Sunship's fairing extends the body from 300 m to 516 m in
+   *        the flow but adds NO lift — it encloses ambient air, not gas.
+   *        One lengthM was serving two masters: skin friction wants the
+   *        516 m Reynolds number, while fuelMassStatus scales gross lift,
+   *        structure and both fuel bands by (length/300)^3 and wants the
+   *        300 m envelope. Handing it 516 inflated k3 by 5.09x — 5,600 t
+   *        of gross lift would have read 28,495 t. Volume is the same
+   *        trap one level down: the tailed body's convex envelope reads
+   *        10.2M m3 against the envelope's 8.09M, which would have
+   *        flattered Cd_v by 17%.
+   * RULE:  buoyancy quantities (lift, structure, payload bands, Cd_v) come
+   *        from the LIFT figures; flow quantities (Reynolds, friction)
+   *        come from the aerodynamic ones. Wetted area is already
+   *        aerodynamic — it is the skin actually in the flow.
+   * PROVENANCE: owner ruling 2026-08-18 (Cd_v on envelope volume, stated
+   *        basis, no flattering variant). */
+  const liftL = fin(geometry.liftLengthM) && geometry.liftLengthM > 0 ? geometry.liftLengthM : L;
   const { airspeedKmh, cd, s } = cfg;
   if (!fin(airspeedKmh) || !(airspeedKmh > 0)) throw new Error(`computeDynamics: airspeedKmh must be a finite number > 0, got ${airspeedKmh}`);
   if (!fin(cd) || !(cd > 0)) throw new Error(`computeDynamics: cd must be a finite number > 0, got ${cd}`);
@@ -326,6 +349,17 @@ export function computeDynamics(geometry, cfg) {
   const volumeSource = volume === null ? 'unavailable' : (geometry.volumeSource ?? 'convex-envelope');
   if (volume !== null && volumeSource !== 'convex-envelope') {
     throw new Error(`computeDynamics: volumeSource must be 'convex-envelope' (owner ruling 2026-08-16), got '${volumeSource}'`);
+  }
+  // The BUOYANT volume — see the aero/lift block above. Cd_v is priced
+  // against LIFTING volume (owner ruling 2026-08-18): a fairing full of
+  // ambient air must never improve a drag-per-carried-volume figure, or
+  // the metric rewards enclosing empty space.
+  const liftV = fin(geometry.liftVolumeM3) && geometry.liftVolumeM3 > 0 ? geometry.liftVolumeM3 : volume;
+  if (geometry.liftVolumeM3 !== undefined && !(fin(geometry.liftVolumeM3) && geometry.liftVolumeM3 > 0)) {
+    throw new Error(`computeDynamics: geometry.liftVolumeM3, when present, must be a finite number > 0, got ${geometry.liftVolumeM3}`);
+  }
+  if (geometry.liftLengthM !== undefined && !(fin(geometry.liftLengthM) && geometry.liftLengthM > 0)) {
+    throw new Error(`computeDynamics: geometry.liftLengthM, when present, must be a finite number > 0, got ${geometry.liftLengthM}`);
   }
   // M6 amendment: estimator echo — SEMANTIC validation (hardened per
   // review r12 #1a: key-and-status checking alone accepted a six-key
@@ -444,7 +478,10 @@ export function computeDynamics(geometry, cfg) {
   }
 
   // --- statuses (spec s8) ---
-  const fuel = fuelMassStatus(refTripFuelSystemT, L);
+  // BUOYANCY: the ENVELOPE's length, never the fairing's. See the
+  // aero/lift block above — this is the line that would have read
+  // 28,495 t of gross lift instead of 5,600 t.
+  const fuel = fuelMassStatus(refTripFuelSystemT, liftL);
 
   return {
     // identity — a VISION screenshot must self-identify (r1 #10)
@@ -470,11 +507,18 @@ export function computeDynamics(geometry, cfg) {
     // (TR-397's 0.02x-class figures), drag priced against carried
     // volume: the aerodynamic sibling of VE. Null when the geometry
     // record carries no trusted volume — never invented.
-    volumeM3: volume,
+    // volumeM3 and shipLengthM report the BUOYANT body — the ship the
+    // user sized. For every record without lift overrides these are the
+    // same numbers as before. Cd_v is on ENVELOPE volume by owner ruling
+    // 2026-08-18; always publish the basis with the figure.
+    volumeM3: liftV,
     volumeSource,
     dragAreaM2: cd * A,
-    cdVolumetric: volume !== null ? (cd * A) / Math.pow(volume, 2 / 3) : null,
-    shipLengthM: L,
+    cdVolumetric: liftV !== null ? (cd * A) / Math.pow(liftV, 2 / 3) : null,
+    shipLengthM: liftL,
+    // The body actually in the flow — equals shipLengthM unless a
+    // deployable surface extends it (new 2026-08-18).
+    aeroLengthM: L,
     airspeedKmh,
     // the chain
     dragN,
