@@ -39,7 +39,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { Line2 } from 'three/addons/lines/Line2.js';
 import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
-import { ROUTE_CITIES, ROUTE_PAIRS as ROUTE_DIRECT, ROUTE_GATES, ROUTE_GATED } from '/v2/route-data.js?v=1.9';
+import { ROUTE_CITIES, ROUTE_PAIRS as ROUTE_DIRECT, ROUTE_GATES, ROUTE_GATED } from '/v2/route-data.js?v=1.9.2';
 
 /* SEA GATES (v4, 2026-08-18): the direct pairs and the gated ones are one
  * pool, re-sorted by km because nextPair() reads ROUTE_PAIRS[0] and
