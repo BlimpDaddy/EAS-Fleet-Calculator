@@ -28,8 +28,17 @@
  * forces a value; the page decides what to do with the proposal.
  */
 
-import { measureSections, scoreSections } from './sections.js';
-import { ittcCf, NU_M2_S } from './dynamicsCore.js';
+/* The ?v= on engine-internal imports is the CACHE STAMP (2026-08-18).
+ * Relative imports do NOT inherit the importer's query string, so a
+ * stamped entry point alone still lets a returning browser pair fresh
+ * callers with a stale './dynamicsCore.js' — which shipped, and read
+ * 58.4 t of LH2 instead of 74.9 t (exactly the 0.78 chain efficiency
+ * the cached engine predated). Delivery metadata in physics source is
+ * ugly and was accepted with eyes open: the alternative (_headers) was
+ * deployed and Cloudflare Pages ignored it. RULE: bump the stamp in
+ * EVERY engine file on any release that changes any engine file. */
+import { measureSections, scoreSections } from './sections.js?v=1.13';
+import { ittcCf, NU_M2_S } from './dynamicsCore.js?v=1.13';
 
 /**
  * SCREENING BAND — ±20%, VISUAL-ONLY — 2026-08-16 (FINAL RULING, Toby;

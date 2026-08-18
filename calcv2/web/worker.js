@@ -4,11 +4,16 @@
  * worker the tab would simply freeze.
  */
 
-import { parseObjVertices, parseObjMesh, facesToEdgeList } from '../src/obj.js';
-import { parseGlbVertices } from '../src/glb.js';
-import { computeShapeMetrics } from '../src/shapeMetrics.js';
-import { measureDynamicsGeometry } from '../src/dynamicsGeometry.js';
-import { measureSectionalProxy } from '../src/cdEstimator.js';
+/* ?v= = engine cache stamp — see the note in src/cdEstimator.js.
+ * The worker matters doubly: the page loads worker.js itself by URL
+ * (stamped at the call site in shape-upload.js) and the worker then
+ * imports the whole measurement chain, so an unstamped import here
+ * would quietly re-introduce the stale-engine split for uploads. */
+import { parseObjVertices, parseObjMesh, facesToEdgeList } from '../src/obj.js?v=1.13';
+import { parseGlbVertices } from '../src/glb.js?v=1.13';
+import { computeShapeMetrics } from '../src/shapeMetrics.js?v=1.13';
+import { measureDynamicsGeometry } from '../src/dynamicsGeometry.js?v=1.13';
+import { measureSectionalProxy } from '../src/cdEstimator.js?v=1.13';
 
 function remapFaces(faces, indices) {
   const origToLocal = new Map(indices.map((orig, local) => [orig, local]));

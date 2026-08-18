@@ -13,7 +13,7 @@
  * would blow the stack on a hull like sphere.obj's 8,066 vertices.
  */
 
-import { makeRng, shuffled } from './rng.js';
+import { makeRng, shuffled } from './rng.js?v=1.13';
 
 const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];

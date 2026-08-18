@@ -28,11 +28,22 @@
  * Node-tested — test/dynamic-state-fixtures.mjs). This file is DOM only:
  * it may not compute anything, and FLEET never scrapes what it renders.
  */
-import { computeDynamics } from '/calcv2/src/dynamicsCore.js';
-import { estimateCd, applyGenericTail } from '/calcv2/src/cdEstimator.js';
-import { scaleGeometryRecord } from '/calcv2/src/dynamicsGeometry.js';
-import { PRESET_DYNAMICS } from '/calcv2/src/presetDynamics.js';
-import { SUNSHIP_TAILED } from '/calcv2/src/sunshipTailed.js';
+/* ENGINE imports are cache-stamped (2026-08-18, caught on the live domain
+ * minutes after release): the /v2/ adapters have carried ?v= since release
+ * night, but the /calcv2/ ENGINE never did — so a returning browser paired
+ * these new adapters with a 4h-stale physics engine and read 58.4 t of LH2
+ * instead of 74.9 t (exactly the 0.78 chain efficiency the cached engine
+ * predated). Flattering direction, structural smoke all green — only a
+ * numbers-against-local comparison caught it. The engine's INTERNAL
+ * relative imports carry the same stamp (see src/cdEstimator.js's note:
+ * relative imports do not inherit the importer's query string, so stamping
+ * here alone would split one module into fresh+stale twins). RULE: any
+ * release touching calcv2/ bumps the stamp HERE and INSIDE the engine. */
+import { computeDynamics } from '/calcv2/src/dynamicsCore.js?v=1.13';
+import { estimateCd, applyGenericTail } from '/calcv2/src/cdEstimator.js?v=1.13';
+import { scaleGeometryRecord } from '/calcv2/src/dynamicsGeometry.js?v=1.13';
+import { PRESET_DYNAMICS } from '/calcv2/src/presetDynamics.js?v=1.13';
+import { SUNSHIP_TAILED } from '/calcv2/src/sunshipTailed.js?v=1.13';
 import {
   EAS_IDEAL, SPEED_MIN, SPEED_MAX, S_MAX,
   SUNSHIP_SHAPE, CD_TRACKS_ESTIMATE, isSunship,
