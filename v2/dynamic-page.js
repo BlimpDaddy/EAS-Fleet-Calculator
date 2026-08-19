@@ -787,7 +787,7 @@ function paint() {
     ? ''
     : 'Smart Tail — REFERENCE ASSUMPTION (§5.4): 20% of pressure drag removed. '
       + 'This is NOT a fairing built for this shape, and it is deliberately conservative — '
-      + 'the Sunship’s measured fairing removes about 93%.';
+      + 'the Sunship’s idealised fairing surrogate removes about 93%.';
 
   const unlocked = easHeld();
   const toggleLocked = !sunship && !unlocked;

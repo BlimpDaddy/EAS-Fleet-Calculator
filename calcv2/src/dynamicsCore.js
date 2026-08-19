@@ -96,20 +96,27 @@ export function ittcCf(re) {
  *
  * WHY CLAMPED: the ITTC-78 form goes NEGATIVE at large L and high Re —
  *        at the deployed Sunship's operating point it crosses zero at
- *        ks = 0.156 mm. A roughness allowance that REDUCES drag is
+ *        ks = 0.164 mm at the ideal 116 km/h / 516 m point (r22 catch:
+ *        0.156 mm was this figure at the RETIRED 120 km/h cruise and
+ *        survived the re-ruling). A roughness allowance that REDUCES drag is
  *        nonsense, so the negative branch is clamped away. Below the
  *        crossing the skin is hydraulically smooth and the allowance is
  *        correctly zero.
  *
- * THE CONSTANT: ks = 0.43 mm, sized to Toby's 3-4% budget and then
- *        CHECKED for physical plausibility (it passes: the B1 literature
- *        table puts fabric weave at ~0.2 mm and coated skin at ~0.5 mm,
- *        so 0.43 mm reads as a well-finished coated surface). At the
- *        deployed Sunship's ideal posture — 120 km/h, aero length 516 m,
- *        Re 1.147e9, wetted/frontal 6.582 — this is dCf 1.187e-4, i.e.
- *        Cd 0.022056 -> 0.022837 (+7.81e-4), or +3.54%. MEASURED from
- *        the engine, not predicted. Sized to the BUDGET, sanity-
- *        checked against the FINISH; the budget is what Toby ruled.
+ * THE CONSTANT: ks = 0.43 mm is a FIXED SCREENING ALLOWANCE selected to
+ *        represent a modest real-surface friction penalty. It is NOT a
+ *        measured roughness of any Sunship skin, and r22 was right to
+ *        insist on the distinction: EQUIVALENT SAND-GRAIN ROUGHNESS is an
+ *        aerodynamic parameter that reproduces a given friction penalty,
+ *        not the literal height of weave, seams or fittings. A 10 mm seam
+ *        is not ks = 10 mm. The number was derived BACKWARDS — pick a
+ *        drag budget, solve for the ks that delivers it — which is a
+ *        legitimate owner design allowance and must be labelled as one.
+ *        Cross-checking it against literal feature heights was the wrong
+ *        move and that comparison has been withdrawn.
+ *        At the deployed Sunship's ideal posture — 116 km/h, aero length
+ *        516 m, wetted/frontal 6.582 — it is dCf 1.187e-4, i.e.
+ *        Cd 0.022056 -> 0.022837 (+3.54%), measured from the engine.
  *
  * SHAPE-DEPENDENCE: ks is constant, the PERCENTAGE is not. The allowance
  *        enters as dCf*(wetted/frontal), so slender high-wetted bodies
@@ -117,19 +124,36 @@ export function ittcCf(re) {
  *        condition pays 0.14%). 3.54% is the deployed Sunship's figure,
  *        not a universal one.
  *
- * WHAT IT DOES NOT COVER — DECLARED: seams, panel joins and battens
- *        standing proud of the skin. Those are 10-30 mm features in the
- *        B1 table and a genuinely seamed finish costs ~15% of total Cd,
- *        about 4x the approved budget. Toby ruled the budget (2026-08-19)
- *        with this exclusion on the record. This term is the SKIN, not
- *        the joinery.
+ * WHAT IT DOES NOT COVER — DECLARED. The split r22 asked for:
+ *          INCLUDED  — smooth/finished surface allowance (this term).
+ *          EXCLUDED  — discrete seams, battens, panel joins and other
+ *                      protuberances. Those are a FUTURE GEOMETRY/DETAIL
+ *                      allowance, not a skin-finish one.
+ *        An earlier version of this block quoted "a seamed finish costs
+ *        ~15%" by reading 3 mm off the ks table. That figure is NOT
+ *        earned: it silently equated a 3 mm ks with a 3 mm physical seam,
+ *        which is the same category error the paragraph above warns
+ *        against. The honest statement is that discrete protuberances are
+ *        UNQUANTIFIED here, not that they cost 15%. Toby ruled the budget
+ *        (2026-08-19) with the exclusion on the record.
  *
- * LIMITATION: the ITTC-78 correlation allowance is a SHIP correlation
- *        applied to an airship. Both are large, smooth, fully-submerged
- *        high-Re bodies, which makes the transfer defensible, but it is
- *        a transfer and not an airship measurement. The negative branch
- *        this clamps away is itself a sign the form is being used past
- *        the scale it was fitted at.
+ * LIMITATION (r22 Q2, PASS as screening / FAIL if called validation):
+ *        ITTC-78 is a MARINE full-scale resistance procedure, not a
+ *        universal atmospheric rough-wall law. Borrowing it here is
+ *        reasonable as a low-order engineering allowance and is nothing
+ *        more than that. Both are large, smooth, fully-submerged high-Re
+ *        bodies, which makes the transfer defensible; it remains a
+ *        transfer and not an airship measurement. The negative branch
+ *        clamped above is itself a sign the form is being used past the
+ *        scale it was fitted at.
+ *
+ * THE HIGH-Re PLATEAU IS A HEURISTIC (r22 Q3). Holding the allowance
+ *        non-increasing above the switch-on prevents an obviously wrong
+ *        unbounded rise, but it is NOT an established rough-wall
+ *        correlation and nothing here validates it. It barely touches the
+ *        Sunship, whose operating Re sits well above the switch-on; it
+ *        matters elsewhere in the sizing domain, which is exactly where
+ *        it is least supported.
  * REPLACE WHEN: airship-specific skin-friction or finish data exists.
  * PROVENANCE: REFERENCE correlation (ITTC-1978) + OWNER RULING on ks.
  * EVIDENCE: spike/sectional/ROUGHNESS-NOTE.md

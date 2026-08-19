@@ -69,7 +69,7 @@ const ESTIMATOR = { estimateCd, applyGenericTail, proxyRecord: SUNSHIP_SECTIONAL
 const bareEstimateAt = (v) => estimateCd(SUNSHIP_SECTIONAL, SUNSHIP_GEOMETRY, v).cdEstimate;
 
 /**
- * THE SUNSHIP IN ITS EAS POSTURE — both systems on, 120 km/h, S 12%.
+ * THE SUNSHIP IN ITS EAS POSTURE — both systems on, 116 km/h, S 12%.
  *
  * Until 2026-08-18 this was simply initialState(): the page loaded with
  * the Smart Tail and BLI already ON, so "the load state" and "the ideal
@@ -332,7 +332,7 @@ console.log('\n== r7 send-back #1: Ideal restores the COMPLETE ruled configurati
     applyIdeal(setToggle(moving, 'tailOn', false)).tailStash === null);
 }
 
-console.log('\n== THE IDEAL CELL as shipped — 120 km/h, S 12%, deployed fairing (2026-08-18) ==');
+console.log('\n== THE IDEAL CELL as shipped — 116 km/h, S 12%, true-section body + roughness ==');
 {
   // The figures a visitor actually meets after pressing the pink button.
   // Pinned here as ONE block so the headline can never drift unnoticed:
@@ -342,7 +342,7 @@ console.log('\n== THE IDEAL CELL as shipped — 120 km/h, S 12%, deployed fairin
   // WHAT THIS CELL COST AND BOUGHT, against the pre-tail production cell
   // (100 km/h, authored Cd 0.043, S 27%: 15.16 MW / 87.5 t / 437 t):
   //   power  15.16 -> 15.57 MW   essentially unchanged
-  //   speed    100 -> 120 km/h   20% faster
+  //   speed    100 -> 116 km/h   16% faster
   //   fuel     437 -> 374 t      14% lighter
   //   Cd     authored -> MEASURED from the deployed fairing
   //   S        27% -> 12%        out of EAS's own recovery-credit bound
@@ -357,7 +357,7 @@ console.log('\n== THE IDEAL CELL as shipped — 120 km/h, S 12%, deployed fairin
   check('ideal Cd ~ 0.0228 (true-section + roughness, estimated at 116 km/h)',
     near(c.selectedCd, 0.022847, 0.001), String(c.selectedCd));
   check('ideal propulsive power ~ 15.12 MW', near(c.powerMW, 15.119, 0.001), String(c.powerMW));
-  check('ideal electrical demand ~ 20.72 MW (propulsive / 0.78)',
+  check('ideal electrical demand ~ 19.38 MW (propulsive / 0.78)',
     near(c.electricalMW, 19.383, 0.001), String(c.electricalMW));
   check('ideal 9,000 km LH2 ~ 75.2 t', near(c.refTripFuelT, 75.201, 0.001), String(c.refTripFuelT));
   check('ideal fuel system ~ 376 t', near(c.refTripFuelSystemT, 376.003, 0.001), String(c.refTripFuelSystemT));
@@ -372,8 +372,13 @@ console.log('\n== THE IDEAL CELL as shipped — 120 km/h, S 12%, deployed fairin
   //     + true-section geometry (r20 c1)   16.16 MW    +6.6%
   //     + skin-roughness allowance (B1)    16.73 MW   +10.4%   <- 120 km/h
   //     + cruise re-ruled to 116 km/h      15.12 MW    -0.3%   <- here
-  // Toby re-ruled the posture to 116 km/h on 2026-08-19 ("to get the
-  // numbers lined up") ON THE CORRECTED Cd. Power goes as v^3, so the
+  // FRAMING (r22 Q7): this is a POWER-CONSTRAINED RE-SOLVE, not a
+  // validation. The honest sentence is "following the drag-model
+  // corrections, cruise was re-solved against the existing propulsion-power
+  // constraint, giving ~116 km/h". It would be circular ONLY if 116 km/h
+  // were then presented as independently confirming the design. It is not.
+  // Toby re-ruled the posture on 2026-08-19 ("to get the numbers lined up")
+  // ON THE CORRECTED Cd. Power goes as v^3, so the
   // 4 km/h buys back (116/120)^3 = 0.903 and lands the cell back on the
   // old figure almost exactly. The bound returns to the original 7%; the
   // interim 12% widening existed only while the posture was un-re-ruled.
@@ -381,15 +386,15 @@ console.log('\n== THE IDEAL CELL as shipped — 120 km/h, S 12%, deployed fairin
     Math.abs(c.powerMW - 15.158) / 15.158 < 0.07,
     `${c.powerMW.toFixed(3)} vs 15.158`);
   check('ideal Cd_v ~ 0.0229 on ENVELOPE volume', near(c.cdVolumetric, 0.022927, 0.001), String(c.cdVolumetric));
-  check('ideal is GREEN and silent at 120 km/h',
+  check('ideal is GREEN and silent at 116 km/h',
     c.aerodynamicStatus === 'GREEN' && c.floorStatus === 'OK'
     && c.fuelMassStatus === 'GREEN' && c.warnings.length === 0,
     c.warnings.join('; '));
   // The reveal, at the shipped speed: bare hull vs deployed fairing.
   const bare = compute(setToggle(easState(), 'tailOn', false), engine, undefined, ESTIMATOR);
-  check('bare hull at 120 km/h is ORANGE aero + RED fuel (the honest un-tailed ship)',
+  check('bare hull at 116 km/h is ORANGE aero + RED fuel (the honest un-tailed ship)',
     bare.aerodynamicStatus === 'ORANGE' && bare.fuelMassStatus === 'RED');
-  check('the reveal at 120 km/h is still ~8x',
+  check('the reveal at 116 km/h is still ~8x',
     bare.selectedCd / c.selectedCd > 7 && bare.selectedCd / c.selectedCd < 9,
     `${(bare.selectedCd / c.selectedCd).toFixed(2)}x`);
 }
