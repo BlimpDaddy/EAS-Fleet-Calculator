@@ -760,8 +760,31 @@ function paint() {
    * CO2 basis uses (2026-08-17), and no on-page copy. The 20% figure
    * itself is a separate question and a real one: the one tail we have
    * ever measured removes 93% of pressure drag, not 20%. */
+  /* DEPLOYED-TAIL TOOLTIP RETIRED 2026-08-19 (Toby: "remove the tooltip for
+   * the Smart Tail... too long copy not needed there"). The copy is kept
+   * HERE rather than deleted, because it is the provenance of the deployed
+   * Cd and it took an external review round to get it true. Verbatim as it
+   * last shipped:
+   *
+   *   "Smart Tail DEPLOYED — Cd derived from the hull's own measured
+   *    section shape plus the fairing (rebuilt from the true surface, r20
+   *    2026-08-19), plus a declared skin-finish allowance — the skin is
+   *    modelled as well-finished, not perfectly smooth. Mid-map
+   *    calibration remains a screening estimate."
+   *
+   * What it was declaring, and where that now lives instead:
+   *   - true-section geometry  -> src/sunshipTailed.js header
+   *   - skin-finish allowance  -> dynamicsCore.js roughnessAllowanceCf
+   *   - mid-map screening      -> ESTIMATOR-FINDINGS.md
+   * NOTE: nothing user-facing now states the roughness allowance. That is
+   * an accepted trade (owner ruling), not an oversight — restore this
+   * string if the declaration is ever wanted back on the page.
+   *
+   * The NON-Sunship branch survives: it is a different disclosure (the
+   * §5.4 generic 20% placeholder is NOT a fairing built for that shape),
+   * and it was not what Toby was looking at. */
   const tailModelTitle = sunship
-    ? 'Smart Tail DEPLOYED — Cd derived from the hull’s own measured section shape plus the fairing (rebuilt from the true surface, r20 2026-08-19), plus a declared skin-finish allowance — the skin is modelled as well-finished, not perfectly smooth. Mid-map calibration remains a screening estimate.'
+    ? ''
     : 'Smart Tail — REFERENCE ASSUMPTION (§5.4): 20% of pressure drag removed. '
       + 'This is NOT a fairing built for this shape, and it is deliberately conservative — '
       + 'the Sunship’s measured fairing removes about 93%.';
