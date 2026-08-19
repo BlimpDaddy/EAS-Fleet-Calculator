@@ -4,15 +4,28 @@
  * The Sunship with its Smart Tail DEPLOYED: the aero fairing picked up at
  * 80% of the envelope, profile exponent 0.8, extending 216 m beyond it.
  *
- * WHAT THIS BODY ACTUALLY IS (r20 finding, 2026-08-19 — earlier wording
- * here overstated it): NOT the Sunship's own surface with a fairing added.
- * The generator takes the hull's cross-sectional AREA at each station,
- * converts it to an equal-area CIRCLE, grafts the fairing, and lathes the
- * whole body. So this is an AXISYMMETRIC EQUAL-AREA SURROGATE of
- * hull+fairing. A circle is the minimum perimeter for a given area, so the
- * surrogate can UNDERSTATE wetted area and therefore friction — which is
- * ~44% of the resulting Cd (0.0095 of 0.0215). Attachment is
- * radius-continuous only; the slope is not matched.
+ * BUILT FROM THE HULL'S TRUE SECTION SHAPE (r20 send-back, closed
+ * 2026-08-19). The previous version replaced each station's cross-
+ * sectional AREA with an equal-area CIRCLE and lathed the result — an
+ * axisymmetric surrogate, not the Sunship. This one samples the hull's
+ * real outline r(x, theta) by plane-triangle intersection, so the body
+ * keeps the Sunship's actual wider-than-tall sections, and the fairing
+ * inherits that outline scaled by the profile rather than becoming a cone
+ * of revolution. Cost of the correction: Cd 0.0215 -> 0.0221 (+2.8%),
+ * wetted 253,919 -> 266,094 m2 (+4.8%). The surrogate was optimistic.
+ *
+ * Outlines are INTERPOLATED between stations, not snapped to the nearest.
+ * Snapping makes the surface piecewise-constant in x, so wetted area grows
+ * without bound with ring count (measured 266,518 -> 286,302 m2 from 128
+ * to 1024 rings, still climbing) — the old record's wetted area was partly
+ * a function of its own discretisation. Converged settings below.
+ *
+ * ATTACHMENT IS RADIUS-CONTINUOUS, NOT TANGENTIAL, and deliberately so.
+ * Solving the profile exponent for C1 continuity with the hull gives
+ * P = 2.4, and that tail is aerodynamically ruinous: proxy 0.674, Cd 0.154,
+ * seven times worse. A single power law cannot be both tangent and a good
+ * fairing, so P = 0.8 stays as an AERODYNAMIC choice. Earlier docs claiming
+ * tangency were wrong; implementing it as claimed would have been worse.
  *
  * PAIRS WITH the bare record in presetDynamics.js — the tail RETRACTS, so
  * the ship has two geometric states and the Smart Tail toggle selects
@@ -23,11 +36,11 @@
  * slider's number and the fairing extends beyond it.
  */
 export const SUNSHIP_TAILED = Object.freeze({
-  aeroObj: 'lab/sunship-tail-aerohull-candidate.obj',
-  objSha256: "d371cf10a9bbebbbe09402bbfd3d39ecb8bf798b8ffafcae55de63712dc4ddf4",
+  sourceHull: '3D OBJ/Sunship.obj',
+  objSha256: "dee482af0af99bd01cb5002cae61c969dba114a9b2ca67e336e8a00fd18d3e64",
   defaultAxis: '+X',
   envelopeFraction: 0.581395,
   deployedOverEnvelope: 1.720000,
-  raw: Object.freeze({"extents":[516,226.01608,226.01608],"frontalRaw":{"X":40056.28811559161,"Y":74375.21770725,"Z":74375.21770725003},"wettedRaw":253918.88171342973,"hullRaw":254856.020877061,"meshRaw":253918.88171342973,"wettedSource":"mesh","volumeRaw":10218809.399139639,"volumeSource":"convex-envelope","warnings":[]}),
-  proxies: Object.freeze({"+X":{"proxy":0.16446151218799673,"cls":"rounded","triggers":{"softFore":0.0016734936932571115,"softAft":0.16446151218799673,"terminalBaseFrac":0.00039896269698783165,"rawRatio":1,"shoulder":0.09122170121587013},"oddFraction":0.001195457262402869},"-X":{"proxy":0.7717201018309247,"cls":"pinned","triggers":{"softFore":0,"softAft":0.7717201018309247,"terminalBaseFrac":0.011569918212647117,"rawRatio":1,"shoulder":0.13809326300043898},"oddFraction":0.001195457262402869},"+Y":{"proxy":0.9205355263599778,"cls":"rounded","triggers":{"softFore":0.024323573522714872,"softAft":0.9205355263599778,"terminalBaseFrac":0.018351214003387916,"rawRatio":1,"shoulder":0.12538825886162674},"oddFraction":0},"-Y":{"proxy":0.9205355263599778,"cls":"rounded","triggers":{"softFore":0.024323573522714872,"softAft":0.9205355263599778,"terminalBaseFrac":0.018351214003387916,"rawRatio":1,"shoulder":0.12538825886162674},"oddFraction":0},"+Z":{"proxy":0.9205355263599778,"cls":"rounded","triggers":{"softFore":0.024323573522714872,"softAft":0.9205355263599778,"terminalBaseFrac":0.018351214003387916,"rawRatio":1,"shoulder":0.12538825886162674},"oddFraction":0},"-Z":{"proxy":0.9205355263599778,"cls":"rounded","triggers":{"softFore":0.024323573522714872,"softAft":0.9205355263599778,"terminalBaseFrac":0.018351214003387916,"rawRatio":1,"shoulder":0.12538825886162674},"oddFraction":0}}),
+  raw: Object.freeze({"extents":[516,247.33588488140487,236.69474291626938],"frontalRaw":{"X":40426.61133598769,"Y":81019.33975181592,"Z":80450.57436002082},"wettedRaw":266093.95202084514,"hullRaw":268423.7706378965,"meshRaw":266093.95202084514,"wettedSource":"mesh","volumeRaw":10525010.05293453,"volumeSource":"convex-envelope","warnings":[]}),
+  proxies: Object.freeze({"+X":{"proxy":0.1735452439587493,"cls":"rounded","triggers":{"softFore":0.0036899053176688524,"softAft":0.1735452439587493,"terminalBaseFrac":0.0002384642899725766,"rawRatio":1,"shoulder":0.09357293482045749},"oddFraction":0.0029719448407037564},"-X":{"proxy":0.7683405257673633,"cls":"pinned","triggers":{"softFore":0,"softAft":0.7683405257673633,"terminalBaseFrac":0.01621557171813521,"rawRatio":1,"shoulder":0.1417046907700494},"oddFraction":0.0029719448407037564},"+Y":{"proxy":0.9629465495553764,"cls":"pinned","triggers":{"softFore":0.000008417691446677932,"softAft":0.9629465495553764,"terminalBaseFrac":0.0006505334374186833,"rawRatio":1,"shoulder":0.21151156863603973},"oddFraction":0},"-Y":{"proxy":0.9620026638176553,"cls":"pinned","triggers":{"softFore":0.000008417691446677932,"softAft":0.9620026638176553,"terminalBaseFrac":0.0006505334374186833,"rawRatio":1,"shoulder":0.20897957748367502},"oddFraction":0},"+Z":{"proxy":0.8725131694491415,"cls":"pinned","triggers":{"softFore":0.2318606224064738,"softAft":0.8725131694491415,"terminalBaseFrac":0.003596624706045096,"rawRatio":1.0000000680532204,"shoulder":0.13815707226955268},"oddFraction":0},"-Z":{"proxy":0.9846125221229927,"cls":"pinned","triggers":{"softFore":0,"softAft":0.9846125221229927,"terminalBaseFrac":0.2538387052151058,"rawRatio":1,"shoulder":0.3643210684350144},"oddFraction":0}}),
 });
