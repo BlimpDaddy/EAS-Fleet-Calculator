@@ -76,6 +76,113 @@ export function ittcCf(re) {
 }
 
 /**
+ * SKIN-ROUGHNESS ALLOWANCE — ITTC-1978 correlation allowance — 2026-08-19
+ * (OWNER RULING, Toby: "maybe there needs to be a default across all input
+ * shapes skin finish which isn't uh chosen to be like impossibly smooth
+ * and it's fine if it adds 3-4% total Cd to keep this accurate")
+ *
+ * WHAT:  dCf = 0.044*[ (ks/L)^(1/3) - 10*Re^(-1/3) ] + 0.000125, CLAMPED
+ *        AT ZERO, added to the ITTC-1957 smooth line before the
+ *        wetted/frontal conversion. ks is a FIXED CONSTANT applied to
+ *        EVERY shape (the ruling says "a default across all input
+ *        shapes") — it is deliberately NOT a slider. Changing the finish
+ *        is a ruling, not a user input.
+ *
+ * WHY:   until now the calculator modelled a perfectly smooth skin BY
+ *        OMISSION — there was no roughness term anywhere. A 300 m fabric
+ *        airship is not hydraulically smooth, and pretending it is is an
+ *        optimistic assumption hiding in a GAP rather than stated in a
+ *        NUMBER. This states it in a number.
+ *
+ * WHY CLAMPED: the ITTC-78 form goes NEGATIVE at large L and high Re —
+ *        at the deployed Sunship's operating point it crosses zero at
+ *        ks = 0.156 mm. A roughness allowance that REDUCES drag is
+ *        nonsense, so the negative branch is clamped away. Below the
+ *        crossing the skin is hydraulically smooth and the allowance is
+ *        correctly zero.
+ *
+ * THE CONSTANT: ks = 0.43 mm, sized to Toby's 3-4% budget and then
+ *        CHECKED for physical plausibility (it passes: the B1 literature
+ *        table puts fabric weave at ~0.2 mm and coated skin at ~0.5 mm,
+ *        so 0.43 mm reads as a well-finished coated surface). At the
+ *        deployed Sunship's ideal posture — 120 km/h, aero length 516 m,
+ *        Re 1.147e9, wetted/frontal 6.582 — this is dCf 1.187e-4, i.e.
+ *        Cd 0.022056 -> 0.022837 (+7.81e-4), or +3.54%. MEASURED from
+ *        the engine, not predicted. Sized to the BUDGET, sanity-
+ *        checked against the FINISH; the budget is what Toby ruled.
+ *
+ * SHAPE-DEPENDENCE: ks is constant, the PERCENTAGE is not. The allowance
+ *        enters as dCf*(wetted/frontal), so slender high-wetted bodies
+ *        pay most and bluff ones barely notice (a sphere at the anchor
+ *        condition pays 0.14%). 3.54% is the deployed Sunship's figure,
+ *        not a universal one.
+ *
+ * WHAT IT DOES NOT COVER — DECLARED: seams, panel joins and battens
+ *        standing proud of the skin. Those are 10-30 mm features in the
+ *        B1 table and a genuinely seamed finish costs ~15% of total Cd,
+ *        about 4x the approved budget. Toby ruled the budget (2026-08-19)
+ *        with this exclusion on the record. This term is the SKIN, not
+ *        the joinery.
+ *
+ * LIMITATION: the ITTC-78 correlation allowance is a SHIP correlation
+ *        applied to an airship. Both are large, smooth, fully-submerged
+ *        high-Re bodies, which makes the transfer defensible, but it is
+ *        a transfer and not an airship measurement. The negative branch
+ *        this clamps away is itself a sign the form is being used past
+ *        the scale it was fitted at.
+ * REPLACE WHEN: airship-specific skin-friction or finish data exists.
+ * PROVENANCE: REFERENCE correlation (ITTC-1978) + OWNER RULING on ks.
+ * EVIDENCE: spike/sectional/ROUGHNESS-NOTE.md
+ */
+export const ROUGHNESS_KS_M = 0.00043;
+
+export function roughnessAllowanceCf(lengthM, re) {
+  const d = 0.044 * (Math.cbrt(ROUGHNESS_KS_M / lengthM) - 10 * Math.pow(re, -1 / 3)) + 0.000125;
+  return d > 0 ? d : 0;
+}
+
+/**
+ * TOTAL SKIN-FRICTION Cd on the frontal basis — the ONE place the
+ * friction chain is assembled. computeDynamics and estimateCd both call
+ * THIS rather than repeating the expression, because they are compared
+ * against each other by computeDynamics' own consistency guard and any
+ * drift between them would trip it (or, worse, not trip it).
+ */
+export function skinFrictionCd(re, lengthM, wetted, frontal) {
+  return cfTotal(re, lengthM) * (wetted / frontal);
+}
+
+/**
+ * FULLY-ROUGH PLATEAU — 2026-08-19, found by fixture, not by inspection.
+ *
+ * The smooth line falls with Re and the allowance rises with it, and the
+ * SUM has exactly one stationary point, at Re* ~ 1.5e8 (a universal
+ * constant of the two correlations — ks and L do not move it; they move
+ * only where the allowance switches on). If the allowance switches on
+ * BELOW Re*, the total Cf rises with speed over the gap between them.
+ *
+ * That rise is an ARTEFACT of extrapolating an empirical ship allowance,
+ * not physics: a fully-rough surface's Cf becomes Re-INDEPENDENT — it
+ * stops falling, it does not climb. So the total is held non-increasing.
+ * Closed form, because the switch-on Re solves exactly:
+ *      allowance = 0  <=>  Re_on = [ 10 / (cbrt(ks/L) + 0.000125/0.044) ]^3
+ * and below Re_on the total is just the (decreasing) smooth line, so the
+ * running minimum is simply min(sum, smooth line AT switch-on).
+ *
+ * WHO THIS BITES: bodies under ~200 m, whose allowance switches on early.
+ * The Sunship switches on at Re 5.4e8, already past Re*, so its deployed
+ * posture (Re 1.15e9) is untouched by this clamp — verified, not assumed.
+ * It costs the ship nothing and keeps small shapes physical.
+ */
+const ROUGHNESS_RE_ON_CONST = 0.000125 / 0.044;
+
+function cfTotal(re, lengthM) {
+  const sum = ittcCf(re) + roughnessAllowanceCf(lengthM, re);
+  const reOn = Math.pow(10 / (Math.cbrt(ROUGHNESS_KS_M / lengthM) + ROUGHNESS_RE_ON_CONST), 3);
+  return re > reOn ? Math.min(sum, ittcCf(reOn)) : sum;
+}
+
+/**
  * RECOVERY-CREDIT BOUND — 2026-08-12 (relabelled r2 #2)
  * WHAT:  S above 0.35 is EXPERIMENTAL; 0.15–0.35 sits at the current EAS
  *        recovery-credit bound; up to 0.15 is within published BLI results.
@@ -439,7 +546,7 @@ export function computeDynamics(geometry, cfg) {
 
   // --- per-shape floors (spec s3.4, s5.1) ---
   const re = (v * L) / NU_M2_S;
-  const frictionCd = ittcCf(re) * (wetted / A);           // Cd slider bottom for this shape
+  const frictionCd = skinFrictionCd(re, L, wetted, A);    // Cd slider bottom for this shape (smooth line + roughness allowance)
   const productFloor = frictionCd * (1 - S_ZONE_BOUND_MAX); // derived screening floor ~0.006
   // Either floor breach is RED (M2 send-back #1): the authority says Cd may
   // not be CLAIMED below the friction estimate — the RED state is the only

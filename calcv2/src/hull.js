@@ -11,7 +11,7 @@
  * file and vendor/ should need to change.
  */
 
-import quickhull from '../vendor/quickhull3d.js?v=1.13';
+import quickhull from '../vendor/quickhull3d.js?v=1.14';
 
 /**
  * @param {number[][]} vertices

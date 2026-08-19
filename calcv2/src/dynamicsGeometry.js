@@ -12,7 +12,7 @@
  * structurally impossible at this API: `flightAxis` is 'X' | 'Y' | 'Z'.
  */
 
-import { convexHull } from './hull.js?v=1.13';
+import { convexHull } from './hull.js?v=1.14';
 
 export const FLIGHT_AXES = ['X', 'Y', 'Z'];
 

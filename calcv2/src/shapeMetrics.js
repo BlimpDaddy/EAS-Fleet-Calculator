@@ -12,10 +12,10 @@
  * airship envelope as a compact convex body.
  */
 
-import { convexHull } from './hull.js?v=1.13';
-import { miniball } from './miniball.js?v=1.13';
-import { makeRng, makeGaussian } from './rng.js?v=1.13';
-import { toFlat } from './obj.js?v=1.13';
+import { convexHull } from './hull.js?v=1.14';
+import { miniball } from './miniball.js?v=1.14';
+import { makeRng, makeGaussian } from './rng.js?v=1.14';
+import { toFlat } from './obj.js?v=1.14';
 
 export const DEFAULT_SAMPLES = 69420; // the sample count used in the reference implementation
 

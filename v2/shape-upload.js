@@ -84,7 +84,7 @@ function compute(payload, transfer, onDone) {
   const id = ++runId;
   vsInfCell.textContent = 'computing…';
   worker?.terminate();
-  worker = new Worker('/calcv2/web/worker.js?v=1.13', { type: 'module' })  // engine cache stamp — see dynamic-page.js;
+  worker = new Worker('/calcv2/web/worker.js?v=1.14', { type: 'module' })  // engine cache stamp — see dynamic-page.js;
   worker.onmessage = (e) => {
     if (id !== runId) return; // superseded by a newer request
     const m = e.data;

@@ -22,7 +22,7 @@
  * flags and the copy-summary collectors pick them up with zero extra
  * wiring (title emptied when inactive — collectors skip untitled).
  */
-import { PRESET_DYNAMICS } from '/calcv2/src/presetDynamics.js?v=1.13'  // engine cache stamp — see dynamic-page.js;
+import { PRESET_DYNAMICS } from '/calcv2/src/presetDynamics.js?v=1.14'  // engine cache stamp — see dynamic-page.js;
 
 const $ = (s) => document.querySelector(s);
 // r21 #1 FIX: box-fill ALONE cannot mean "rectilinear" — a perfectly

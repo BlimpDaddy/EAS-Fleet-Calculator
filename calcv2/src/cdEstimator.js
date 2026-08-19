@@ -15,8 +15,25 @@
  *
  *   cdEstimate = frictionCd + pressureCd   (frontal basis, like every Cd
  *                                           in the engine)
- *   frictionCd = ITTC-1957 × wetted/frontal at the vehicle's Re
- *                (dynamicsCore's own line — computed, never estimated)
+ *   frictionCd = (ITTC-1957 smooth line + ITTC-1978 roughness allowance)
+ *                × wetted/frontal at the vehicle's Re
+ *                (dynamicsCore's own skinFrictionCd — computed, never
+ *                estimated). AMENDED 2026-08-19: the roughness allowance
+ *                is new; before it, this seam modelled a perfectly smooth
+ *                skin by omission.
+ *
+ *   CONSEQUENCE OF THE ALLOWANCE, and it is NOT a bug — read before
+ *   "fixing" it: the pressure knots are derived as (measured total
+ *   − SMOOTH ITTC friction at the measurement Re), from polished
+ *   wind-tunnel models. They are unchanged and stay internally
+ *   consistent. But frictionCd now carries a real-skin term the models
+ *   did not have, so the estimator deliberately returns MORE than the
+ *   measured smooth total for an anchor body — e.g. the sphere-HR anchor
+ *   at its 100 m / 100 km/h reference condition estimates ~0.1% above
+ *   Achenbach's 0.19. A real 100 m sphere with a 0.43 mm skin genuinely
+ *   does have more drag than a polished tunnel model. The knot is the
+ *   PRESSURE anchor; the allowance is the SKIN. Both are pinned by
+ *   fixtures.
  *   pressureCd = monotone calibration of the sectional geometric proxy
  *   band       = [0.8, 1.2] × cdEstimate — see BAND_FRACTION ruling below
  *   status     = 'ok' | 'unavailable' — estimator failure can never break
@@ -37,8 +54,8 @@
  * ugly and was accepted with eyes open: the alternative (_headers) was
  * deployed and Cloudflare Pages ignored it. RULE: bump the stamp in
  * EVERY engine file on any release that changes any engine file. */
-import { measureSections, scoreSections } from './sections.js?v=1.13';
-import { ittcCf, NU_M2_S } from './dynamicsCore.js?v=1.13';
+import { measureSections, scoreSections } from './sections.js?v=1.14';
+import { skinFrictionCd, NU_M2_S } from './dynamicsCore.js?v=1.14';
 
 /**
  * SCREENING BAND — ±20%, VISUAL-ONLY — 2026-08-16 (FINAL RULING, Toby;
@@ -437,7 +454,7 @@ export function estimateCd(proxyRecord, geometry, airspeedKmh) {
 
   const v = airspeedKmh / 3.6;
   const re = (v * L) / NU_M2_S;
-  const frictionCd = ittcCf(re) * (wetted / A);
+  const frictionCd = skinFrictionCd(re, L, wetted, A);
 
   // Graduation 2026-08-16: class travels in the proxy record (computed
   // once with the proxy). Records predating the graduation carry no

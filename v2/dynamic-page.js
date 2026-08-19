@@ -39,11 +39,11 @@
  * relative imports do not inherit the importer's query string, so stamping
  * here alone would split one module into fresh+stale twins). RULE: any
  * release touching calcv2/ bumps the stamp HERE and INSIDE the engine. */
-import { computeDynamics } from '/calcv2/src/dynamicsCore.js?v=1.13';
-import { estimateCd, applyGenericTail } from '/calcv2/src/cdEstimator.js?v=1.13';
-import { scaleGeometryRecord } from '/calcv2/src/dynamicsGeometry.js?v=1.13';
-import { PRESET_DYNAMICS } from '/calcv2/src/presetDynamics.js?v=1.13';
-import { SUNSHIP_TAILED } from '/calcv2/src/sunshipTailed.js?v=1.13';
+import { computeDynamics } from '/calcv2/src/dynamicsCore.js?v=1.14';
+import { estimateCd, applyGenericTail } from '/calcv2/src/cdEstimator.js?v=1.14';
+import { scaleGeometryRecord } from '/calcv2/src/dynamicsGeometry.js?v=1.14';
+import { PRESET_DYNAMICS } from '/calcv2/src/presetDynamics.js?v=1.14';
+import { SUNSHIP_TAILED } from '/calcv2/src/sunshipTailed.js?v=1.14';
 import {
   EAS_IDEAL, SPEED_MIN, SPEED_MAX, S_MAX,
   SUNSHIP_SHAPE, CD_TRACKS_ESTIMATE, isSunship,
@@ -761,7 +761,7 @@ function paint() {
    * itself is a separate question and a real one: the one tail we have
    * ever measured removes 93% of pressure drag, not 20%. */
   const tailModelTitle = sunship
-    ? 'Smart Tail DEPLOYED — Cd derived from the hull’s own measured section shape plus the fairing (rebuilt from the true surface, r20 2026-08-19). Mid-map calibration remains a screening estimate.'
+    ? 'Smart Tail DEPLOYED — Cd derived from the hull’s own measured section shape plus the fairing (rebuilt from the true surface, r20 2026-08-19), plus a declared skin-finish allowance — the skin is modelled as well-finished, not perfectly smooth. Mid-map calibration remains a screening estimate.'
     : 'Smart Tail — REFERENCE ASSUMPTION (§5.4): 20% of pressure drag removed. '
       + 'This is NOT a fairing built for this shape, and it is deliberately conservative — '
       + 'the Sunship’s measured fairing removes about 93%.';
