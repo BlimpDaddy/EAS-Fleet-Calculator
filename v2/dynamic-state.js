@@ -96,8 +96,19 @@ export const EAS_IDEAL = Object.freeze({
    * back far more than the speed increase spends — so the number Toby
    * always wanted is affordable now and goes back in. This is a knob on
    * the ideal POSTURE only; the slider still runs 0-140 and the physics
-   * behind it did not move. */
-  airspeedKmh: 120,
+   * behind it did not move.
+   *
+   * 120 -> 116 km/h (Toby, 2026-08-19) — "to get the numbers lined up".
+   * The headroom that justified 120 was spent by two corrections that made
+   * the ship honester rather than better: the true-section geometry (r20,
+   * +2.8% Cd) and the skin-roughness allowance (B1, +3.54% Cd). At 120 the
+   * ideal cell had drifted to 16.73 MW against the old 100 km/h production
+   * cell's 15.158 MW — +10.4%, where the posture was originally justified
+   * at ~3%. Power goes as v^3, so 116 km/h gives back (116/120)^3 = 0.903
+   * and lands the cell essentially back on the old figure. This RE-RULES
+   * the posture on the corrected Cd; the earlier 120 ruling was made on a
+   * Cd that has since moved twice. */
+  airspeedKmh: 116,
   /* AUTHORED Cd RETIRED 2026-08-18 (Toby: "that was just a guess... happy
    * to remove it"). 0.043 was hand-entered, and the estimator was
    * deliberately bypassed for the one configuration the whole project

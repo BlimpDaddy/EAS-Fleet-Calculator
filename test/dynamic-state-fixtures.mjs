@@ -81,7 +81,7 @@ const bareEstimateAt = (v) => estimateCd(SUNSHIP_SECTIONAL, SUNSHIP_GEOMETRY, v)
  * Deliberately applyIdeal() rather than two setToggle calls: it is the
  * exact path a user takes, so these fixtures keep testing the shipped
  * behaviour instead of a reconstruction of it. Callers that pin a speed
- * still set their own — applyIdeal's 120 km/h is overridden by the
+ * still set their own — applyIdeal's 116 km/h is overridden by the
  * setInput that follows, which is why the pinned figures below did not
  * move with the speed change.
  */
@@ -324,9 +324,9 @@ console.log('\n== r7 send-back #1: Ideal restores the COMPLETE ruled configurati
     check(`${name}: speed restored to the ideal ${EAS_IDEAL.airspeedKmh} km/h`,
       ideal.airspeedKmh === EAS_IDEAL.airspeedKmh, String(ideal.airspeedKmh));
     check(`${name}: engine receives the DEPLOYED-fairing estimate, not the bare hull`,
-      near(contract.selectedCd, 0.022837, 0.01), String(contract.selectedCd));
-    check(`${name}: the 402 t state exactly (120 km/h, S 12% ideal)`,
-      contract.refTripFuelSystemT.toFixed(0) === '402', String(contract.refTripFuelSystemT));
+      near(contract.selectedCd, 0.022847, 0.01), String(contract.selectedCd));
+    check(`${name}: the 376 t state exactly (116 km/h, S 12% ideal)`,
+      contract.refTripFuelSystemT.toFixed(0) === '376', String(contract.refTripFuelSystemT));
   }
   check('Ideal clears the tail stash (no stale restore target)',
     applyIdeal(setToggle(moving, 'tailOn', false)).tailStash === null);
@@ -351,36 +351,36 @@ console.log('\n== THE IDEAL CELL as shipped — 120 km/h, S 12%, deployed fairin
   // a reviewer can refuse. All of it is paid for by measuring the fairing.
   const { engine } = countingEngine();
   const c = compute(easState(), engine, undefined, ESTIMATOR);
-  check('ideal cruise is 120 km/h', easState().airspeedKmh === 120);
+  check('ideal cruise is 116 km/h', easState().airspeedKmh === 116);
   check('ideal S is 12% — inside the published-BLI zone (0–15%), not the EAS bound',
     EAS_IDEAL.s === 0.12 && EAS_IDEAL.s <= 0.15, String(EAS_IDEAL.s));
-  check('ideal Cd ~ 0.0228 (true-section + roughness, estimated at 120 km/h)',
-    near(c.selectedCd, 0.022837, 0.001), String(c.selectedCd));
-  check('ideal propulsive power ~ 16.73 MW', near(c.powerMW, 16.730, 0.001), String(c.powerMW));
+  check('ideal Cd ~ 0.0228 (true-section + roughness, estimated at 116 km/h)',
+    near(c.selectedCd, 0.022847, 0.001), String(c.selectedCd));
+  check('ideal propulsive power ~ 15.12 MW', near(c.powerMW, 15.119, 0.001), String(c.powerMW));
   check('ideal electrical demand ~ 20.72 MW (propulsive / 0.78)',
-    near(c.electricalMW, 21.449, 0.001), String(c.electricalMW));
-  check('ideal 9,000 km LH2 ~ 80.4 t', near(c.refTripFuelT, 80.441, 0.001), String(c.refTripFuelT));
-  check('ideal fuel system ~ 402 t', near(c.refTripFuelSystemT, 402.205, 0.001), String(c.refTripFuelSystemT));
+    near(c.electricalMW, 19.383, 0.001), String(c.electricalMW));
+  check('ideal 9,000 km LH2 ~ 75.2 t', near(c.refTripFuelT, 75.201, 0.001), String(c.refTripFuelT));
+  check('ideal fuel system ~ 376 t', near(c.refTripFuelSystemT, 376.003, 0.001), String(c.refTripFuelSystemT));
   // The comparison that justifies the whole posture: the OLD production
-  // cell needed 15.158 MW at 100 km/h, and raising cruise to 120 km/h was
-  // ruled affordable because the measured fairing bought back more Cd than
-  // the speed spent.
+  // cell needed 15.158 MW at 100 km/h, and raising cruise was ruled
+  // affordable because the measured fairing bought back more Cd than the
+  // speed spent.
   //
-  // THAT MARGIN IS ERODING, and this fixture is where it shows. The
-  // headroom has been spent twice by corrections that both made the ship
-  // HONESTER, not better:
+  // THAT MARGIN ERODED, AND HAS NOW BEEN RE-RULED. Two corrections which
+  // made the ship honester rather than better spent the headroom:
   //     original (surrogate geometry)      15.36 MW    +1.3%
   //     + true-section geometry (r20 c1)   16.16 MW    +6.6%
-  //     + skin-roughness allowance (B1)    16.73 MW   +10.4%   <- here
-  // Still affordable, and every step was owner-approved, but the "within
-  // 3%" claim the old comment made is dead and the bound is widened to 12%
-  // to say so out loud rather than by silently loosening a number.
-  // FLAGGED FOR TOBY 2026-08-19: the 120 km/h ruling was made on the
-  // pre-correction Cd. It has not been re-ruled on 0.0228.
-  check('ideal power is within 12% of the old 100 km/h production cell (15.16 MW)',
-    Math.abs(c.powerMW - 15.158) / 15.158 < 0.12,
+  //     + skin-roughness allowance (B1)    16.73 MW   +10.4%   <- 120 km/h
+  //     + cruise re-ruled to 116 km/h      15.12 MW    -0.3%   <- here
+  // Toby re-ruled the posture to 116 km/h on 2026-08-19 ("to get the
+  // numbers lined up") ON THE CORRECTED Cd. Power goes as v^3, so the
+  // 4 km/h buys back (116/120)^3 = 0.903 and lands the cell back on the
+  // old figure almost exactly. The bound returns to the original 7%; the
+  // interim 12% widening existed only while the posture was un-re-ruled.
+  check('ideal power is within 7% of the old 100 km/h production cell (15.16 MW)',
+    Math.abs(c.powerMW - 15.158) / 15.158 < 0.07,
     `${c.powerMW.toFixed(3)} vs 15.158`);
-  check('ideal Cd_v ~ 0.0229 on ENVELOPE volume', near(c.cdVolumetric, 0.022917, 0.001), String(c.cdVolumetric));
+  check('ideal Cd_v ~ 0.0229 on ENVELOPE volume', near(c.cdVolumetric, 0.022927, 0.001), String(c.cdVolumetric));
   check('ideal is GREEN and silent at 120 km/h',
     c.aerodynamicStatus === 'GREEN' && c.floorStatus === 'OK'
     && c.fuelMassStatus === 'GREEN' && c.warnings.length === 0,
